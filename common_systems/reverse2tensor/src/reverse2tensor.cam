@@ -1,0 +1,620 @@
+# reverse2tensor — コモン公用語の記述を三次元疎テンソルへ戻す
+# doc: tensor3d tensor3d.inverse tensor3d.ragged frontier.width plain.text
+#
+#   docs/common_national_language/02_三次元疎テンソルと文法.md §4、§5、§6、§7
+#
+# 入力はコモン公用語の記述、すなわち音節列になる。
+#
+#     .cmn = E_speech(C_P) ∈ Σ*                                    16 (1.1)
+#
+# 出力は §7 の直方体そのものになる。
+#
+#     Q = max_{k,r} |Γ_{k,r}|、  H = 1 + max_k h_k、  S ∈ Sparse(N×Q×H)
+#
+# §6 は復元に三つが要ると言う。Γ_k^-、Γ_k^+、S(k,·,·) である。だから行列だけを
+# 出しても語は戻らない。幅は命題5.1 が型から与える。
+#
+#     |Γ_{k,r}|   = u_r + Σ_j m_j        層 r へ入る本数
+#     |Γ_{k,r+1}| = u_r + Σ_j n_j        層 r から出る本数
+#
+# 走査は cur と nxt の二本を持つ。gap は両方を一つ進め、箱は入力アリティだけ cur を、
+# 出力アリティだけ nxt を進める。層境界で cur がその層の |Γ_{k,r}| になり、
+# 語境界で nxt が Γ_k^+ になる。これで ragged 定義域 ℐ が丸ごと復元できる。
+#
+# ---- byte 列の形 ----
+#
+#   見出し    4 byte      N, Q, H, 0
+#   語 k ごと
+#     形 W_k   H+1 byte   |Γ_{k,0}|, …, |Γ_{k,h_k}|, |Γ_k^+|、余りは 0
+#     行列 S_k H×Q byte   行 r、列 q。値は e+1。箱が無ければ 0
+#
+# 全体は 4 + N·((H+1) + H·Q) byte になる。値に 1 を足すのは、0 を「箱が無い」に
+# 使うためで、e = 0（id）と空白が同じ byte にならないようにする。
+#
+# ---- 二巡する理由 ----
+#
+# block の刻み per = (H+1) + H·Q は Q と H が決まるまで出ない。だから
+#
+#     一巡目  mode = 0   N と Q と H だけを測る
+#     二巡目  mode = 1   刻みが決まったので形と行列を書く
+#
+# 入力は作業領域に残っているので、二巡目は走査位置を 0 へ戻すだけで足りる。
+#
+# ---- 反復は Ω 閉包で書く ----
+#
+# 後退 label を持つ分離が Ω 閉包そのものになる（10 章 §2 末、仕様 §18）。
+# 閉包は二つある。
+#
+#     外   巡回そのもの。境界は rounds < 2
+#     内   音節の走査。境界は p < N
+#
+# 本体の途中から次の一周へ移る箇所は、閉じの直前 cont への前方分離になる。
+# 前方分離は §16 の path separation であって反復ではない。
+#
+# 語境界は改行で表す。02 §11 のとおり語境界は意味論の原始ではなく、可逆表示の
+# 範囲で動かせる。入力は語ごとに改行で閉じる。
+#
+# ---- 作業領域 ----
+#
+#    0  N      入力の byte 数           host が書く
+#    1  IB     本文の基底語番号         host が書く。終わりに出力の基底で上書きする
+#    2  nOut   出力の byte 数
+#    3  nNeed  要る語数
+#    4  p      入力の走査位置
+#    5  k      文章中の語位置
+#    6  r      語内部の因果深度
+#    7  cur    層へ入る本数を数える
+#    8  Q      frontier 幅の最大
+#    9  H      層数の最大
+#   11  BASE   入力の基底（退避）
+#   15  rounds 巡回の回数
+#   12  mode   0 = 測る、1 = 書く
+#   13  nxt    層から出る本数を数える
+#   14  per    語ごとの byte 数
+#
+#  1024+c  子音番号 + 1。c は ASCII。子音でない字は 0 のまま
+#  1280+c  母音番号 + 1
+#  1536+e  入力アリティ m。CommonChamber.kindsOfPrim の転記
+#  1600+e 出力アリティ n。同上
+#  2048+   出力 byte
+#
+# 基底を高く取るのは、hosted package がワイヤ w を語 64+w へ置くためになる
+# （arch/18 §3）。箱の数だけ語 64 以降が埋まるので、表はその上へ逃がす。
+# 本文の基底は host の --in-base で 4096 を渡す。
+#
+# ---- 限界 ----
+#
+# 各欄は 1 byte に収まる範囲に限る。越えたら te を返す。黙って切り詰めると
+# 別の文章へ復号されるので、そこは報告する。
+
+mu i
+d  8
+
+# ==== 定数 ====
+c0        ke  0 0
+c1        ke  1 0
+c2        ke  2 0
+c3        ke  3 0
+c4        ke  4 0
+c5        ke  5 0
+c6        ke  6 0
+c7        ke  7 0
+c8        ke  8 0
+c9        ke  9 0
+c10       ke  10 0
+c11       ke  11 0
+c12       ke  12 0
+c13       ke  13 0
+c14       ke  14 0
+c15       ke  15 0
+c97       ke  97 0
+c122      ke  122 0
+c255      ke  255 0
+cCM       ke  1024 0                     # 子音の逆引き表の基底
+cVM       ke  1280 0                     # 母音の逆引き表の基底
+cIN       ke  1536 0                     # 入力アリティ表の基底
+cOU       ke  1600 0                     # 出力アリティ表の基底
+cOB       ke  2048 0                     # 出力の基底
+
+# ==== 子音の逆引き表。値は子音番号 + 1 ====
+ca0       ke  1131 0                     # k
+cv0       ke  1 0
+.         ti  ca0 cv0
+ca1       ke  1139 0                     # s
+cv1       ke  2 0
+.         ti  ca1 cv1
+ca2       ke  1140 0                     # t
+cv2       ke  3 0
+.         ti  ca2 cv2
+ca3       ke  1134 0                     # n
+cv3       ke  4 0
+.         ti  ca3 cv3
+ca4       ke  1128 0                     # h
+cv4       ke  5 0
+.         ti  ca4 cv4
+ca5       ke  1133 0                     # m
+cv5       ke  6 0
+.         ti  ca5 cv5
+ca6       ke  1145 0                     # y
+cv6       ke  7 0
+.         ti  ca6 cv6
+ca7       ke  1138 0                     # r
+cv7       ke  8 0
+.         ti  ca7 cv7
+ca8       ke  1143 0                     # w
+cv8       ke  9 0
+.         ti  ca8 cv8
+ca9       ke  1127 0                     # g
+cv9       ke  10 0
+.         ti  ca9 cv9
+ca10      ke  1146 0                     # z
+cv10      ke  11 0
+.         ti  ca10 cv10
+ca11      ke  1124 0                     # d
+cv11      ke  12 0
+.         ti  ca11 cv11
+ca12      ke  1122 0                     # b
+cv12      ke  13 0
+.         ti  ca12 cv12
+ca13      ke  1136 0                     # p
+cv13      ke  14 0
+.         ti  ca13 cv13
+
+# ==== 母音の逆引き表。値は母音番号 + 1 ====
+va0       ke  1377 0                     # a
+vv0       ke  1 0
+.         ti  va0 vv0
+va1       ke  1385 0                     # i
+vv1       ke  2 0
+.         ti  va1 vv1
+va2       ke  1397 0                     # u
+vv2       ke  3 0
+.         ti  va2 vv2
+va3       ke  1381 0                     # e
+vv3       ke  4 0
+.         ti  va3 vv3
+va4       ke  1391 0                     # o
+vv4       ke  5 0
+.         ti  va4 vv4
+
+# ==== アリティ表。CommonChamber.kindsOfPrim の転記 ====
+#     m = 入力、n = 出力。命題5.1 の u_r + Σm と u_r + Σn がこれを引く
+ia0       ke  1536 0                     # id    e=0  m=1 n=1
+iv0       ke  1 0
+.         ti  ia0 iv0
+oa0       ke  1600 0
+ov0       ke  1 0
+.         ti  oa0 ov0
+ia1       ke  1537 0                     # cid   e=1  m=1 n=1
+iv1       ke  1 0
+.         ti  ia1 iv1
+oa1       ke  1601 0
+ov1       ke  1 0
+.         ti  oa1 ov1
+ia2       ke  1538 0                     # i     e=2  m=1 n=1
+iv2       ke  1 0
+.         ti  ia2 iv2
+oa2       ke  1602 0
+ov2       ke  1 0
+.         ti  oa2 ov2
+ia3       ke  1539 0                     # j     e=3  m=1 n=1
+iv3       ke  1 0
+.         ti  ia3 iv3
+oa3       ke  1603 0
+ov3       ke  1 0
+.         ti  oa3 ov3
+ia4       ke  1540 0                     # neg   e=4  m=1 n=1
+iv4       ke  1 0
+.         ti  ia4 iv4
+oa4       ke  1604 0
+ov4       ke  1 0
+.         ti  oa4 ov4
+ia5       ke  1541 0                     # beta  e=5  m=1 n=1
+iv5       ke  1 0
+.         ti  ia5 iv5
+oa5       ke  1605 0
+ov5       ke  1 0
+.         ti  oa5 ov5
+ia6       ke  1542 0                     # fold  e=6  m=1 n=1
+iv6       ke  1 0
+.         ti  ia6 iv6
+oa6       ke  1606 0
+ov6       ke  1 0
+.         ti  oa6 ov6
+ia7       ke  1543 0                     # add   e=7  m=2 n=1
+iv7       ke  2 0
+.         ti  ia7 iv7
+oa7       ke  1607 0
+ov7       ke  1 0
+.         ti  oa7 ov7
+ia8       ke  1544 0                     # mul   e=8  m=2 n=1
+iv8       ke  2 0
+.         ti  ia8 iv8
+oa8       ke  1608 0
+ov8       ke  1 0
+.         ti  oa8 ov8
+ia9       ke  1545 0                     # dup   e=9  m=1 n=2
+iv9       ke  1 0
+.         ti  ia9 iv9
+oa9       ke  1609 0
+ov9       ke  2 0
+.         ti  oa9 ov9
+ia10      ke  1546 0                     # drop  e=10 m=1 n=0
+iv10      ke  1 0
+.         ti  ia10 iv10
+oa10      ke  1610 0
+ov10      ke  0 0
+.         ti  oa10 ov10
+ia11      ke  1547 0                     # agr   e=11 m=2 n=1
+iv11      ke  2 0
+.         ti  ia11 iv11
+oa11      ke  1611 0
+ov11      ke  1 0
+.         ti  oa11 ov11
+ia12      ke  1548 0                     # agru  e=12 m=1 n=1
+iv12      ke  1 0
+.         ti  ia12 iv12
+oa12      ke  1612 0
+ov12      ke  1 0
+.         ti  oa12 ov12
+ia13      ke  1549 0                     # agrz  e=13 m=1 n=1
+iv13      ke  1 0
+.         ti  ia13 iv13
+oa13      ke  1613 0
+ov13      ke  1 0
+.         ti  oa13 ov13
+ia14      ke  1550 0                     # mulj  e=14 m=2 n=1
+iv14      ke  2 0
+.         ti  ia14 iv14
+oa14      ke  1614 0
+ov14      ke  1 0
+.         ti  oa14 ov14
+ia15      ke  1551 0                     # phij  e=15 m=1 n=1
+iv15      ke  1 0
+.         ti  ia15 iv15
+oa15      ke  1615 0
+ov15      ke  1 0
+.         ti  oa15 ov15
+ia16      ke  1552 0                     # addd  e=16 m=2 n=1
+iv16      ke  2 0
+.         ti  ia16 iv16
+oa16      ke  1616 0
+ov16      ke  1 0
+.         ti  oa16 ov16
+ia17      ke  1553 0                     # negd  e=17 m=1 n=1
+iv17      ke  1 0
+.         ti  ia17 iv17
+oa17      ke  1617 0
+ov17      ke  1 0
+.         ti  oa17 ov17
+ia18      ke  1554 0                     # leqd  e=18 m=2 n=1
+iv18      ke  2 0
+.         ti  ia18 iv18
+oa18      ke  1618 0
+ov18      ke  1 0
+.         ti  oa18 ov18
+ia19      ke  1555 0                     # one   e=19 m=0 n=1
+iv19      ke  0 0
+.         ti  ia19 iv19
+oa19      ke  1619 0
+ov19      ke  1 0
+.         ti  oa19 ov19
+ia20      ke  1556 0                     # dupd  e=20 m=1 n=2
+iv20      ke  1 0
+.         ti  ia20 iv20
+oa20      ke  1620 0
+ov20      ke  2 0
+.         ti  oa20 ov20
+ia21      ke  1557 0                     # drpd  e=21 m=1 n=0
+iv21      ke  1 0
+.         ti  ia21 iv21
+oa21      ke  1621 0
+ov21      ke  0 0
+.         ti  oa21 ov21
+ia22      ke  1558 0                     # node  e=22 m=0 n=1
+iv22      ke  0 0
+.         ti  ia22 iv22
+oa22      ke  1622 0
+ov22      ke  1 0
+.         ti  oa22 ov22
+ia23      ke  1559 0                     # load  e=23 m=1 n=1
+iv23      ke  1 0
+.         ti  ia23 iv23
+oa23      ke  1623 0
+ov23      ke  1 0
+.         ti  oa23 ov23
+ia24      ke  1560 0                     # store e=24 m=2 n=0
+iv24      ke  2 0
+.         ti  ia24 iv24
+oa24      ke  1624 0
+ov24      ke  0 0
+.         ti  oa24 ov24
+ia25      ke  1561 0                     # ok    e=25 m=0 n=0
+iv25      ke  0 0
+.         ti  ia25 iv25
+oa25      ke  1625 0
+ov25      ke  0 0
+.         ti  oa25 ov25
+ia26      ke  1562 0                     # pi    e=26 m=1 n=1
+iv26      ke  1 0
+.         ti  ia26 iv26
+oa26      ke  1626 0
+ov26      ke  1 0
+.         ti  oa26 ov26
+ia27      ke  1563 0                     # omop  e=27 m=0 n=0
+iv27      ke  0 0
+.         ti  ia27 iv27
+oa27      ke  1627 0
+ov27      ke  0 0
+.         ti  oa27 ov27
+ia28      ke  1564 0                     # omcl  e=28 m=1 n=0
+iv28      ke  1 0
+.         ti  ia28 iv28
+oa28      ke  1628 0
+ov28      ke  0 0
+.         ti  oa28 ov28
+ia29      ke  1565 0                     # sup   e=29 m=2 n=1
+iv29      ke  2 0
+.         ti  ia29 iv29
+oa29      ke  1629 0
+ov29      ke  1 0
+.         ti  oa29 ov29
+ia30      ke  1566 0                     # resr  e=30 m=2 n=1
+iv30      ke  2 0
+.         ti  ia30 iv30
+oa30      ke  1630 0
+ov30      ke  1 0
+.         ti  oa30 ov30
+ia31      ke  1567 0                     # resl  e=31 m=2 n=1
+iv31      ke  2 0
+.         ti  ia31 iv31
+oa31      ke  1631 0
+ov31      ke  1 0
+.         ti  oa31 ov31
+ia32      ke  1568 0                     # leqj  e=32 m=2 n=1
+iv32      ke  2 0
+.         ti  ia32 iv32
+oa32      ke  1632 0
+ov32      ke  1 0
+.         ti  oa32 ov32
+ia33      ke  1569 0                     # hom   e=33 m=2 n=1
+iv33      ke  2 0
+.         ti  ia33 iv33
+oa33      ke  1633 0
+ov33      ke  1 0
+.         ti  oa33 ov33
+ia34      ke  1570 0                     # pij   e=34 m=1 n=1
+iv34      ke  1 0
+.         ti  ia34 iv34
+oa34      ke  1634 0
+ov34      ke  1 0
+.         ti  oa34 ov34
+# ==== 初期化 ====
+
+ib0       ta  c1
+.         ti  c11 ib0
+.         ti  c8 c0
+.         ti  c9 c0
+.         ti  c12 c0
+.         ti  c15 c0
+
+n1        si  c1
+n3        si  c3
+
+# ==== 巡回の閉包。境界は rounds < 2 ====
+
+pop       ti  c4 c0
+.         ti  c5 c0
+.         ti  c6 c0
+.         ti  c7 c0
+.         ti  c13 c0
+
+# ==== 音節の走査の閉包。境界は p < N ====
+#
+# 入力が空なら一度も回らないので、前方分離で分ける。
+
+sg        ta  c4
+sgN       ta  c0
+.         se  sg sgN lp
+.         so  endp
+
+lp        ta  c4
+lgo       ta  c11
+lad       ko  lgo lp
+lch       ta  lad
+
+.         su  lch c10 wend
+.         se  lch c97 skip1
+.         se  c122 lch skip1
+
+cad       ko  cCM lch
+cvl       ta  cad
+.         su  cvl c0 bad
+
+p1        ko  lp c1
+a2        ko  lgo p1
+ch2       ta  a2
+vad       ko  cVM ch2
+vvl       ta  vad
+.         su  vvl c0 bad
+
+cm1       ko  cvl n1
+vm1       ko  vvl n1
+sy5       sa  cm1 c5
+sy        ko  sy5 vm1
+
+p2        ko  lp c2
+.         ti  c4 p2
+
+.         su  sy c0 dsep
+.         su  sy c1 dgap
+.         su  sy c2 dzm
+.         so  datom
+
+# ---- 層境界 ----
+#
+# 命題5.1 の二本の式をそのまま書く。この層へ入った本数が |Γ_{k,r}|、
+# 出た本数が |Γ_{k,r+1}| になる。最後の層の出口が Γ_k^+ で、形の行の末尾に座る。
+
+dsep      ta  c12
+.         su  dsep c0 dsm
+dscur     ta  c7
+dsr       ta  c6
+dsk       ta  c5
+dsp       ta  c14
+dsm1      sa  dsk dsp
+dsb4      ko  cOB c4
+dsbb      ko  dsb4 dsm1
+dsw       ko  dsbb dsr
+.         ti  dsw dscur
+dsr1      ko  dsw c1
+dsnn      ta  c13
+.         ti  dsr1 dsnn
+.         so  dsnx
+
+dsm       ta  c7
+dsq       ta  c8
+.         se  dsq dsm qup
+.         so  dsnx
+qup       ti  c8 dsm
+
+dsnx      ta  c6
+rr        ko  dsnx c1
+.         ti  c6 rr
+.         ti  c7 c0
+.         ti  c13 c0
+.         so  cont
+
+# ---- 無声ワイヤ。入口も出口も一つ進む ----
+
+dgap      ta  c7
+g1        ko  dgap c1
+.         ti  c7 g1
+gn        ta  c13
+g2        ko  gn c1
+.         ti  c13 g2
+.         so  cont
+
+# ---- 零標示音。本体が空なので成分を置かない（06 §16.2）----
+
+dzm       so  cont
+
+# ---- 原子箱。いまの cur が q になる ----
+
+datom     ko  sy n3
+dmod      ta  c12
+.         su  dmod c0 dadv
+
+.         se  c255 datom bad
+dk        ta  c5
+.         se  c255 dk bad
+dc        ta  c7
+.         se  c255 dc bad
+dr        ta  c6
+.         se  c255 dr bad
+
+dp        ta  c14
+dm1       sa  dk dp
+db4       ko  cOB c4
+dbb       ko  db4 dm1
+dh        ta  c9
+dh1       ko  dh c1
+dq        ta  c8
+drq       sa  dr dq
+dx1       ko  dbb dh1
+dx2       ko  dx1 drq
+dx3       ko  dx2 dc
+dv        ko  datom c1
+.         ti  dx3 dv
+
+dadv      ko  cIN datom
+div       ta  dadv
+dcc       ta  c7
+dcn       ko  dcc div
+.         ti  c7 dcn
+doa       ko  cOU datom
+dov       ta  doa
+dnn       ta  c13
+dnx       ko  dnn dov
+.         ti  c13 dnx
+.         so  cont
+
+# ---- 語境界。改行が k を進める。形は層境界で書き終えている ----
+
+wend      ta  c12
+.         su  wend c0 wm
+.         so  wnext
+
+wm        ta  c6
+wh        ta  c9
+.         se  wh wm hup
+.         so  wnext
+hup       ti  c9 wm
+
+wnext     ta  c5
+kn        ko  wnext c1
+.         ti  c5 kn
+.         ti  c6 c0
+.         ti  c7 c0
+.         ti  c13 c0
+wp        ta  c4
+wp1       ko  wp c1
+.         ti  c4 wp1
+.         so  cont
+
+# ---- 音節にならない字は落とす（filter_Σ）----
+
+skip1     ta  c4
+sp1       ko  skip1 c1
+.         ti  c4 sp1
+
+# ---- 走査の閉じ ----
+
+cont      ta  c4
+contN     ta  c0
+.         se  cont contN lp
+
+# ==== 一巡の終わり ====
+#
+# 一巡目なら刻み per = (H+1) + H·Q を決める。rounds を進めて巡回の閉じへ渡す。
+
+endp      ta  c12
+.         su  endp c1 eadv
+eh        ta  c9
+eq        ta  c8
+eh1       ko  eh c1
+ehq       sa  eh eq
+eper      ko  eh1 ehq
+.         ti  c14 eper
+.         ti  c12 c1
+
+eadv      ta  c15
+er1       ko  eadv c1
+.         ti  c15 er1
+er2       ta  c15
+.         se  er2 c2 pop
+
+# ==== 見出しと後始末 ====
+#
+# 語 1 を出力の基底へ、語 2 を byte 数へ、語 3 を要る語数へ書き換える。
+# host の --emit がこの三つを読む（19 §3.1）。
+
+fin       ta  c5
+.         ti  cOB fin
+f1        ko  cOB c1
+fq        ta  c8
+.         ti  f1 fq
+f2        ko  cOB c2
+fh        ta  c9
+.         ti  f2 fh
+f3        ko  cOB c3
+.         ti  f3 c0
+fper      ta  c14
+fnp       sa  fin fper
+fno       ko  fnp c4
+.         ti  c2 fno
+.         ti  c1 cOB
+fnd       ko  cOB fno
+.         ti  c3 fnd
+.         tu
+bad       te

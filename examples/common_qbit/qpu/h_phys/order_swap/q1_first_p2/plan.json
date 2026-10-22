@@ -1,0 +1,14 @@
+{
+ "id": "h_phys/order_swap/q1_first_p2",
+ "function": "h_phys",
+ "family": "order_swap",
+ "section": "式 2.10、10.1",
+ "role": "独立な操作の記述順だけが違う回路の組",
+ "phi": 3.141592653589793,
+ "meta": {
+  "tag": "q1_first",
+  "form": "q1_first",
+  "pair": "order_swap"
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

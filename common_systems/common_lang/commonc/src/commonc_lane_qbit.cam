@@ -1,0 +1,16 @@
+# commonc — Common 言語の compiler、lane-qbit 版
+#
+#   .cmn  --commonc-->  X_lane-qbit
+#
+# 前段は lane64 版と同じ。後段が量子の三命令（qbit.cam の語）を image へ落とす。
+
+mu i
+d  0
+
+use front.cam
+use back_lane_qbit.cam
+use qlayer.cam
+use region.cam
+use qword.cam
+use qbit.cam
+use qstate.cam

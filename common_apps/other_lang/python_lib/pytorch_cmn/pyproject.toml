@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytorch-cmn"
+version = "0.1.0"
+description = "PyTorch の full graph backend をコモン公用語で書く"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "common-vcpu>=0.1.0"]
+
+[project.optional-dependencies]
+run = ["torch>=2.7", "transformers>=5.0"]
+gpu = ["cupy-cuda12x>=13"]
+
+[project.scripts]
+pytorch-cmn-serve = "pytorch_cmn.serve:main"
+
+[tool.setuptools]
+packages = ["pytorch_cmn", "pytorch_cmn.check"]
+
+[tool.setuptools.package-data]
+pytorch_cmn = ["intent/*.cmn"]

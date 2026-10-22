@@ -1,0 +1,76 @@
+cabal-version: 2.4
+name: common-assembler
+version: 0.2.0.0
+synopsis: Common Assembler — ツイ数圏論による固定マルチターゲット・クロスアセンブラ
+
+-- モジュールの分類は docs/common-compiler の章立てと一対一に対応する。
+--   Lang     source の字体（コモン公用語）              10 章
+--   Core     target 非依存の pipeline                   01〜03 章
+--   Arch     architecture package（式 33.1 の九区分）   04〜09、18、20 章
+--   Program  Common Assembler で書いた意味 program      11 章
+
+library
+  hs-source-dirs: src
+  exposed-modules:
+    Common.Lang.NL
+    Common.Lang.Source
+    Common.Lang.Anf
+    Common.Lang.LLVM
+    Common.Lang.LLVMRef
+    Common.Lang.LLVMText
+    Common.Lang.Descend
+    Common.Lang.Cmn
+    Common.Lang.Cml
+    Common.Lang.Construction
+    Common.Core.Pipe
+    Common.Core.Dyad
+    Common.Core.Proof
+    Common.Core.Eval
+    Common.Arch.Lane
+    Common.Arch.RV64
+    Common.Arch.AARCH64
+    Common.Arch.X86
+    Common.Arch.X86Hosted
+    Common.Arch.GFX1200
+    Common.Arch.SM120
+    Common.Arch.Lane64
+    Common.Program.Arith
+    Common.Program.Compiler
+  build-depends:
+    base >=4 && <5
+    , containers
+    , counter-plane
+    , common-national-language
+  default-language: Haskell2010
+  ghc-options: -Wall
+
+executable common
+  hs-source-dirs: app
+  main-is: Compile.hs
+  build-depends:
+    base >=4 && <5
+    , counter-plane
+    , common-national-language
+    , common-assembler
+  default-language: Haskell2010
+  ghc-options: -Wall -rtsopts
+
+executable common-verify
+  hs-source-dirs: app
+  main-is: Verify.hs
+  build-depends:
+    base >=4 && <5
+    , counter-plane
+    , common-national-language
+    , common-assembler
+    , directory
+  default-language: Haskell2010
+  ghc-options: -Wall
+
+test-suite common-vocabulary-spec
+  type: exitcode-stdio-1.0
+  hs-source-dirs: app
+  main-is: VocabularySpec.hs
+  build-depends: base >=4 && <5, counter-plane, common-national-language, common-assembler
+  default-language: Haskell2010
+  ghc-options: -Wall

@@ -1,0 +1,14 @@
+{
+ "id": "h_phys/virtual_rz/v1_p2",
+ "function": "h_phys",
+ "family": "virtual_rz",
+ "section": "式 12.2、19.2",
+ "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+ "phi": 3.141592653589793,
+ "meta": {
+  "tag": "v1",
+  "form": "v1",
+  "pair": "virtual_rz"
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

@@ -1,0 +1,13 @@
+{
+ "id": "D_g/depth/k0_p2",
+ "function": "D_g",
+ "family": "depth",
+ "section": "式 13.1、13.2",
+ "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+ "phi": 3.141592653589793,
+ "meta": {
+  "k": 0,
+  "tag": "k0"
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

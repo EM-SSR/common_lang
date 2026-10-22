@@ -1,0 +1,92 @@
+# 接合秩の採用語彙。見出しは Σ_V = {be bo pa pi pu pe po} の三音節で、全部同じ長さなので接頭自由。
+#
+#   joinrank : 𝒞 × Cut → ℕ        境界を渡る独立影響の最小本数（構成語 §15 の表）
+#
+# チェンバー C の値は頂点で決まる（Common-Lang/1 定理 2.2）。だから入口は頂点値の表 TAB だけでよい。
+# カット κ は [n] = A ⊔ B の位置で、A = {0..κ-1}、B = {κ..n-1}。頂点番号は
+#
+#   v = α + 2^κ·β          α ∈ {0,1}^A、β ∈ {0,1}^B
+#
+# 行 R_α[β] = TAB[v] を ⊕ で閉じた束の高さが ρ になる（定理 4.1）。
+# 閉包は倍化で伸びるので、語の容量が上限を決める。越えたら溢れの印を立てる。
+#
+#   ρ ≤ 8        |V| = 2^ρ ≤ 256。倍化の行き先は m + |V| ≤ 511 なので閉包は 512 行
+#                 見本と係数の添字は r = 0..ρ を取るので、行と刻みは ρ+1 = 9 になる
+#   2^(n-κ) ≤ 512  行の刻み
+#
+# pobepe = 32 が「まだ倍にできる」上限で、pebepi = 128 が行の数になる。
+#
+# 作業領域の基底は 65536（toolchain.WORK）。
+
+# ---- 数 ----
+# pebepa は行の刻み、pebepi は閉包の行数、pobepe は倍化できる |V| の上限、pebebo は ρ の席の数
+pebebe	=2
+pebebo	=9
+pebepa	=512
+pebepi	=512
+pobepe	=128
+
+# ---- 入口（host が書く）と出口 ----
+pebobe	=65536
+pebobo	=65537
+pebopa	=65538
+pebopi	=65539
+pebopu	=65540
+pebope	=65541
+pebopo	=65542
+pepabe	=65543
+
+# ---- 走りの語 ----
+pepabo	=65544
+pepapa	=65545
+pepapi	=65546
+pepapu	=65547
+pepape	=65548
+pepapo	=65549
+pepibe	=65550
+pepibo	=65551
+pepipa	=65552
+pepipi	=65553
+pepipu	=65554
+pepipe	=65555
+pepipo	=65556
+pobebe	=65557
+pobebo	=65558
+pobepa	=65559
+pobepi	=65560
+
+# ---- 表の基底 ----
+pepube	=65600
+pepubo	=66624
+pepupa	=67136
+pepupi	=329280
+pepupu	=333888
+pepupe	=338496
+pepupo	=343104
+pobepu	=343616
+
+# ---- 番地の式。どれも I → D で、番地を机に一つ置く ----
+# 頂点 TAB[v]
+pepebe	pepube ka, pepipu ka, mi ka, no ka.
+# 行 ROW[β]
+pepebo	pepubo ka, pepapa ka, mi ka, no ka.
+# 閉包 SPN[m][β]        刻み 512
+pepepa	pepupa ka, pepapi ka, mi ka, pebepa ka, ti ka, no ka, pepapa ka, mi ka, no ka.
+# 係数 COF[m][r]        刻み 9
+pepepi	pepupi ka, pepapi ka, mi ka, pebebo ka, ti ka, no ka, pepapu ka, mi ka, no ka.
+# 見本 WIT[r][β]        刻み 512
+pepepu	pepupu ka, pepapu ka, mi ka, pebepa ka, ti ka, no ka, pepapa ka, mi ka, no ka.
+# 係数の写し PCO[α][r]   刻み 9
+pepepe	pepupe ka, pepabo ka, mi ka, pebebo ka, ti ka, no ka, pepapu ka, mi ka, no ka.
+# 見つけた索引 IDX[α]
+pepepo	pepupo ka, pepabo ka, mi ka, no ka.
+# 倍化の行き先 SPN[m + |V|][β]
+pepobe	pepupa ka, pepapi ka, mi ka, pebope ka, mi ka, no ka, pebepa ka, ti ka, no ka, pepapa ka, mi ka, no ka.
+# 倍化の行き先の係数 COF[m + |V|][r]   刻み 9
+pepobo	pepupi ka, pepapi ka, mi ka, pebope ka, mi ka, no ka, pebebo ka, ti ka, no ka, pepapu ka, mi ka, no ka.
+# 正規形の係数 ANF[v]
+pepopu	pobepu ka, pepipu ka, mi ka, no ka.
+# 蝶の上側 ANF[BASE + STEP + J]
+pepopa	pobepu ka, pobepa ka, mi ka, no ka, pobebo ka, mi ka, no ka, pobepi ka, mi ka, no ka.
+# 蝶の下側 ANF[BASE + J]
+pepopi	pobepu ka, pobepa ka, mi ka, no ka, pobepi ka, mi ka, no ka.

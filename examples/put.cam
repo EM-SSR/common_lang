@@ -1,0 +1,23 @@
+# 一 byte 出力 — "Hi" と改行
+# doc: casm.registry casm.io.put casm.x86.io
+#
+#   docs/common-compiler/lang/10 §2      意味レジストリ ord 11 = to = Put
+#   docs/common-compiler/arch/04 §8.2    16550 UART での realization
+#   docs/common-compiler/arch/20 §4      lane64 での realization
+#
+# Put は報告と同じ boundary atom だが、実行を閉じない（§55）。値は [0,255] の
+# 整数として読み、範囲外は下位 8 bit を採る。
+#
+# 局所片を持つのは x86_64 と lane64 だけになる。他の target は式 (50.3) の
+# 実現不能で build が止まる。それが正しい返り値であって、黙って落とさない。
+
+mu i
+d  0
+
+cH ke 72 0
+.  to cH
+cI ke 105 0
+.  to cI
+cN ke 10 0
+.  to cN
+.  tu

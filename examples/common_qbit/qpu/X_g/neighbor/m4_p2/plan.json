@@ -1,0 +1,13 @@
+{
+ "id": "X_g/neighbor/m4_p2",
+ "function": "X_g",
+ "family": "neighbor",
+ "section": "式 11.1",
+ "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+ "phi": 3.141592653589793,
+ "meta": {
+  "tag": "m4",
+  "m": 4
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

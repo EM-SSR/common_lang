@@ -1,0 +1,6 @@
+:set prompt "PhraseTest> "
+:cd D:\work\common-continuous-republics
+:add D:\work\common-continuous-republics\continuous_republic\common_systems\common_national_language\src\speech\Speech.hs
+:add D:\work\common-continuous-republics\continuous_republic\common_systems\common_national_language\src\chamber\CommonChamber.hs
+:module + Speech CommonChamber
+putStrLn "PhraseTest ready. Try: pronounce sampleWordI"

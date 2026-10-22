@@ -1,0 +1,14 @@
+{
+ "id": "sigma/determinism/tape32",
+ "function": "sigma",
+ "family": "determinism",
+ "section": "式 1.13、13.1、4.12",
+ "role": "depth 桁の系列。同じ量子ビットで測定を重ねる深さ k に対する、桁の 1 の割合（作図深度 d の効果）",
+ "phi": null,
+ "meta": {
+  "rounds": 32,
+  "shots": 20000,
+  "ordered": true
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

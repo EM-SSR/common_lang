@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gradcmn4torch"
+version = "0.1.0"
+description = "Common の作図を前向きと逆向きに微分する PyTorch ライブラリ"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.7", "numpy>=1.24", "common-vcpu>=0.1.0"]
+
+[project.optional-dependencies]
+check = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["gradcmn4torch", "gradcmn4torch.check", "gradcmn4torch.synth"]
+
+[tool.setuptools.package-data]
+gradcmn4torch = ["cmn/*.cmn", "cmn/box/*.cmn", "cmn/example/*.cmn"]

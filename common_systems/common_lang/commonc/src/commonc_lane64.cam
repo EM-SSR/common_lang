@@ -1,0 +1,15 @@
+# commonc — Common 言語の compiler、lane64 版
+#
+#   .cmn  --commonc-->  X_lane64                                    20 章
+#
+# 前段は x86-64 hosted 版と同じものを使う。後段だけが target を知る。
+
+mu i
+d  0
+
+use front.cam
+use back_lane64.cam
+use qlayer.cam
+use region.cam
+use qword.cam
+use noqbit.cam

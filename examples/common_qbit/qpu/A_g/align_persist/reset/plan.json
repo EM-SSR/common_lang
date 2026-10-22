@@ -1,0 +1,15 @@
+{
+ "id": "A_g/align_persist/reset",
+ "function": "A_g",
+ "family": "align_persist",
+ "section": "式 12.5、17.2、19.6",
+ "role": "整列の後の待機、測定とリセット。倍率が残るか",
+ "phi": null,
+ "meta": {
+  "word": "align",
+  "M": 16,
+  "between": "reset",
+  "cls": "pulse"
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

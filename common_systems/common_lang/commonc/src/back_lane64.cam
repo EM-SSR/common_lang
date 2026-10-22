@@ -1,0 +1,1091 @@
+# commonc 後段 — 疑似命令列を lane64 の image へ落とす
+#
+# 仕様は docs/common-compiler/arch/20。前段が置いた OPK / OPA / OPB / OPD / OPL と
+# 刻み BW を読み、IMG 26B へ byte を積む。
+#
+# ---- x86-64 hosted 版との違いは三つ ----
+#
+#   1. 命令語が固定 16 byte になる（20 式 2.1）。prologue も epilogue も無い
+#   2. pc が byte でなく命令の番号を数える（20 式 2.2）。分岐の変位も命令の本数になる
+#   3. 語が多倍長なので、中間値の幅で場合分けが起きない（20 §0.3、命題 4.1）
+#
+# ---- 命令語の欄（20 §2）----
+#
+#   byte 0     op
+#   byte 1     a    出力 landmark
+#   byte 2     b    第一入力
+#   byte 3     c    第二入力
+#   byte 4-5   s_b  b の左シフト
+#   byte 6-7   s_c  c の左シフト
+#   byte 8-15  imm  分子、または分岐の変位
+#
+#   op: 0 HALT  1 MAT  2 ADD  3 MUL  4 NEG  5 EQ  6 LT  7 JMP
+#       8 LD    9 ST  10 OK  11 KO  12 PUT
+#
+# ---- 覆い ----
+#
+#   19 式 (6.1) と同じ λ(w) = 語 64+w を採る。landmark は三本だけ使う。
+#
+#   R1  第一の値      R2  第二の値      R3  番地
+#
+#   干渉グラフも生存区間も要らない。代償は語の往復で、一つの疑似命令が
+#   最大 7 命令へ開く。
+#
+# ---- 疑似命令ごとの命令の本数 ----
+#
+#   1 Cst 3   2 Add 7   3 Mul 7   4 Neg 7   5 Store 5
+#   6 Ok  1   7 Load 5  8 EqBr 5  9 LtBr 5
+#
+# ---- 語の割付（前段の 0..58 に続く）----
+#
+#   100  nins   この箱が出す命令の本数
+#   101  総 byte 数
+#   102  emit の走査位置
+#   103  雛形を零で埋める走査位置
+#   104  u   第一入力のワイヤ
+#   105  v   第二入力のワイヤ
+#   106  su  左シフト a
+#   107  sv  左シフト b
+#   108  fill 変位の上位 byte。負なら 255
+#   110-112  64+u の byte
+#   113-115  64+v の byte
+#   116-118  64+j の byte
+#   120-122  分岐の変位の byte
+#   200-311  組み立て中の命令語。16 語 × 7 命令
+#
+# ---- 配列（前段と共有）----
+#
+#   DA 14B  DB 16B  DC 18B   語番号 64+w の byte 0,1,2
+#   BA 20B  BB 22B  BC 24B   箱の先頭命令の番号の byte 0,1,2
+#   IMG 42B                  image の byte
+#
+# 箱あたり最大 112 byte なので、本文の基底は 288B 以上を要る。
+
+# ================= 第 4 段：語番号の byte 分解 =================
+#
+# word(w) = 64 + w。除算が無いので、w の昇順に桁上げを持ち回る。
+# 走りは語 24 25 26 に置く
+
+LNP0      ke  24 0
+LNP1      ke  64 0
+.         ti  LNP0 LNP1
+LNP2      ke  25 0
+LNPZ      ke  0 0
+.         ti  LNP2 LNPZ
+LNP3      ke  26 0
+.         ti  LNP3 LNPZ
+LNP4      ke  20 0
+.         ti  LNP4 LNPZ
+
+# ---- 入口。0 回のときは本体へ入らない ----
+LNP5      ke  20 0
+LNP6      ta  LNP5
+LNP7      ke  6 0
+LNP8      ta  LNP7
+.         se  LNP6 LNP8 LNW4
+.         so  LNQ0
+
+LNW4      ke  20 0
+LNW4A     ta  LNW4
+
+LNW4B     ke  24 0
+LNW4C     ta  LNW4B
+LNW4D     sa  KV14 BW
+LNW4E     ko  LNW4D LNW4A
+.         ti  LNW4E LNW4C
+
+LNW4F     ke  25 0
+LNW4G     ta  LNW4F
+LNW4H     sa  KV16 BW
+LNW4I     ko  LNW4H LNW4A
+.         ti  LNW4I LNW4G
+
+LNW4J     ke  26 0
+LNW4K     ta  LNW4J
+LNW4L     sa  KV18 BW
+LNW4M     ko  LNW4L LNW4A
+.         ti  LNW4M LNW4K
+
+# 次の語番号。da += 1、繰り上がりは 256 ごと
+LNW4N     ke  1 0
+LNW4O     ko  LNW4C LNW4N
+LNW4P     ke  256 0
+.         se  LNW4O LNW4P LNW4X
+LNW4Q     si  LNW4P
+LNW4R     ko  LNW4O LNW4Q
+LNW4S     ke  24 0
+.         ti  LNW4S LNW4R
+LNW4T     ke  25 0
+LNW4U     ta  LNW4T
+LNW4V     ke  1 0
+LNW4W     ko  LNW4U LNW4V
+LNW4Y     ke  256 0
+.         se  LNW4W LNW4Y LNW4Z
+LNW4a     si  LNW4Y
+LNW4b     ko  LNW4W LNW4a
+LNW4c     ke  25 0
+.         ti  LNW4c LNW4b
+LNW4d     ke  26 0
+LNW4e     ta  LNW4d
+LNW4f     ke  1 0
+LNW4g     ko  LNW4e LNW4f
+.         ti  LNW4d LNW4g
+.         so  LNW4h
+
+LNW4Z     ke  25 0
+.         ti  LNW4Z LNW4W
+.         so  LNW4h
+
+LNW4X     ke  24 0
+.         ti  LNW4X LNW4O
+.         so  LNW4h
+
+LNW4h     ke  20 0
+LNW4i     ta  LNW4h
+LNW4j     ke  1 0
+LNW4k     ko  LNW4i LNW4j
+.         ti  LNW4h LNW4k
+
+# ---- 閉じ ----
+LNW4l     ke  20 0
+LNW4m     ta  LNW4l
+LNW4n     ke  6 0
+LNW4o     ta  LNW4n
+.         se  LNW4m LNW4o LNW4
+.         so  LNQ0
+
+# ================= 第 4b 段：箱ごとの命令番号 =================
+#
+# 分岐の変位は命令番号の差になる。箱の昇順に本数を足していく。
+# prologue が無いので走りは 0 から始まる
+
+LNQ0      ke  24 0
+LNQZ      ke  0 0
+.         ti  LNQ0 LNQZ
+LNQ1      ke  25 0
+.         ti  LNQ1 LNQZ
+LNQ2      ke  26 0
+.         ti  LNQ2 LNQZ
+LNQ3      ke  20 0
+.         ti  LNQ3 LNQZ
+
+# ---- 入口 ----
+LNQ4      ke  20 0
+LNQ5      ta  LNQ4
+LNQ6      ke  6 0
+LNQ7      ta  LNQ6
+.         se  LNQ5 LNQ7 LNW5
+.         so  LNR0
+
+LNW5      ke  20 0
+LNW5A     ta  LNW5
+
+LNW5B     ke  24 0
+LNW5C     ta  LNW5B
+LNW5D     sa  KV20 BW
+LNW5E     ko  LNW5D LNW5A
+.         ti  LNW5E LNW5C
+
+LNW5F     ke  25 0
+LNW5G     ta  LNW5F
+LNW5H     sa  KV22 BW
+LNW5I     ko  LNW5H LNW5A
+.         ti  LNW5I LNW5G
+
+LNW5J     ke  26 0
+LNW5K     ta  LNW5J
+LNW5L     sa  KV24 BW
+LNW5M     ko  LNW5L LNW5A
+.         ti  LNW5M LNW5K
+
+# 種類ごとの本数を語 100 へ置く
+LNW5N     sa  KV04 BW
+LNW5O     ko  LNW5N LNW5A
+LNW5P     ta  LNW5O
+LNW5Q     ke  1 0
+.         su  LNW5P LNW5Q LNN3
+LNW5R     ke  5 0
+.         su  LNW5P LNW5R LNN5
+LNW5S     ke  6 0
+.         su  LNW5P LNW5S LNN1
+LNW5T     ke  7 0
+.         su  LNW5P LNW5T LNN5
+LNW5U     ke  8 0
+.         su  LNW5P LNW5U LNN5
+LNW5V     ke  9 0
+.         su  LNW5P LNW5V LNN5
+LNW5W     ke  10 0
+.         su  LNW5P LNW5W LNN1
+LNW5X     ke  11 0
+.         su  LNW5P LNW5X LNN3
+.         so  LNN7
+
+LNN1      ke  1 0
+LNN1A     ke  100 0
+.         ti  LNN1A LNN1
+.         so  LNNA
+
+LNN3      ke  3 0
+LNN3A     ke  100 0
+.         ti  LNN3A LNN3
+.         so  LNNA
+
+LNN5      ke  5 0
+LNN5A     ke  100 0
+.         ti  LNN5A LNN5
+.         so  LNNA
+
+LNN7      ke  7 0
+LNN7A     ke  100 0
+.         ti  LNN7A LNN7
+.         so  LNNA
+
+# ia += 本数。本数は 7 以下なので桁上げは一段で足りる
+LNNA      ke  100 0
+LNNB      ta  LNNA
+LNNC      ke  24 0
+LNND      ta  LNNC
+LNNE      ko  LNND LNNB
+LNNF      ke  256 0
+.         se  LNNE LNNF LNNX
+LNNG      si  LNNF
+LNNH      ko  LNNE LNNG
+LNNI      ke  24 0
+.         ti  LNNI LNNH
+LNNJ      ke  25 0
+LNNK      ta  LNNJ
+LNNL      ke  1 0
+LNNM      ko  LNNK LNNL
+LNNN      ke  256 0
+.         se  LNNM LNNN LNNY
+LNNO      si  LNNN
+LNNP      ko  LNNM LNNO
+LNNQ      ke  25 0
+.         ti  LNNQ LNNP
+LNNR      ke  26 0
+LNNS      ta  LNNR
+LNNT      ke  1 0
+LNNU      ko  LNNS LNNT
+.         ti  LNNR LNNU
+.         so  LNNZ
+
+LNNY      ke  25 0
+.         ti  LNNY LNNM
+.         so  LNNZ
+
+LNNX      ke  24 0
+.         ti  LNNX LNNE
+.         so  LNNZ
+
+LNNZ      ke  20 0
+LNNa      ta  LNNZ
+LNNb      ke  1 0
+LNNc      ko  LNNa LNNb
+.         ti  LNNZ LNNc
+
+# ---- 閉じ ----
+LNNd      ke  20 0
+LNNe      ta  LNNd
+LNNf      ke  6 0
+LNNg      ta  LNNf
+.         se  LNNe LNNg LNW5
+.         so  LNR0
+
+# ================= 第 5 段：Emit =================
+
+LNR0      ke  15 0
+LNRZ      ke  0 0
+.         ti  LNR0 LNRZ
+LNR1      ke  20 0
+.         ti  LNR1 LNRZ
+
+# ---- 入口 ----
+LNR2      ke  20 0
+LNR3      ta  LNR2
+LNR4      ke  6 0
+LNR5      ta  LNR4
+.         se  LNR3 LNR5 LNW6
+.         so  LN6
+
+# ---- 箱ひとつ ----
+LNW6      ke  103 0
+LNW6Z     ke  0 0
+.         ti  LNW6 LNW6Z
+
+# 雛形を零で埋める。112 語
+LNZ1      ke  103 0
+LNZ2      ta  LNZ1
+LNZ3      ke  112 0
+.         se  LNZ2 LNZ3 LNZL
+.         so  LNZE
+
+LNZL      ke  103 0
+LNZ4      ta  LNZL
+LNZ5      ke  200 0
+LNZ6      ko  LNZ5 LNZ4
+LNZ7      ke  0 0
+.         ti  LNZ6 LNZ7
+LNZ8      ke  1 0
+LNZ9      ko  LNZ4 LNZ8
+.         ti  LNZL LNZ9
+LNZA      ke  103 0
+LNZB      ta  LNZA
+LNZC      ke  112 0
+.         se  LNZB LNZC LNZL
+.         so  LNZE
+
+# ---- 出力語 64+j の byte を語 116..118 へ ----
+LNZE      ke  20 0
+LNZF      ta  LNZE
+LNZG      sa  KV14 BW
+LNZH      ko  LNZG LNZF
+LNZI      ta  LNZH
+LNZJ      ke  116 0
+.         ti  LNZJ LNZI
+LNZK      sa  KV16 BW
+LNZL2     ko  LNZK LNZF
+LNZM      ta  LNZL2
+LNZN      ke  117 0
+.         ti  LNZN LNZM
+LNZO      sa  KV18 BW
+LNZP      ko  LNZO LNZF
+LNZQ      ta  LNZP
+LNZR      ke  118 0
+.         ti  LNZR LNZQ
+
+# ---- 種類で分ける ----
+LNZS      sa  KV04 BW
+LNZT      ko  LNZS LNZF
+LNZU      ta  LNZT
+LNZV      ke  6 0
+.         su  LNZU LNZV LNFOK
+LNZV2     ke  10 0
+.         su  LNZU LNZV2 LNFKO
+LNZW      ke  1 0
+.         su  LNZU LNZW LNFCS
+
+# ---- u と v を読む。Neg は第二入力を第一と同じにする ----
+LNZX      sa  KV06 BW
+LNZY      ko  LNZX LNZF
+LNZa      ta  LNZY
+LNZb      ke  104 0
+.         ti  LNZb LNZa
+LNZc      sa  KV08 BW
+LNZd      ko  LNZc LNZF
+LNZe      ta  LNZd
+LNZf      ke  105 0
+.         ti  LNZf LNZe
+LNZg      ke  4 0
+.         su  LNZU LNZg LNNEG
+.         so  LNUV
+
+LNNEG     ke  105 0
+LNNEGa    ke  104 0
+LNNEGb    ta  LNNEGa
+.         ti  LNNEG LNNEGb
+
+# ---- 64+u と 64+v の byte を語 110..115 へ ----
+LNUV      ke  104 0
+LNUVa     ta  LNUV
+LNUVb     sa  KV14 BW
+LNUVc     ko  LNUVb LNUVa
+LNUVd     ta  LNUVc
+LNUVe     ke  110 0
+.         ti  LNUVe LNUVd
+LNUVf     sa  KV16 BW
+LNUVg     ko  LNUVf LNUVa
+LNUVh     ta  LNUVg
+LNUVi     ke  111 0
+.         ti  LNUVi LNUVh
+LNUVj     sa  KV18 BW
+LNUVk     ko  LNUVj LNUVa
+LNUVl     ta  LNUVk
+LNUVm     ke  112 0
+.         ti  LNUVm LNUVl
+
+LNUVn     ke  105 0
+LNUVo     ta  LNUVn
+LNUVp     sa  KV14 BW
+LNUVq     ko  LNUVp LNUVo
+LNUVr     ta  LNUVq
+LNUVs     ke  113 0
+.         ti  LNUVs LNUVr
+LNUVt     sa  KV16 BW
+LNUVu     ko  LNUVt LNUVo
+LNUVv     ta  LNUVu
+LNUVw     ke  114 0
+.         ti  LNUVw LNUVv
+LNUVx     sa  KV18 BW
+LNUVy     ko  LNUVx LNUVo
+LNUVz     ta  LNUVy
+LNUVA     ke  115 0
+.         ti  LNUVA LNUVz
+
+# ---- 命令 0：MAT 3, 64+u ----
+LNI0      ke  200 0
+LNI0a     ke  1 0
+.         ti  LNI0 LNI0a
+LNI0b     ke  201 0
+LNI0c     ke  3 0
+.         ti  LNI0b LNI0c
+LNI0d     ke  208 0
+LNI0e     ke  110 0
+LNI0f     ta  LNI0e
+.         ti  LNI0d LNI0f
+LNI0g     ke  209 0
+LNI0h     ke  111 0
+LNI0i     ta  LNI0h
+.         ti  LNI0g LNI0i
+LNI0j     ke  210 0
+LNI0k     ke  112 0
+LNI0l     ta  LNI0k
+.         ti  LNI0j LNI0l
+
+# ---- 命令 1：LD 1, 3 ----
+LNI1      ke  216 0
+LNI1a     ke  8 0
+.         ti  LNI1 LNI1a
+LNI1b     ke  217 0
+LNI1c     ke  1 0
+.         ti  LNI1b LNI1c
+LNI1d     ke  218 0
+LNI1e     ke  3 0
+.         ti  LNI1d LNI1e
+
+# Load と Put は第二入力を持たない
+LNI1f     ke  7 0
+.         su  LNZU LNI1f LNFLD
+LNI1g     ke  11 0
+.         su  LNZU LNI1g LNFPU
+
+# ---- 命令 2：MAT 3, 64+v ----
+LNI2      ke  232 0
+LNI2a     ke  1 0
+.         ti  LNI2 LNI2a
+LNI2b     ke  233 0
+LNI2c     ke  3 0
+.         ti  LNI2b LNI2c
+LNI2d     ke  240 0
+LNI2e     ke  113 0
+LNI2f     ta  LNI2e
+.         ti  LNI2d LNI2f
+LNI2g     ke  241 0
+LNI2h     ke  114 0
+LNI2i     ta  LNI2h
+.         ti  LNI2g LNI2i
+LNI2j     ke  242 0
+LNI2k     ke  115 0
+LNI2l     ta  LNI2k
+.         ti  LNI2j LNI2l
+
+# ---- 命令 3：LD 2, 3 ----
+LNI3      ke  248 0
+LNI3a     ke  8 0
+.         ti  LNI3 LNI3a
+LNI3b     ke  249 0
+LNI3c     ke  2 0
+.         ti  LNI3b LNI3c
+LNI3d     ke  250 0
+LNI3e     ke  3 0
+.         ti  LNI3d LNI3e
+
+LNI3f     ke  5 0
+.         su  LNZU LNI3f LNFST
+LNI3g     ke  8 0
+.         su  LNZU LNI3g LNFBR
+LNI3h     ke  9 0
+.         su  LNZU LNI3h LNFBR
+
+# ================= 算術：Add / Mul / Neg =================
+#
+#   命令 4  ADD/MUL/NEG a=1 b=1 c=2
+#   命令 5  MAT 3, 64+j
+#   命令 6  ST  3, 1
+
+LNA4      ke  265 0
+LNA4a     ke  1 0
+.         ti  LNA4 LNA4a
+LNA4b     ke  266 0
+LNA4c     ke  1 0
+.         ti  LNA4b LNA4c
+
+LNA4d     ke  3 0
+.         su  LNZU LNA4d LNAMU
+LNA4e     ke  4 0
+.         su  LNZU LNA4e LNANE
+
+# Add。深度をそろえる左シフトが入る（core/01 式 4.3）
+LNA4f     ke  264 0
+LNA4g     ke  2 0
+.         ti  LNA4f LNA4g
+LNA4h     ke  267 0
+LNA4i     ke  2 0
+.         ti  LNA4h LNA4i
+.         so  LNSH
+
+LNAMU     ke  264 0
+LNAMUa    ke  3 0
+.         ti  LNAMU LNAMUa
+LNAMUb    ke  267 0
+LNAMUc    ke  2 0
+.         ti  LNAMUb LNAMUc
+.         so  LNAOU
+
+LNANE     ke  264 0
+LNANEa    ke  4 0
+.         ti  LNANE LNANEa
+.         so  LNAOU
+
+# ---- 左シフト量。s_u = d(w) − d(u)、s_v = d(w) − d(v)（19 式 4.3）----
+LNSH      ke  20 0
+LNSHa     ta  LNSH
+LNSHb     sa  KV10 BW
+LNSHc     ko  LNSHb LNSHa
+LNSHd     ta  LNSHc
+LNSHe     ke  104 0
+LNSHf     ta  LNSHe
+LNSHg     sa  KV10 BW
+LNSHh     ko  LNSHg LNSHf
+LNSHi     ta  LNSHh
+LNSHj     si  LNSHi
+LNSHk     ko  LNSHd LNSHj
+LNSHl     ke  256 0
+.         se  LNSHk LNSHl LNSHm
+.         so  BAD
+LNSHm     ke  268 0
+.         ti  LNSHm LNSHk
+LNSHn     ke  105 0
+LNSHo     ta  LNSHn
+LNSHp     sa  KV10 BW
+LNSHq     ko  LNSHp LNSHo
+LNSHr     ta  LNSHq
+LNSHs     si  LNSHr
+LNSHt     ko  LNSHd LNSHs
+LNSHu     ke  256 0
+.         se  LNSHt LNSHu LNSHv
+.         so  BAD
+LNSHv     ke  270 0
+.         ti  LNSHv LNSHt
+
+# ---- 命令 5、6 ----
+LNAOU     ke  280 0
+LNAOUa    ke  1 0
+.         ti  LNAOU LNAOUa
+LNAOUb    ke  281 0
+LNAOUc    ke  3 0
+.         ti  LNAOUb LNAOUc
+LNAOUd    ke  288 0
+LNAOUe    ke  116 0
+LNAOUf    ta  LNAOUe
+.         ti  LNAOUd LNAOUf
+LNAOUg    ke  289 0
+LNAOUh    ke  117 0
+LNAOUi    ta  LNAOUh
+.         ti  LNAOUg LNAOUi
+LNAOUj    ke  290 0
+LNAOUk    ke  118 0
+LNAOUl    ta  LNAOUk
+.         ti  LNAOUj LNAOUl
+LNAOUm    ke  296 0
+LNAOUn    ke  9 0
+.         ti  LNAOUm LNAOUn
+LNAOUo    ke  298 0
+LNAOUp    ke  3 0
+.         ti  LNAOUo LNAOUp
+LNAOUq    ke  299 0
+LNAOUr    ke  1 0
+.         ti  LNAOUq LNAOUr
+LNAOUs    ke  100 0
+LNAOUt    ke  7 0
+.         ti  LNAOUs LNAOUt
+.         so  LNEMI
+
+# ================= Store =================
+#
+#   命令 4  ST b=1 c=2。番地は第一入力、値は第二入力
+
+LNFST     ke  264 0
+LNFSTa    ke  9 0
+.         ti  LNFST LNFSTa
+LNFSTb    ke  266 0
+LNFSTc    ke  1 0
+.         ti  LNFSTb LNFSTc
+LNFSTd    ke  267 0
+LNFSTe    ke  2 0
+.         ti  LNFSTd LNFSTe
+LNFSTf    ke  100 0
+LNFSTg    ke  5 0
+.         ti  LNFSTf LNFSTg
+.         so  LNEMI
+
+# ================= Load =================
+#
+#   命令 2  LD 1, 1   番地の中身を読む
+#   命令 3  MAT 3, 64+j
+#   命令 4  ST  3, 1
+
+LNFLD     ke  232 0
+LNFLDa    ke  8 0
+.         ti  LNFLD LNFLDa
+LNFLDb    ke  233 0
+LNFLDc    ke  1 0
+.         ti  LNFLDb LNFLDc
+LNFLDd    ke  234 0
+LNFLDe    ke  1 0
+.         ti  LNFLDd LNFLDe
+LNFLDf    ke  248 0
+LNFLDg    ke  1 0
+.         ti  LNFLDf LNFLDg
+LNFLDh    ke  249 0
+LNFLDi    ke  3 0
+.         ti  LNFLDh LNFLDi
+LNFLDj    ke  256 0
+LNFLDk    ke  116 0
+LNFLDl    ta  LNFLDk
+.         ti  LNFLDj LNFLDl
+LNFLDm    ke  257 0
+LNFLDn    ke  117 0
+LNFLDo    ta  LNFLDn
+.         ti  LNFLDm LNFLDo
+LNFLDp    ke  258 0
+LNFLDq    ke  118 0
+LNFLDr    ta  LNFLDq
+.         ti  LNFLDp LNFLDr
+LNFLDs    ke  264 0
+LNFLDt    ke  9 0
+.         ti  LNFLDs LNFLDt
+LNFLDu    ke  266 0
+LNFLDv    ke  3 0
+.         ti  LNFLDu LNFLDv
+LNFLDw    ke  267 0
+LNFLDx    ke  1 0
+.         ti  LNFLDw LNFLDx
+LNFLDy    ke  100 0
+LNFLDz    ke  5 0
+.         ti  LNFLDy LNFLDz
+.         so  LNEMI
+
+# ================= 分岐 =================
+#
+#   命令 4  EQ / LT b=1 c=2 s_b s_c imm
+#
+# 変位は命令番号の差になる（20 式 2.3）。分岐命令は箱の先頭から 4 本目なので
+#
+#   imm = idx(target) − ( idx(j) + 4 )
+#
+# 除算が無いので、二つの三 byte を byte 単位で引き、借りを持ち回る。
+# 借りが残れば負なので、上位五 byte を 255 で埋める。
+
+LNFBR     ke  264 0
+LNFBRa    ke  5 0
+.         ti  LNFBR LNFBRa
+LNFBRb    ke  9 0
+.         su  LNZU LNFBRb LNFBRL
+.         so  LNFBRc
+
+LNFBRL    ke  264 0
+LNFBRLa   ke  6 0
+.         ti  LNFBRL LNFBRLa
+
+LNFBRc    ke  266 0
+LNFBRd    ke  1 0
+.         ti  LNFBRc LNFBRd
+LNFBRe    ke  267 0
+LNFBRf    ke  2 0
+.         ti  LNFBRe LNFBRf
+
+# 左シフト量
+LNBS      ke  20 0
+LNBSa     ta  LNBS
+LNBSb     sa  KV10 BW
+LNBSc     ko  LNBSb LNBSa
+LNBSd     ta  LNBSc
+LNBSe     ke  104 0
+LNBSf     ta  LNBSe
+LNBSg     sa  KV10 BW
+LNBSh     ko  LNBSg LNBSf
+LNBSi     ta  LNBSh
+LNBSj     si  LNBSi
+LNBSk     ko  LNBSd LNBSj
+LNBSl     ke  256 0
+.         se  LNBSk LNBSl LNBSm
+.         so  BAD
+LNBSm     ke  268 0
+.         ti  LNBSm LNBSk
+LNBSn     ke  105 0
+LNBSo     ta  LNBSn
+LNBSp     sa  KV10 BW
+LNBSq     ko  LNBSp LNBSo
+LNBSr     ta  LNBSq
+LNBSs     si  LNBSr
+LNBSt     ko  LNBSd LNBSs
+LNBSu     ke  256 0
+.         se  LNBSt LNBSu LNBSv
+.         so  BAD
+LNBSv     ke  270 0
+.         ti  LNBSv LNBSt
+
+# ---- 自分の分岐命令の番号 idx(j) + 4 を語 120..122 へ ----
+LNBC      ke  20 0
+LNBCa     ta  LNBC
+LNBCb     sa  KV20 BW
+LNBCc     ko  LNBCb LNBCa
+LNBCd     ta  LNBCc
+LNBCe     ke  4 0
+LNBCf     ko  LNBCd LNBCe
+LNBCg     sa  KV22 BW
+LNBCh     ko  LNBCg LNBCa
+LNBCi     ta  LNBCh
+LNBCj     ke  256 0
+.         se  LNBCf LNBCj LNBCk
+LNBCl     si  LNBCj
+LNBCm     ko  LNBCf LNBCl
+LNBCn     ke  120 0
+.         ti  LNBCn LNBCm
+LNBCo     ke  1 0
+LNBCp     ko  LNBCi LNBCo
+LNBCq     ke  121 0
+.         ti  LNBCq LNBCp
+.         so  LNBCr
+
+LNBCk     ke  120 0
+.         ti  LNBCk LNBCf
+LNBCs     ke  121 0
+.         ti  LNBCs LNBCi
+.         so  LNBCr
+
+LNBCr     ke  20 0
+LNBCt     ta  LNBCr
+LNBCu     sa  KV24 BW
+LNBCv     ko  LNBCu LNBCt
+LNBCw     ta  LNBCv
+LNBCx     ke  122 0
+.         ti  LNBCx LNBCw
+
+# ---- 変位 = idx(target) − 語 120..122 ----
+LNBD      ke  12 0
+LNBDa     sa  KV12 BW
+LNBDb     ke  20 0
+LNBDc     ta  LNBDb
+LNBDd     ko  LNBDa LNBDc
+LNBDe     ta  LNBDd
+
+LNBDf     sa  KV20 BW
+LNBDg     ko  LNBDf LNBDe
+LNBDh     ta  LNBDg
+LNBDi     ke  120 0
+LNBDj     ta  LNBDi
+LNBDk     si  LNBDj
+LNBDl     ko  LNBDh LNBDk
+LNBDm     ke  0 0
+.         se  LNBDl LNBDm LNBDn
+LNBDo     ke  272 0
+.         ti  LNBDo LNBDl
+LNBDp     ke  108 0
+LNBDq     ke  0 0
+.         ti  LNBDp LNBDq
+.         so  LNBE
+
+LNBDn     ke  256 0
+LNBDr     ko  LNBDl LNBDn
+LNBDs     ke  272 0
+.         ti  LNBDs LNBDr
+LNBDt     ke  108 0
+LNBDu     ke  1 0
+.         ti  LNBDt LNBDu
+.         so  LNBE
+
+# byte 1
+LNBE      ke  12 0
+LNBEa     sa  KV12 BW
+LNBEb     ke  20 0
+LNBEc     ta  LNBEb
+LNBEd     ko  LNBEa LNBEc
+LNBEe     ta  LNBEd
+LNBEf     sa  KV22 BW
+LNBEg     ko  LNBEf LNBEe
+LNBEh     ta  LNBEg
+LNBEi     ke  121 0
+LNBEj     ta  LNBEi
+LNBEk     si  LNBEj
+LNBEl     ko  LNBEh LNBEk
+LNBEm     ke  108 0
+LNBEn     ta  LNBEm
+LNBEo     si  LNBEn
+LNBEp     ko  LNBEl LNBEo
+LNBEq     ke  0 0
+.         se  LNBEp LNBEq LNBEr
+LNBEs     ke  273 0
+.         ti  LNBEs LNBEp
+LNBEt     ke  108 0
+LNBEu     ke  0 0
+.         ti  LNBEt LNBEu
+.         so  LNBF
+
+LNBEr     ke  256 0
+LNBEv     ko  LNBEp LNBEr
+LNBEw     ke  273 0
+.         ti  LNBEw LNBEv
+LNBEx     ke  108 0
+LNBEy     ke  1 0
+.         ti  LNBEx LNBEy
+.         so  LNBF
+
+# byte 2
+LNBF      ke  12 0
+LNBFa     sa  KV12 BW
+LNBFb     ke  20 0
+LNBFc     ta  LNBFb
+LNBFd     ko  LNBFa LNBFc
+LNBFe     ta  LNBFd
+LNBFf     sa  KV24 BW
+LNBFg     ko  LNBFf LNBFe
+LNBFh     ta  LNBFg
+LNBFi     ke  122 0
+LNBFj     ta  LNBFi
+LNBFk     si  LNBFj
+LNBFl     ko  LNBFh LNBFk
+LNBFm     ke  108 0
+LNBFn     ta  LNBFm
+LNBFo     si  LNBFn
+LNBFp     ko  LNBFl LNBFo
+LNBFq     ke  0 0
+.         se  LNBFp LNBFq LNBFr
+LNBFs     ke  274 0
+.         ti  LNBFs LNBFp
+LNBFt     ke  108 0
+LNBFu     ke  0 0
+.         ti  LNBFt LNBFu
+.         so  LNBG
+
+LNBFr     ke  256 0
+LNBFv     ko  LNBFp LNBFr
+LNBFw     ke  274 0
+.         ti  LNBFw LNBFv
+LNBFx     ke  108 0
+LNBFy     ke  255 0
+.         ti  LNBFx LNBFy
+.         so  LNBG
+
+# 借りが残れば負。上位五 byte を 255 で埋める
+LNBG      ke  108 0
+LNBGa     ta  LNBG
+LNBGb     ke  0 0
+.         su  LNBGa LNBGb LNBGc
+LNBGd     ke  275 0
+.         ti  LNBGd LNBGa
+LNBGe     ke  276 0
+.         ti  LNBGe LNBGa
+LNBGf     ke  277 0
+.         ti  LNBGf LNBGa
+LNBGg     ke  278 0
+.         ti  LNBGg LNBGa
+LNBGh     ke  279 0
+.         ti  LNBGh LNBGa
+
+LNBGc     ke  100 0
+LNBGi     ke  5 0
+.         ti  LNBGc LNBGi
+.         so  LNEMI
+
+# ================= Cst =================
+#
+#   命令 0  MAT 1, x
+#   命令 1  MAT 3, 64+j
+#   命令 2  ST  3, 1
+#
+# 分子は 256 未満に限る（19 §2.1）。越えたら止める
+
+LNFCS     ke  200 0
+LNFCSa    ke  1 0
+.         ti  LNFCS LNFCSa
+LNFCSb    ke  201 0
+LNFCSc    ke  1 0
+.         ti  LNFCSb LNFCSc
+LNFCSd    sa  KV06 BW
+LNFCSe    ke  20 0
+LNFCSf    ta  LNFCSe
+LNFCSg    ko  LNFCSd LNFCSf
+LNFCSh    ta  LNFCSg
+
+# 分子は符号つきの 64 bit になる。|x| < 256 の範囲で、負なら上位七 byte を
+# 255 で埋める。二の補数はこの埋めで閉じる（20 §2 の imm 欄）
+LNCSGN    ke  0 0
+.         se  LNFCSh LNCSGN LNFCSN
+LNFCSi    ke  256 0
+.         se  LNFCSh LNFCSi LNFCSj
+.         so  BAD
+LNFCSj    ke  208 0
+.         ti  LNFCSj LNFCSh
+.         so  LNFCSk
+
+LNFCSN    ke  -256 0
+.         se  LNFCSN LNFCSh LNFCSN2
+.         so  BAD
+LNFCSN2   ke  256 0
+LNFCSN3   ko  LNFCSN2 LNFCSh
+LNFCSN4   ke  208 0
+.         ti  LNFCSN4 LNFCSN3
+LNFF      ke  255 0
+LNFF1     ke  209 0
+.         ti  LNFF1 LNFF
+LNFF2     ke  210 0
+.         ti  LNFF2 LNFF
+LNFF3     ke  211 0
+.         ti  LNFF3 LNFF
+LNFF4     ke  212 0
+.         ti  LNFF4 LNFF
+LNFF5     ke  213 0
+.         ti  LNFF5 LNFF
+LNFF6     ke  214 0
+.         ti  LNFF6 LNFF
+LNFF7     ke  215 0
+.         ti  LNFF7 LNFF
+.         so  LNFCSk
+
+LNFCSk    ke  216 0
+LNFCSl    ke  1 0
+.         ti  LNFCSk LNFCSl
+LNFCSm    ke  217 0
+LNFCSn    ke  3 0
+.         ti  LNFCSm LNFCSn
+LNFCSo    ke  224 0
+LNFCSp    ke  116 0
+LNFCSq    ta  LNFCSp
+.         ti  LNFCSo LNFCSq
+LNFCSr    ke  225 0
+LNFCSs    ke  117 0
+LNFCSt    ta  LNFCSs
+.         ti  LNFCSr LNFCSt
+LNFCSu    ke  226 0
+LNFCSv    ke  118 0
+LNFCSw    ta  LNFCSv
+.         ti  LNFCSu LNFCSw
+LNFCSx    ke  232 0
+LNFCSy    ke  9 0
+.         ti  LNFCSx LNFCSy
+LNFCSz    ke  234 0
+LNFCSA    ke  3 0
+.         ti  LNFCSz LNFCSA
+LNFCSB    ke  235 0
+LNFCSC    ke  1 0
+.         ti  LNFCSB LNFCSC
+LNFCSD    ke  100 0
+LNFCSE    ke  3 0
+.         ti  LNFCSD LNFCSE
+.         so  LNEMI
+
+# ================= Ko =================
+
+LNFKO     ke  200 0
+LNFKOa    ke  11 0
+.         ti  LNFKO LNFKOa
+LNFKOb    ke  100 0
+LNFKOc    ke  1 0
+.         ti  LNFKOb LNFKOc
+.         so  LNEMI
+
+# ================= Put =================
+#
+# 命令 0 と 1 は共通の前置きが置く。ここは命令 2 だけになる。
+#
+#   PUT 1     R1 の下位 8 bit を外へ出す
+
+LNFPU     ke  232 0
+LNFPUa    ke  12 0
+.         ti  LNFPU LNFPUa
+LNFPUb    ke  234 0
+LNFPUc    ke  1 0
+.         ti  LNFPUb LNFPUc
+LNFPUd    ke  100 0
+LNFPUe    ke  3 0
+.         ti  LNFPUd LNFPUe
+.         so  LNEMI
+
+# ================= Ok =================
+
+LNFOK     ke  200 0
+LNFOKa    ke  10 0
+.         ti  LNFOK LNFOKa
+LNFOKb    ke  100 0
+LNFOKc    ke  1 0
+.         ti  LNFOKb LNFOKc
+.         so  LNEMI
+
+# ================= 組み立てた命令語を IMG へ積む =================
+
+LNEMI     ke  100 0
+LNEMIa    ta  LNEMI
+LNEMIb    ke  16 0
+LNEMIc    sa  LNEMIa LNEMIb
+LNEMId    ke  101 0
+.         ti  LNEMId LNEMIc
+LNEMIe    ke  102 0
+LNEMIf    ke  0 0
+.         ti  LNEMIe LNEMIf
+
+# ---- 入口 ----
+LNEMIg    ke  102 0
+LNEMIh    ta  LNEMIg
+LNEMIi    ke  101 0
+LNEMIj    ta  LNEMIi
+.         se  LNEMIh LNEMIj LNEML
+.         so  LNENX
+
+LNEML     ke  102 0
+LNEMLa    ta  LNEML
+LNEMLb    ke  200 0
+LNEMLc    ko  LNEMLb LNEMLa
+LNEMLd    ta  LNEMLc
+LNEMLe    ke  15 0
+LNEMLf    ta  LNEMLe
+LNEMLg    sa  KV54 BW
+LNEMLh    ko  LNEMLg LNEMLf
+LNEMLi    ko  LNEMLh LNEMLa
+.         ti  LNEMLi LNEMLd
+LNEMLj    ke  1 0
+LNEMLk    ko  LNEMLa LNEMLj
+.         ti  LNEML LNEMLk
+
+# ---- 閉じ ----
+LNEMLl    ke  102 0
+LNEMLm    ta  LNEMLl
+LNEMLn    ke  101 0
+LNEMLo    ta  LNEMLn
+.         se  LNEMLm LNEMLo LNEML
+.         so  LNENX
+
+LNENX     ke  15 0
+LNENXa    ta  LNENX
+LNENXb    ke  101 0
+LNENXc    ta  LNENXb
+LNENXd    ko  LNENXa LNENXc
+.         ti  LNENX LNENXd
+
+LNENXe    ke  20 0
+LNENXf    ta  LNENXe
+LNENXg    ke  1 0
+LNENXh    ko  LNENXf LNENXg
+.         ti  LNENXe LNENXh
+
+# ---- 閉じ ----
+LNENXi    ke  20 0
+LNENXj    ta  LNENXi
+LNENXk    ke  6 0
+LNENXl    ta  LNENXk
+.         se  LNENXj LNENXl LNW6
+.         so  LN6
+
+# ================= 第 6 段：host へ返す =================
+
+LN6       ke  1 0
+LN6a      sa  KV54 BW
+.         ti  LN6 LN6a
+LN6b      ke  2 0
+LN6c      ke  15 0
+LN6d      ta  LN6c
+.         ti  LN6b LN6d
+
+.         tu
+
+BAD       te

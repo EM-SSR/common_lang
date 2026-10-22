@@ -1,0 +1,1224 @@
+# ================= 構成語の接合（Quantale.mulWord）=================
+#
+#   引数  語 700-702 = (m1, e1, s1)、語 703-705 = (m2, e2, s2)
+#   返り  語 706-708 = (m, e, s)、戻り符号は語 709
+#
+# 継ぎ目で末尾と先頭が一致すると、交替語なので短い方が尽きるまで畳む。
+# 畳んだ i の対だけが符号を反転する
+
+WMUL      ke  0 0
+WM1m      ke  700 0
+WM1mv     ta  WM1m
+WM1e      ke  701 0
+WM1ev     ta  WM1e
+WM1z      ke  0 0
+.         se  WM1z WM1mv WM1PJ
+.         se  WM1mv WM1z WM1PI
+WM1ZF     ke  0 0
+WM1zf     ke  761 0
+.         ti  WM1zf WM1ZF
+WM1zl     ke  760 0
+.         ti  WM1zl WM1ev
+.         so  WM1EN
+
+WM1PJ     ke  1 0
+WM1jf     ke  761 0
+.         ti  WM1jf WM1PJ
+WM1j2     ke  2 0
+WM1j2m    sa  WM1j2 WM1mv
+WM1jne    si  WM1ev
+WM1jL     ko  WM1j2m WM1jne
+WM1jl     ke  760 0
+.         ti  WM1jl WM1jL
+.         so  WM1EN
+
+WM1PI     ke  0 0
+WM1if     ke  761 0
+.         ti  WM1if WM1PI
+WM1i2     ke  2 0
+WM1i2m    sa  WM1i2 WM1mv
+WM1ing    si  WM1i2m
+WM1iL     ko  WM1ing WM1ev
+WM1il     ke  760 0
+.         ti  WM1il WM1iL
+.         so  WM1EN
+
+WM1EN     ke  0 0
+
+WM2m      ke  703 0
+WM2mv     ta  WM2m
+WM2e      ke  704 0
+WM2ev     ta  WM2e
+WM2z      ke  0 0
+.         se  WM2z WM2mv WM2PJ
+.         se  WM2mv WM2z WM2PI
+WM2ZF     ke  0 0
+WM2zf     ke  763 0
+.         ti  WM2zf WM2ZF
+WM2zl     ke  762 0
+.         ti  WM2zl WM2ev
+.         so  WM2EN
+
+WM2PJ     ke  1 0
+WM2jf     ke  763 0
+.         ti  WM2jf WM2PJ
+WM2j2     ke  2 0
+WM2j2m    sa  WM2j2 WM2mv
+WM2jne    si  WM2ev
+WM2jL     ko  WM2j2m WM2jne
+WM2jl     ke  762 0
+.         ti  WM2jl WM2jL
+.         so  WM2EN
+
+WM2PI     ke  0 0
+WM2if     ke  763 0
+.         ti  WM2if WM2PI
+WM2i2     ke  2 0
+WM2i2m    sa  WM2i2 WM2mv
+WM2ing    si  WM2i2m
+WM2iL     ko  WM2ing WM2ev
+WM2il     ke  762 0
+.         ti  WM2il WM2iL
+.         so  WM2EN
+
+WM2EN     ke  0 0
+
+# 符号は先に掛けておく
+WMs1      ke  702 0
+WMs1v     ta  WMs1
+WMs2      ke  705 0
+WMs2v     ta  WMs2
+WMss      sa  WMs1v WMs2v
+WMsst     ke  764 0
+.         ti  WMsst WMss
+
+# どちらかが空語なら、相手をそのまま返す
+WMl1      ke  760 0
+WMl1v     ta  WMl1
+WMz1      ke  0 0
+.         su  WMl1v WMz1 WMR2
+WMl2      ke  762 0
+WMl2v     ta  WMl2
+WMz2      ke  0 0
+.         su  WMl2v WMz2 WMR1
+.         so  WMGO
+
+WMR2      ke  706 0
+WMR2m     ke  703 0
+WMR2mv    ta  WMR2m
+.         ti  WMR2 WMR2mv
+WMR2e     ke  707 0
+WMR2ev0   ke  704 0
+WMR2ev    ta  WMR2ev0
+.         ti  WMR2e WMR2ev
+.         so  WMRS
+
+WMR1      ke  706 0
+WMR1m     ke  700 0
+WMR1mv    ta  WMR1m
+.         ti  WMR1 WMR1mv
+WMR1e     ke  707 0
+WMR1ev0   ke  701 0
+WMR1ev    ta  WMR1ev0
+.         ti  WMR1e WMR1ev
+.         so  WMRS
+
+# 末尾は長さの偶奇で決まる。奇数なら先頭と同じ、偶数なら反対になる
+WMGO      ke  760 0
+WMGOl     ta  WMGO
+WMhtq0    ke  0 0
+WMhtsq    ke  772 0
+.         ti  WMhtsq WMhtq0
+WMhtr0    ke  760 0
+WMhtr0v   ta  WMhtr0
+WMhtsr    ke  773 0
+.         ti  WMhtsr WMhtr0v
+
+WMhtLP    ke  773 0
+WMhtLPv   ta  WMhtLP
+WMhtt2    ke  2 0
+.         se  WMhtLPv WMhtt2 WMhtDN
+WMhtnt2   si  WMhtt2
+WMhtsub   ko  WMhtLPv WMhtnt2
+WMhtss    ke  773 0
+.         ti  WMhtss WMhtsub
+WMhtqq    ke  772 0
+WMhtqqv   ta  WMhtqq
+WMhto1    ke  1 0
+WMhtq2    ko  WMhtqqv WMhto1
+WMhtsq2   ke  772 0
+.         ti  WMhtsq2 WMhtq2
+.         so  WMhtLP
+
+WMhtDN    ke  0 0
+
+WMpar     ke  773 0
+WMparv    ta  WMpar
+WMf1      ke  761 0
+WMf1v     ta  WMf1
+WMo1      ke  1 0
+.         su  WMparv WMo1 WMTF
+WMnf      ko  WMo1 WMf1v
+WMnf2     si  WMf1v
+WMnf3     ko  WMo1 WMnf2
+WMst1     ke  765 0
+.         ti  WMst1 WMnf3
+.         so  WMTK
+WMTF      ke  765 0
+.         ti  WMTF WMf1v
+.         so  WMTK
+
+# 継ぎ目が合わなければ畳まない
+WMTK      ke  765 0
+WMt1      ta  WMTK
+WMf2      ke  763 0
+WMf2v     ta  WMf2
+.         su  WMt1 WMf2v WMFOLD
+WMk0      ke  766 0
+WMk0z     ke  0 0
+.         ti  WMk0 WMk0z
+.         so  WMLEN
+
+# 合えば短い方が尽きるまで畳む
+WMFOLD    ke  760 0
+WMFl1     ta  WMFOLD
+WMFL2     ke  762 0
+WMFl2     ta  WMFL2
+.         se  WMFl1 WMFl2 WMFA
+WMFk2     ke  766 0
+.         ti  WMFk2 WMFl2
+.         so  WMLEN
+WMFA      ke  766 0
+.         ti  WMFA WMFl1
+.         so  WMLEN
+
+# 長さ L = L1 + L2 − 2k
+WMLEN     ke  760 0
+WMLl1     ta  WMLEN
+WMLL2     ke  762 0
+WMLl2     ta  WMLL2
+WMLK      ke  766 0
+WMLk      ta  WMLK
+WMLt2     ke  2 0
+WMLk2     sa  WMLt2 WMLk
+WMLnk     si  WMLk2
+WMLs      ko  WMLl1 WMLl2
+WMLv      ko  WMLs WMLnk
+WMLst     ke  767 0
+.         ti  WMLst WMLv
+
+# 畳んだ i の対の数だけ符号が反転する。末尾が i なら ceil(k/2)、j なら floor(k/2)
+WMhkq0    ke  0 0
+WMhksq    ke  774 0
+.         ti  WMhksq WMhkq0
+WMhkr0    ke  766 0
+WMhkr0v   ta  WMhkr0
+WMhksr    ke  775 0
+.         ti  WMhksr WMhkr0v
+
+WMhkLP    ke  775 0
+WMhkLPv   ta  WMhkLP
+WMhkt2    ke  2 0
+.         se  WMhkLPv WMhkt2 WMhkDN
+WMhknt2   si  WMhkt2
+WMhksub   ko  WMhkLPv WMhknt2
+WMhkss    ke  775 0
+.         ti  WMhkss WMhksub
+WMhkqq    ke  774 0
+WMhkqqv   ta  WMhkqq
+WMhko1    ke  1 0
+WMhkq2    ko  WMhkqqv WMhko1
+WMhksq2   ke  774 0
+.         ti  WMhksq2 WMhkq2
+.         so  WMhkLP
+
+WMhkDN    ke  0 0
+
+WMcq      ke  774 0
+WMcqv     ta  WMcq
+WMcr      ke  775 0
+WMcrv     ta  WMcr
+WMct      ke  765 0
+WMctv     ta  WMct
+WMcz      ke  0 0
+.         su  WMctv WMcz WMCI
+WMcst     ke  768 0
+.         ti  WMcst WMcqv
+.         so  WMSGN
+WMCI      ke  768 0
+WMci2     ko  WMcqv WMcrv
+.         ti  WMCI WMci2
+.         so  WMSGN
+
+# 反転の回数の偶奇だけが効く
+WMSGN     ke  0 0
+WMhsq0    ke  0 0
+WMhssq    ke  776 0
+.         ti  WMhssq WMhsq0
+WMhsr0    ke  768 0
+WMhsr0v   ta  WMhsr0
+WMhssr    ke  777 0
+.         ti  WMhssr WMhsr0v
+
+WMhsLP    ke  777 0
+WMhsLPv   ta  WMhsLP
+WMhst2    ke  2 0
+.         se  WMhsLPv WMhst2 WMhsDN
+WMhsnt2   si  WMhst2
+WMhssub   ko  WMhsLPv WMhsnt2
+WMhsss    ke  777 0
+.         ti  WMhsss WMhssub
+WMhsqq    ke  776 0
+WMhsqqv   ta  WMhsqq
+WMhso1    ke  1 0
+WMhsq2    ko  WMhsqqv WMhso1
+WMhssq2   ke  776 0
+.         ti  WMhssq2 WMhsq2
+.         so  WMhsLP
+
+WMhsDN    ke  0 0
+
+WMsp      ke  777 0
+WMspv     ta  WMsp
+WMsz      ke  0 0
+WMsv0     ke  764 0
+WMsv      ta  WMsv0
+.         su  WMspv WMsz WMSKP
+WMsn      si  WMsv
+WMsst2    ke  764 0
+.         ti  WMsst2 WMsn
+.         so  WMSKP
+
+# 残った先頭。L1 が畳み残せば f1、そうでなければ w2 の k 番目になる
+WMSKP     ke  760 0
+WMSl1     ta  WMSKP
+WMSK2     ke  766 0
+WMSk      ta  WMSK2
+.         se  WMSk WMSl1 WMSF1
+WMSL2     ke  762 0
+WMSl2     ta  WMSL2
+.         se  WMSk WMSl2 WMSF2
+WMSF0     ke  769 0
+WMSF0z    ke  0 0
+.         ti  WMSF0 WMSF0z
+.         so  WMENC
+
+WMSF1     ke  769 0
+WMSF1f    ke  761 0
+WMSF1v    ta  WMSF1f
+.         ti  WMSF1 WMSF1v
+.         so  WMENC
+
+# w2 の k 番目は、k が偶数なら f2、奇数なら反対になる
+WMhfq0    ke  0 0
+WMhfsq    ke  778 0
+.         ti  WMhfsq WMhfq0
+WMhfr0    ke  766 0
+WMhfr0v   ta  WMhfr0
+WMhfsr    ke  779 0
+.         ti  WMhfsr WMhfr0v
+
+WMhfLP    ke  779 0
+WMhfLPv   ta  WMhfLP
+WMhft2    ke  2 0
+.         se  WMhfLPv WMhft2 WMhfDN
+WMhfnt2   si  WMhft2
+WMhfsub   ko  WMhfLPv WMhfnt2
+WMhfss    ke  779 0
+.         ti  WMhfss WMhfsub
+WMhfqq    ke  778 0
+WMhfqqv   ta  WMhfqq
+WMhfo1    ke  1 0
+WMhfq2    ko  WMhfqqv WMhfo1
+WMhfsq2   ke  778 0
+.         ti  WMhfsq2 WMhfq2
+.         so  WMhfLP
+
+WMhfDN    ke  0 0
+
+WMSF2     ke  779 0
+WMSF2p    ta  WMSF2
+WMSF2f    ke  763 0
+WMSF2v    ta  WMSF2f
+WMSF2o    ke  1 0
+WMSF2z    ke  0 0
+.         su  WMSF2p WMSF2z WMSFE
+WMSF2n    si  WMSF2v
+WMSF2m    ko  WMSF2o WMSF2n
+WMSF2s    ke  769 0
+.         ti  WMSF2s WMSF2m
+.         so  WMENC
+WMSFE     ke  769 0
+.         ti  WMSFE WMSF2v
+.         so  WMENC
+
+WMENC     ke  0 0
+WMEhq0    ke  0 0
+WMEhsq    ke  770 0
+.         ti  WMEhsq WMEhq0
+WMEhr0    ke  767 0
+WMEhr0v   ta  WMEhr0
+WMEhsr    ke  771 0
+.         ti  WMEhsr WMEhr0v
+
+WMEhLP    ke  771 0
+WMEhLPv   ta  WMEhLP
+WMEht2    ke  2 0
+.         se  WMEhLPv WMEht2 WMEhDN
+WMEhnt2   si  WMEht2
+WMEhsub   ko  WMEhLPv WMEhnt2
+WMEhss    ke  771 0
+.         ti  WMEhss WMEhsub
+WMEhqq    ke  770 0
+WMEhqqv   ta  WMEhqq
+WMEho1    ke  1 0
+WMEhq2    ko  WMEhqqv WMEho1
+WMEhsq2   ke  770 0
+.         ti  WMEhsq2 WMEhq2
+.         so  WMEhLP
+
+WMEhDN    ke  0 0
+
+WMEq      ke  770 0
+WMEqv     ta  WMEq
+WMEr      ke  771 0
+WMErv     ta  WMEr
+WMEse     ke  707 0
+.         ti  WMEse WMErv
+WMEf      ke  769 0
+WMEfv     ta  WMEf
+WMEone    ke  1 0
+.         su  WMEfv WMEone WMEJJ
+WMEnq     si  WMEqv
+WMEsi     ke  706 0
+.         ti  WMEsi WMEnq
+.         so  WMEEN
+
+WMEJJ     ke  0 0
+WMEcq     ko  WMEqv WMErv
+WMEsj     ke  706 0
+.         ti  WMEsj WMEcq
+.         so  WMEEN
+
+WMEEN     ke  0 0
+
+.         so  WMRS
+
+# 返り
+WMRS      ke  708 0
+WMRSs0    ke  764 0
+WMRSs     ta  WMRSs0
+.         ti  WMRS WMRSs
+WMRSg     ke  709 0
+WMRSgv    ta  WMRSg
+WMRc1     ke  1 0
+.         su  WMRSgv WMRc1 WC1R
+.         so  BAD
+
+# ================= 構成語の逆元（Quantale.invWord）=================
+#
+#   引数  語 720-722、返り 語 723-725、戻り符号は語 726
+#
+# 語をひっくり返す。i の個数は変わらないので符号は動かない
+
+WINV      ke  0 0
+WI1m      ke  720 0
+WI1mv     ta  WI1m
+WI1e      ke  721 0
+WI1ev     ta  WI1e
+WI1z      ke  0 0
+.         se  WI1z WI1mv WI1PJ
+.         se  WI1mv WI1z WI1PI
+WI1ZF     ke  0 0
+WI1zf     ke  761 0
+.         ti  WI1zf WI1ZF
+WI1zl     ke  760 0
+.         ti  WI1zl WI1ev
+.         so  WI1EN
+
+WI1PJ     ke  1 0
+WI1jf     ke  761 0
+.         ti  WI1jf WI1PJ
+WI1j2     ke  2 0
+WI1j2m    sa  WI1j2 WI1mv
+WI1jne    si  WI1ev
+WI1jL     ko  WI1j2m WI1jne
+WI1jl     ke  760 0
+.         ti  WI1jl WI1jL
+.         so  WI1EN
+
+WI1PI     ke  0 0
+WI1if     ke  761 0
+.         ti  WI1if WI1PI
+WI1i2     ke  2 0
+WI1i2m    sa  WI1i2 WI1mv
+WI1ing    si  WI1i2m
+WI1iL     ko  WI1ing WI1ev
+WI1il     ke  760 0
+.         ti  WI1il WI1iL
+.         so  WI1EN
+
+WI1EN     ke  0 0
+
+# ひっくり返すと先頭が末尾になる
+WIhq0     ke  0 0
+WIhsq     ke  772 0
+.         ti  WIhsq WIhq0
+WIhr0     ke  760 0
+WIhr0v    ta  WIhr0
+WIhsr     ke  773 0
+.         ti  WIhsr WIhr0v
+
+WIhLP     ke  773 0
+WIhLPv    ta  WIhLP
+WIht2     ke  2 0
+.         se  WIhLPv WIht2 WIhDN
+WIhnt2    si  WIht2
+WIhsub    ko  WIhLPv WIhnt2
+WIhss     ke  773 0
+.         ti  WIhss WIhsub
+WIhqq     ke  772 0
+WIhqqv    ta  WIhqq
+WIho1     ke  1 0
+WIhq2     ko  WIhqqv WIho1
+WIhsq2    ke  772 0
+.         ti  WIhsq2 WIhq2
+.         so  WIhLP
+
+WIhDN     ke  0 0
+
+WIpar     ke  773 0
+WIparv    ta  WIpar
+WIf       ke  761 0
+WIfv      ta  WIf
+WIo1      ke  1 0
+.         su  WIparv WIo1 WINF
+WInn      si  WIfv
+WInf      ko  WIo1 WInn
+WIst      ke  769 0
+.         ti  WIst WInf
+.         so  WIEN
+WINF      ke  769 0
+.         ti  WINF WIfv
+.         so  WIEN
+
+WIEN      ke  767 0
+WIL       ke  760 0
+WILv      ta  WIL
+.         ti  WIEN WILv
+WIEhq0    ke  0 0
+WIEhsq    ke  770 0
+.         ti  WIEhsq WIEhq0
+WIEhr0    ke  767 0
+WIEhr0v   ta  WIEhr0
+WIEhsr    ke  771 0
+.         ti  WIEhsr WIEhr0v
+
+WIEhLP    ke  771 0
+WIEhLPv   ta  WIEhLP
+WIEht2    ke  2 0
+.         se  WIEhLPv WIEht2 WIEhDN
+WIEhnt2   si  WIEht2
+WIEhsub   ko  WIEhLPv WIEhnt2
+WIEhss    ke  771 0
+.         ti  WIEhss WIEhsub
+WIEhqq    ke  770 0
+WIEhqqv   ta  WIEhqq
+WIEho1    ke  1 0
+WIEhq2    ko  WIEhqqv WIEho1
+WIEhsq2   ke  770 0
+.         ti  WIEhsq2 WIEhq2
+.         so  WIEhLP
+
+WIEhDN    ke  0 0
+
+WIEq      ke  770 0
+WIEqv     ta  WIEq
+WIEr      ke  771 0
+WIErv     ta  WIEr
+WIEse     ke  724 0
+.         ti  WIEse WIErv
+WIEf      ke  769 0
+WIEfv     ta  WIEf
+WIEone    ke  1 0
+.         su  WIEfv WIEone WIEJJ
+WIEnq     si  WIEqv
+WIEsi     ke  723 0
+.         ti  WIEsi WIEnq
+.         so  WIEEN
+
+WIEJJ     ke  0 0
+WIEcq     ko  WIEqv WIErv
+WIEsj     ke  723 0
+.         ti  WIEsj WIEcq
+.         so  WIEEN
+
+WIEEN     ke  0 0
+
+WIRS      ke  725 0
+WIRSs0    ke  722 0
+WIRSs     ta  WIRSs0
+.         ti  WIRS WIRSs
+WIRSg     ke  726 0
+WIRSgv    ta  WIRSg
+WIRc1     ke  1 0
+.         su  WIRSgv WIRc1 WV1R
+WIRc2     ke  2 0
+.         su  WIRSgv WIRc2 WV2R
+.         so  BAD
+
+# ================= WGATE：門をひとつ掛ける（Descend.gateWords）=================
+#
+#   引数  語 730 = 並びの先頭、731 = 個数、732 = 掛ける門の箱
+#   返り  語 733 = 新しい先頭。戻り符号は語 734
+
+WGATE     ke  733 0
+WGAn      ke  97 0
+WGAnv     ta  WGAn
+.         ti  WGATE WGAnv
+WGi       ke  735 0
+WGiz      ke  0 0
+.         ti  WGi WGiz
+
+WGLP      ke  735 0
+WGLPi     ta  WGLP
+WGLPn     ke  731 0
+WGLPnv    ta  WGLPn
+.         se  WGLPi WGLPnv WGLB
+.         so  WGDN
+
+WGLB      ke  730 0
+WGLBs     ta  WGLB
+WGLBi0    ke  735 0
+WGLBi     ta  WGLBi0
+WGLBk     ko  WGLBs WGLBi
+WGg       sa  KV44 BW
+WGga      ko  WGg WGLBk
+WGgv      ta  WGga
+WGm0      ke  732 0
+WGm0v     ta  WGm0
+WGmul0    ke  6 0
+WGmuln    ta  WGmul0
+WGmulk    sa  KV04 BW
+WGmulka   ko  WGmulk WGmuln
+WGmulkv   ke  3 0
+.         ti  WGmulka WGmulkv
+WGmulaw   sa  KV06 BW
+WGmulaa   ko  WGmulaw WGmuln
+.         ti  WGmulaa WGm0v
+WGmulbw   sa  KV08 BW
+WGmulba   ko  WGmulbw WGmuln
+.         ti  WGmulba WGgv
+WGmuldw   sa  KV10 BW
+WGmulda   ko  WGmuldw WGmuln
+WGmulz    ke  0 0
+.         ti  WGmulda WGmulz
+WGmulo1   ke  1 0
+WGmuln2   ko  WGmuln WGmulo1
+.         ti  WGmul0 WGmuln2
+
+WGgm      sa  KV46 BW
+WGgma     ko  WGgm WGLBk
+WGgmv     ta  WGgma
+WGge      sa  KV48 BW
+WGgea     ko  WGge WGLBk
+WGgev     ta  WGgea
+WGgs      sa  KV50 BW
+WGgsa     ko  WGgs WGLBk
+WGgsv     ta  WGgsa
+WGaln     ke  97 0
+WGalnv    ta  WGaln
+WGalo     ke  1 0
+WGaln2    ko  WGalnv WGalo
+WGals     ke  97 0
+.         ti  WGals WGaln2
+WGpg      sa  KV44 BW
+WGpga     ko  WGpg WGalnv
+.         ti  WGpga WGmuln
+WGpm      sa  KV46 BW
+WGpma     ko  WGpm WGalnv
+.         ti  WGpma WGgmv
+WGpe      sa  KV48 BW
+WGpea     ko  WGpe WGalnv
+.         ti  WGpea WGgev
+WGps      sa  KV50 BW
+WGpsa     ko  WGps WGalnv
+.         ti  WGpsa WGgsv
+
+WGnx      ke  735 0
+WGnxv     ta  WGnx
+WGnxo     ke  1 0
+WGnx2     ko  WGnxv WGnxo
+.         ti  WGnx WGnx2
+.         so  WGLP
+
+WGDN      ke  734 0
+WGDNv     ta  WGDN
+WGc1      ke  1 0
+.         su  WGDNv WGc1 WG1R
+WGc2      ke  2 0
+.         su  WGDNv WGc2 WG2R
+WGc3      ke  3 0
+.         su  WGDNv WGc3 WG3R
+.         so  BAD
+
+# ================= WMERGE：同じ語の門を足す（Descend.mergeWords）=================
+#
+#   引数  語 755 = 先頭、756 = 個数
+#   返り  語 757 = 新しい先頭、759 = 新しい個数。戻り符号は語 758
+#
+# 先頭から見て、同じ語を持つ後ろの欄を足し込む。足した欄には印を付ける
+
+WMRG      ke  780 0
+WMRGz     ke  0 0
+.         ti  WMRG WMRGz
+
+# 印を消す
+WMFP      ke  780 0
+WMFPi     ta  WMFP
+WMFPn     ke  756 0
+WMFPnv    ta  WMFPn
+.         se  WMFPi WMFPnv WMFB
+.         so  WMFD
+WMFB      ke  755 0
+WMFBs     ta  WMFB
+WMFBk     ko  WMFBs WMFPi
+WMFBz     ke  0 0
+WMFBp     sa  KV52 BW
+WMFBpa    ko  WMFBp WMFBk
+.         ti  WMFBpa WMFBz
+WMFBo     ke  1 0
+WMFBi2    ko  WMFPi WMFBo
+.         ti  WMFP WMFBi2
+.         so  WMFP
+
+WMFD      ke  757 0
+WMFDn     ke  97 0
+WMFDnv    ta  WMFDn
+.         ti  WMFD WMFDnv
+WMFDc     ke  759 0
+WMFDz     ke  0 0
+.         ti  WMFDc WMFDz
+WMFDi     ke  780 0
+.         ti  WMFDi WMFDz
+
+WMKP      ke  780 0
+WMKPk     ta  WMKP
+WMKPn     ke  756 0
+WMKPnv    ta  WMKPn
+.         se  WMKPk WMKPnv WMKB
+.         so  WMDN
+
+WMKB      ke  755 0
+WMKBs     ta  WMKB
+WMKBx     ko  WMKBs WMKPk
+WMKBf     sa  KV52 BW
+WMKBfa    ko  WMKBf WMKBx
+WMKBfv    ta  WMKBfa
+WMKBz     ke  0 0
+.         su  WMKBfv WMKBz WMKG
+.         so  WMKN
+
+# まだ足されていない欄。門を控え、同じ語の後ろを足す
+WMKG      ke  781 0
+WMKGg     sa  KV44 BW
+WMKGga    ko  WMKGg WMKBx
+WMKGgv    ta  WMKGga
+.         ti  WMKG WMKGgv
+WMKGl     ke  782 0
+WMKGl0    ke  1 0
+WMKGl1    ko  WMKPk WMKGl0
+.         ti  WMKGl WMKGl1
+
+WMLP      ke  782 0
+WMLPl     ta  WMLP
+WMLPn     ke  756 0
+WMLPnv    ta  WMLPn
+.         se  WMLPl WMLPnv WMLB
+.         so  WMKE
+
+WMLB      ke  755 0
+WMLBs     ta  WMLB
+WMLBy     ko  WMLBs WMLPl
+WMLBf     sa  KV52 BW
+WMLBfa    ko  WMLBf WMLBy
+WMLBfv    ta  WMLBfa
+WMLBz     ke  0 0
+.         su  WMLBfv WMLBz WMLC
+.         so  WMLN
+
+# 語が同じかを見る
+WMLC      ke  0 0
+WMLCm1    sa  KV46 BW
+WMLCm1a   ko  WMLCm1 WMKBx
+WMLCm1v   ta  WMLCm1a
+WMLCm2    sa  KV46 BW
+WMLCm2a   ko  WMLCm2 WMLBy
+WMLCm2v   ta  WMLCm2a
+.         su  WMLCm1v WMLCm2v WMLD
+.         so  WMLN
+WMLD      ke  0 0
+WMLDe1    sa  KV48 BW
+WMLDe1a   ko  WMLDe1 WMKBx
+WMLDe1v   ta  WMLDe1a
+WMLDe2    sa  KV48 BW
+WMLDe2a   ko  WMLDe2 WMLBy
+WMLDe2v   ta  WMLDe2a
+.         su  WMLDe1v WMLDe2v WMLE
+.         so  WMLN
+WMLE      ke  0 0
+WMLEs1    sa  KV50 BW
+WMLEs1a   ko  WMLEs1 WMKBx
+WMLEs1v   ta  WMLEs1a
+WMLEs2    sa  KV50 BW
+WMLEs2a   ko  WMLEs2 WMLBy
+WMLEs2v   ta  WMLEs2a
+.         su  WMLEs1v WMLEs2v WMLF
+.         so  WMLN
+
+WMLF      ke  781 0
+WMLFg     ta  WMLF
+WMLFh     sa  KV44 BW
+WMLFha    ko  WMLFh WMLBy
+WMLFhv    ta  WMLFha
+WMLFa0    ke  6 0
+WMLFan    ta  WMLFa0
+WMLFak    sa  KV04 BW
+WMLFaka   ko  WMLFak WMLFan
+WMLFakv   ke  2 0
+.         ti  WMLFaka WMLFakv
+WMLFaaw   sa  KV06 BW
+WMLFaaa   ko  WMLFaaw WMLFan
+.         ti  WMLFaaa WMLFg
+WMLFabw   sa  KV08 BW
+WMLFaba   ko  WMLFabw WMLFan
+.         ti  WMLFaba WMLFhv
+WMLFadw   sa  KV10 BW
+WMLFada   ko  WMLFadw WMLFan
+WMLFaz    ke  0 0
+.         ti  WMLFada WMLFaz
+WMLFao1   ke  1 0
+WMLFan2   ko  WMLFan WMLFao1
+.         ti  WMLFa0 WMLFan2
+.         ti  WMLF WMLFan
+WMLFo     ke  1 0
+WMLFp     sa  KV52 BW
+WMLFpa    ko  WMLFp WMLBy
+.         ti  WMLFpa WMLFo
+.         so  WMLN
+
+WMLN      ke  782 0
+WMLNl     ta  WMLN
+WMLNo     ke  1 0
+WMLNl2    ko  WMLNl WMLNo
+.         ti  WMLN WMLNl2
+.         so  WMLP
+
+# 足し終えた。新しい欄へ書く
+WMKE      ke  0 0
+WMKEm     sa  KV46 BW
+WMKEma    ko  WMKEm WMKBx
+WMKEmv    ta  WMKEma
+WMKEe     sa  KV48 BW
+WMKEea    ko  WMKEe WMKBx
+WMKEev    ta  WMKEea
+WMKEs     sa  KV50 BW
+WMKEsa    ko  WMKEs WMKBx
+WMKEsv    ta  WMKEsa
+WMKEg     ke  781 0
+WMKEgv    ta  WMKEg
+WMKEan    ke  97 0
+WMKEanv   ta  WMKEan
+WMKEao    ke  1 0
+WMKEan2   ko  WMKEanv WMKEao
+WMKEas    ke  97 0
+.         ti  WMKEas WMKEan2
+WMKEpg    sa  KV44 BW
+WMKEpga   ko  WMKEpg WMKEanv
+.         ti  WMKEpga WMKEgv
+WMKEpm    sa  KV46 BW
+WMKEpma   ko  WMKEpm WMKEanv
+.         ti  WMKEpma WMKEmv
+WMKEpe    sa  KV48 BW
+WMKEpea   ko  WMKEpe WMKEanv
+.         ti  WMKEpea WMKEev
+WMKEps    sa  KV50 BW
+WMKEpsa   ko  WMKEps WMKEanv
+.         ti  WMKEpsa WMKEsv
+WMKEc     ke  759 0
+WMKEcv    ta  WMKEc
+WMKEo     ke  1 0
+WMKEc2    ko  WMKEcv WMKEo
+.         ti  WMKEc WMKEc2
+.         so  WMKN
+
+WMKN      ke  780 0
+WMKNk     ta  WMKN
+WMKNo     ke  1 0
+WMKNk2    ko  WMKNk WMKNo
+.         ti  WMKN WMKNk2
+.         so  WMKP
+
+WMDN      ke  758 0
+WMDNv     ta  WMDN
+WMDc1     ke  1 0
+.         su  WMDNv WMDc1 WR1R
+WMDc2     ke  2 0
+.         su  WMDNv WMDc2 WR2R
+.         so  BAD
+
+# ================= WCOMB：直積を取り、語を合わせてから畳む =================
+#
+#   引数  語 740 = 先頭1、741 = 個数1、742 = 先頭2、743 = 個数2、744 = 合わせ方
+#   返り  語 745 = 先頭、746 = 個数。戻り符号は語 747
+#
+#   合わせ方  0 : u ⋆ v         nu が使う
+#             1 : u⁻¹ ⋆ v       ye が使う
+#             2 : u ⋆ v⁻¹       yo が使う
+#             3 : 同じなら u、違えば空語   yu が使う
+
+WCOMB     ke  748 0
+WCn1      ke  741 0
+WCn1v     ta  WCn1
+WCn2      ke  743 0
+WCn2v     ta  WCn2
+WCtot     sa  WCn1v WCn2v
+.         ti  WCOMB WCtot
+WCbs      ke  749 0
+WCbsn     ke  97 0
+WCbsnv    ta  WCbsn
+.         ti  WCbs WCbsnv
+WCrs      ke  750 0
+WCrsz     ke  0 0
+.         ti  WCrs WCrsz
+
+# 枠を取る
+WCRP      ke  750 0
+WCRPi     ta  WCRP
+WCRPn     ke  748 0
+WCRPnv    ta  WCRPn
+.         se  WCRPi WCRPnv WCRB
+.         so  WCGO
+WCRB      ke  97 0
+WCRBv     ta  WCRB
+WCRBo     ke  1 0
+WCRBv2    ko  WCRBv WCRBo
+.         ti  WCRB WCRBv2
+WCRBi     ke  750 0
+WCRBiv    ta  WCRBi
+WCRBi2    ko  WCRBiv WCRBo
+.         ti  WCRBi WCRBi2
+.         so  WCRP
+
+# 直積。i が外、j が内になる
+WCGO      ke  751 0
+WCGOz     ke  0 0
+.         ti  WCGO WCGOz
+WCwk      ke  752 0
+.         ti  WCwk WCGOz
+
+WCIP      ke  751 0
+WCIPi     ta  WCIP
+WCIPn     ke  741 0
+WCIPnv    ta  WCIPn
+.         se  WCIPi WCIPnv WCIB
+.         so  WCMG
+WCIB      ke  753 0
+WCIBz     ke  0 0
+.         ti  WCIB WCIBz
+
+WCJP      ke  753 0
+WCJPj     ta  WCJP
+WCJPn     ke  743 0
+WCJPnv    ta  WCJPn
+.         se  WCJPj WCJPnv WCJB
+.         so  WCIN
+
+# 組ひとつ。門の箱を置き、語を合わせる
+WCJB      ke  740 0
+WCJBs     ta  WCJB
+WCJBi0    ke  751 0
+WCJBi     ta  WCJBi0
+WCxi      ko  WCJBs WCJBi
+WCJBt     ke  742 0
+WCJBts    ta  WCJBt
+WCJBj0    ke  753 0
+WCJBj     ta  WCJBj0
+WCyj      ko  WCJBts WCJBj
+WCg1      sa  KV44 BW
+WCg1a     ko  WCg1 WCxi
+WCg1v     ta  WCg1a
+WCg2      sa  KV44 BW
+WCg2a     ko  WCg2 WCyj
+WCg2v     ta  WCg2a
+WCmul0    ke  6 0
+WCmuln    ta  WCmul0
+WCmulk    sa  KV04 BW
+WCmulka   ko  WCmulk WCmuln
+WCmulkv   ke  3 0
+.         ti  WCmulka WCmulkv
+WCmulaw   sa  KV06 BW
+WCmulaa   ko  WCmulaw WCmuln
+.         ti  WCmulaa WCg1v
+WCmulbw   sa  KV08 BW
+WCmulba   ko  WCmulbw WCmuln
+.         ti  WCmulba WCg2v
+WCmuldw   sa  KV10 BW
+WCmulda   ko  WCmuldw WCmuln
+WCmulz    ke  0 0
+.         ti  WCmulda WCmulz
+WCmulo1   ke  1 0
+WCmuln2   ko  WCmuln WCmulo1
+.         ti  WCmul0 WCmuln2
+WCgs      ke  754 0
+.         ti  WCgs WCmuln
+
+WCm1      sa  KV46 BW
+WCm1a     ko  WCm1 WCxi
+WCm1v     ta  WCm1a
+WCsm1     ke  700 0
+.         ti  WCsm1 WCm1v
+WCe1      sa  KV48 BW
+WCe1a     ko  WCe1 WCxi
+WCe1v     ta  WCe1a
+WCse1     ke  701 0
+.         ti  WCse1 WCe1v
+WCs1      sa  KV50 BW
+WCs1a     ko  WCs1 WCxi
+WCs1v     ta  WCs1a
+WCss1     ke  702 0
+.         ti  WCss1 WCs1v
+WCm2      sa  KV46 BW
+WCm2a     ko  WCm2 WCyj
+WCm2v     ta  WCm2a
+WCsm2     ke  703 0
+.         ti  WCsm2 WCm2v
+WCe2      sa  KV48 BW
+WCe2a     ko  WCe2 WCyj
+WCe2v     ta  WCe2a
+WCse2     ke  704 0
+.         ti  WCse2 WCe2v
+WCs2      sa  KV50 BW
+WCs2a     ko  WCs2 WCyj
+WCs2v     ta  WCs2a
+WCss2     ke  705 0
+.         ti  WCss2 WCs2v
+
+WCmd      ke  744 0
+WCmdv     ta  WCmd
+WCmd1     ke  1 0
+.         su  WCmdv WCmd1 WCM1
+WCmd2     ke  2 0
+.         su  WCmdv WCmd2 WCM2
+WCmd3     ke  3 0
+.         su  WCmdv WCmd3 WCM3
+WCr0      ke  709 0
+WCr0v     ke  1 0
+.         ti  WCr0 WCr0v
+.         so  WMUL
+
+# 1 : u の逆元を左に取る
+WCM1      ke  0 0
+WCM1ar    ke  700 0
+WCM1arv   ta  WCM1ar
+WCM1aw    ke  720 0
+.         ti  WCM1aw WCM1arv
+WCM1br    ke  701 0
+WCM1brv   ta  WCM1br
+WCM1bw    ke  721 0
+.         ti  WCM1bw WCM1brv
+WCM1cr    ke  702 0
+WCM1crv   ta  WCM1cr
+WCM1cw    ke  722 0
+.         ti  WCM1cw WCM1crv
+WCM1r     ke  726 0
+WCM1rv    ke  1 0
+.         ti  WCM1r WCM1rv
+.         so  WINV
+
+WV1R      ke  0 0
+WV1Rar    ke  723 0
+WV1Rarv   ta  WV1Rar
+WV1Raw    ke  700 0
+.         ti  WV1Raw WV1Rarv
+WV1Rbr    ke  724 0
+WV1Rbrv   ta  WV1Rbr
+WV1Rbw    ke  701 0
+.         ti  WV1Rbw WV1Rbrv
+WV1Rcr    ke  725 0
+WV1Rcrv   ta  WV1Rcr
+WV1Rcw    ke  702 0
+.         ti  WV1Rcw WV1Rcrv
+WV1Rr     ke  709 0
+WV1Rrv    ke  1 0
+.         ti  WV1Rr WV1Rrv
+.         so  WMUL
+
+# 2 : v の逆元を右に取る
+WCM2      ke  0 0
+WCM2ar    ke  703 0
+WCM2arv   ta  WCM2ar
+WCM2aw    ke  720 0
+.         ti  WCM2aw WCM2arv
+WCM2br    ke  704 0
+WCM2brv   ta  WCM2br
+WCM2bw    ke  721 0
+.         ti  WCM2bw WCM2brv
+WCM2cr    ke  705 0
+WCM2crv   ta  WCM2cr
+WCM2cw    ke  722 0
+.         ti  WCM2cw WCM2crv
+WCM2r     ke  726 0
+WCM2rv    ke  2 0
+.         ti  WCM2r WCM2rv
+.         so  WINV
+
+WV2R      ke  0 0
+WV2Rar    ke  723 0
+WV2Rarv   ta  WV2Rar
+WV2Raw    ke  703 0
+.         ti  WV2Raw WV2Rarv
+WV2Rbr    ke  724 0
+WV2Rbrv   ta  WV2Rbr
+WV2Rbw    ke  704 0
+.         ti  WV2Rbw WV2Rbrv
+WV2Rcr    ke  725 0
+WV2Rcrv   ta  WV2Rcr
+WV2Rcw    ke  705 0
+.         ti  WV2Rcw WV2Rcrv
+WV2Rr     ke  709 0
+WV2Rrv    ke  1 0
+.         ti  WV2Rr WV2Rrv
+.         so  WMUL
+
+# 3 : 同じなら u、違えば空語
+WCM3      ke  700 0
+WCM3m1    ta  WCM3
+WCM3w2    ke  703 0
+WCM3m2    ta  WCM3w2
+.         su  WCM3m1 WCM3m2 WCM3a
+.         so  WCM3z
+WCM3a     ke  701 0
+WCM3e1    ta  WCM3a
+WCM3w4    ke  704 0
+WCM3e2    ta  WCM3w4
+.         su  WCM3e1 WCM3e2 WCM3b
+.         so  WCM3z
+WCM3b     ke  702 0
+WCM3s1    ta  WCM3b
+WCM3w6    ke  705 0
+WCM3s2    ta  WCM3w6
+.         su  WCM3s1 WCM3s2 WCM3k
+.         so  WCM3z
+WCM3k     ke  0 0
+WCM3kar   ke  700 0
+WCM3karv  ta  WCM3kar
+WCM3kaw   ke  706 0
+.         ti  WCM3kaw WCM3karv
+WCM3kbr   ke  701 0
+WCM3kbrv  ta  WCM3kbr
+WCM3kbw   ke  707 0
+.         ti  WCM3kbw WCM3kbrv
+WCM3kcr   ke  702 0
+WCM3kcrv  ta  WCM3kcr
+WCM3kcw   ke  708 0
+.         ti  WCM3kcw WCM3kcrv
+.         so  WC1R
+WCM3z     ke  706 0
+WCM3zz    ke  0 0
+.         ti  WCM3z WCM3zz
+WCM3ze    ke  707 0
+.         ti  WCM3ze WCM3zz
+WCM3zs    ke  708 0
+WCM3zo    ke  1 0
+.         ti  WCM3zs WCM3zo
+.         so  WC1R
+
+# 語が出た。枠の後ろから埋める
+WC1R      ke  748 0
+WC1Rt     ta  WC1R
+WC1Rw0    ke  752 0
+WC1Rw     ta  WC1Rw0
+WC1Ro     ke  1 0
+WC1Rn     ko  WC1Rw WC1Ro
+WC1Rng    si  WC1Rn
+WC1Rp     ko  WC1Rt WC1Rng
+WC1Rb0    ke  749 0
+WC1Rb     ta  WC1Rb0
+WC1Rx     ko  WC1Rb WC1Rp
+
+WC1Rg0    ke  754 0
+WC1Rg     ta  WC1Rg0
+WC1Rpg    sa  KV44 BW
+WC1Rpga   ko  WC1Rpg WC1Rx
+.         ti  WC1Rpga WC1Rg
+WC1Rm0    ke  706 0
+WC1Rm     ta  WC1Rm0
+WC1Rpm    sa  KV46 BW
+WC1Rpma   ko  WC1Rpm WC1Rx
+.         ti  WC1Rpma WC1Rm
+WC1Re0    ke  707 0
+WC1Re     ta  WC1Re0
+WC1Rpe    sa  KV48 BW
+WC1Rpea   ko  WC1Rpe WC1Rx
+.         ti  WC1Rpea WC1Re
+WC1Rs0    ke  708 0
+WC1Rs     ta  WC1Rs0
+WC1Rps    sa  KV50 BW
+WC1Rpsa   ko  WC1Rps WC1Rx
+.         ti  WC1Rpsa WC1Rs
+
+WC1Rk     ke  752 0
+WC1Rkv    ta  WC1Rk
+WC1Rk2    ko  WC1Rkv WC1Ro
+.         ti  WC1Rk WC1Rk2
+WC1Rj     ke  753 0
+WC1Rjv    ta  WC1Rj
+WC1Rj2    ko  WC1Rjv WC1Ro
+.         ti  WC1Rj WC1Rj2
+.         so  WCJP
+
+WCIN      ke  751 0
+WCINi     ta  WCIN
+WCINo     ke  1 0
+WCINi2    ko  WCINi WCINo
+.         ti  WCIN WCINi2
+.         so  WCIP
+
+# 直積が出来たら畳む
+WCMG      ke  755 0
+WCMGs0    ke  749 0
+WCMGs     ta  WCMGs0
+.         ti  WCMG WCMGs
+WCMGn     ke  756 0
+WCMGt0    ke  748 0
+WCMGt     ta  WCMGt0
+.         ti  WCMGn WCMGt
+WCMGr     ke  758 0
+WCMGrv    ke  1 0
+.         ti  WCMGr WCMGrv
+.         so  WMRG
+
+# 畳み終えた。返る
+WR1R      ke  745 0
+WR1Rs0    ke  757 0
+WR1Rs     ta  WR1Rs0
+.         ti  WR1R WR1Rs
+WR1Rn     ke  746 0
+WR1Rn0    ke  759 0
+WR1Rnv    ta  WR1Rn0
+.         ti  WR1Rn WR1Rnv
+WR1Rg     ke  747 0
+WR1Rgv    ta  WR1Rg
+WR1c1     ke  1 0
+.         su  WR1Rgv WR1c1 WK1R
+WR1c2     ke  2 0
+.         su  WR1Rgv WR1c2 WK2R
+WR1c3     ke  3 0
+.         su  WR1Rgv WR1c3 WK3R
+WR1c4     ke  4 0
+.         su  WR1Rgv WR1c4 WK4R
+WR1c5     ke  5 0
+.         su  WR1Rgv WR1c5 WK5R
+.         so  BAD
+

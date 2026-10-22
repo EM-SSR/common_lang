@@ -1,0 +1,15 @@
+{
+ "id": "J_g/preparation_rot/h2_N16_p1",
+ "function": "J_g",
+ "family": "preparation_rot",
+ "section": "式 10.3、10.11",
+ "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+ "phi": 1.5707963267948966,
+ "meta": {
+  "tag": "h2_N16",
+  "word": "h2",
+  "N": 16,
+  "offset": 1.5707963267948966
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

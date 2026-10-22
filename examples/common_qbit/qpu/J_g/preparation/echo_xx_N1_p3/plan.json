@@ -1,0 +1,14 @@
+{
+ "id": "J_g/preparation/echo_xx_N1_p3",
+ "function": "J_g",
+ "family": "preparation",
+ "section": "式 9.2〜9.8",
+ "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+ "phi": 4.71238898038469,
+ "meta": {
+  "tag": "echo_xx_N1",
+  "word": "echo_xx",
+  "N": 1
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

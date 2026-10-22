@@ -1,0 +1,2520 @@
+# commonc 量子層 — compile 時の作図（lane-qbit だけが受ける）
+# doc: chamber.def omega.closure beta.def
+#
+# 量子の語が当たるたびに、Counter 完全状態の ρ = [h] を compile 時に作図する。実行時に
+# 残るのは、測定座標 u0 と境界の点の比較だけになる。
+#
+# ---- 作図の対象 ----
+#
+#   振幅      ζ = e^{iπ/4} の整数係数 (a, b, c, d) で a + bζ + cζ² + dζ³ を表す。規格化しない
+#   状態      枝ごとに 2^NQ 個の振幅。量子ビット q は二分の段 q に当たる。番号 k の振幅と
+#             k + 2^q の振幅が、段 q で隣り合う二つの領域の点になる
+#   枝        それまでの測定結果の並び x_1 x_2 … で分かれた状態。枝 b の子は 2b + x
+#   写像      枝ごとに u0 = (α u + β)/(γ u + δ)（u はいまの測定座標）。成分は Z[√2] の対 (A, B)
+#
+# ---- 作図 ----
+#
+#   H   (α0, α1) → (α0 + α1, α0 − α1)     二つの折返しの像の和（平行四辺形）
+#   X   (α0, α1) → (α1, α0)               対角の折返し R_ij
+#   Z   α1 → −α1                          実軸の折返し R_r
+#   S   α1 → ζ² α1        T   α1 → ζ α1   Π_i の回転。ζ (a,b,c,d) = (−d, a, b, c)
+#   Y = ζ² X Z、SX = H S H
+#   rx ry rz   角の閉包の点 z（QSROT）を対の二点へ当てる
+#
+#   重み  |α|² = (a² + b² + c² + d²) + √2 (ab + bc + cd − ad)          論文 7.4b
+#
+# ---- 測定（論文 3.6、3.7、3.16）----
+#
+#   枝 b の重み w0、w1、N = w0 + w1 から、u0 の側の境界の点 T = (α w0 + β N)/(γ w0 + δ N) を作る。
+#   T を二分の作図で 62 桁まで決め、θ = ⌈T·2^62⌉ を image の表へ置く。実行時は
+#   x = [θ_b ≤ U0]（u0 = U0/2^62）。各桁の判定は X + Y√2 の符号で、二次形式で決める。
+#
+#     X ≥ 0、Y ≥ 0  → 非負        X ≥ 0、Y < 0 → [2Y² ≤ X²]
+#     X < 0、Y ≤ 0  → 負          X < 0、Y > 0 → [X² ≤ 2Y²]
+#
+#   測定、移送、メビウス、β_a は、どれも写像へ右から一つの行列を掛ける（QSMUL の説明を見る）
+#
+# ---- リセット（論文 12.15、12.16）----
+#
+#   R_C の u の成分は論文に形が無い。host が候補を語 1061 で明示する。
+#     1  u を測定と同じく使う。子 1 に X を当てて |0> へ戻す
+#   それ以外は失敗にする（候補を黙って選ばない）
+#
+# ---- 語の割付 ----
+#
+#   host が置く
+#     1000 QBASE   状態の置き場の基底      1001 NBMAX  枝の上限
+#     1002 QMAX    量子ビットの上限        1003 TB0    image の作業領域に置く境界の表の基底
+#     1061 RC      リセットの u の候補     1062 ANGB 角の表   1063 POWB 2 の冪の表   1064 POWN その長さ
+#     1065 ゲートごとの候補の作用の表     1066 回転の作図に足す桁   1067 状態の保存の書き出し場所
+#   commonc が持つ
+#     1004 初期化の印   1005 NQ   1006 DIM = 2^NQ   1007 NBR 枝の数
+#     1008 SB 枝の刻み（4·2^QMAX）   1009 UMB 写像の置き場   1010 TBN 次の表の番地
+#     1011 ゲートの番号   1012 q1   1013 q2   1014 S1 = 2^q1   1015 S2 = 2^q2
+#     1016 移送の x      1017 b    1018 k    1019 c1   1020 c2   1021 枝の基底
+#     1041 走り          1042 いま掛ける作図   1043 SX の段   1048 表の箱
+#     1060 入口の種類（1 一量子ビット、2 二量子ビット、3 測定、4 リセット、5 移送、6 回転、7 メビウス）
+#     1068 書き出しの位置   1069 回転の数   1070 回転の印   1095 境界の桁が決まらない印
+#     1100+k  2^k（k < 64）
+#   写像の置き場 UMB + 16b + j
+#     j = 0..7  α β γ δ の (A, B)   8..11  w0、w1 の (A, B)   12  届かない枝の印
+
+# ================= 前置き：初期化、量子ビットの番号、状態の拡張 =================
+
+QSPRE     ke  1004 0
+QSPf      ta  QSPRE
+QSPz      ke  0 0
+.         su  QSPf QSPz QSINI
+.         so  QSPQ
+
+# ---- 初期化。|0…0> の一枝、写像は恒等（α = δ = 1、β = γ = 0）----
+QSINI     ke  1004 0
+QSI1      ke  1 0
+.         ti  QSINI QSI1
+QSI2      ke  1005 0
+QSI0      ke  0 0
+.         ti  QSI2 QSI0
+QSI3      ke  1006 0
+.         ti  QSI3 QSI1
+QSI4      ke  1007 0
+.         ti  QSI4 QSI1
+QSI5      ke  1100 0
+.         ti  QSI5 QSI1
+QSI6      ke  1041 0
+QSI6a     ke  1101 0
+.         ti  QSI6 QSI6a
+QSIL      ke  1041 0
+QSIp      ta  QSIL
+QSIo      ke  1 0
+QSIq      si  QSIo
+QSIr      ko  QSIp QSIq
+QSIv      ta  QSIr
+QSIw      ko  QSIv QSIv
+.         ti  QSIp QSIw
+QSIx      ko  QSIp QSIo
+.         ti  QSIL QSIx
+QSIe      ke  1164 0
+.         se  QSIx QSIe QSIL
+QSI7      ke  1002 0
+QSI7a     ta  QSI7
+QSI7b     ke  1100 0
+QSI7c     ko  QSI7b QSI7a
+QSI7d     ta  QSI7c
+QSI7e     ke  4 0
+QSI7f     sa  QSI7d QSI7e
+QSI7g     ke  1008 0
+.         ti  QSI7g QSI7f
+QSI8      ke  1001 0
+QSI8a     ta  QSI8
+QSI8b     sa  QSI8a QSI7f
+QSI8c     ke  1000 0
+QSI8d     ta  QSI8c
+QSI8e     ko  QSI8d QSI8b
+QSI8f     ke  1009 0
+.         ti  QSI8f QSI8e
+QSI9      ke  1003 0
+QSI9a     ta  QSI9
+QSI9b     ke  1010 0
+.         ti  QSI9b QSI9a
+.         ti  QSI8d QSI1
+.         ti  QSI8e QSI1
+QSIc      ke  6 0
+QSId      ko  QSI8e QSIc
+.         ti  QSId QSI1
+# 回転の作図が使う 2 の冪の表：POWB + j = 2^j（j < POWN）
+QSIP      ke  1063 0
+QSIPa     ta  QSIP
+.         ti  QSIPa QSI1
+QSIPb     ke  1041 0
+QSIPc     ko  QSIPa QSI1
+.         ti  QSIPb QSIPc
+QSIPL     ke  1041 0
+QSIPp     ta  QSIPL
+QSIPo     ke  1 0
+QSIPq     si  QSIPo
+QSIPr     ko  QSIPp QSIPq
+QSIPv     ta  QSIPr
+QSIPw     ko  QSIPv QSIPv
+.         ti  QSIPp QSIPw
+QSIPx     ko  QSIPp QSIPo
+.         ti  QSIPL QSIPx
+QSIPn     ke  1064 0
+QSIPN     ta  QSIPn
+QSIPe     ko  QSIPa QSIPN
+.         se  QSIPx QSIPe QSIPL
+QSIQ      ke  1060 0
+QSIQa     ta  QSIQ
+QSIQ7     ke  7 0
+.         su  QSIQa QSIQ7 QSMO0
+.         so  QSPQ
+
+# ---- 量子ビットの番号。frontier の箱は定数（Cst、深度 0）でなければならない ----
+QSPQ      ke  10 0
+QSQc      ta  QSPQ
+QSQb      sa  KV02 BW
+QSQa      ko  QSQb QSQc
+QSQn      ta  QSQa
+QSQz      ke  0 0
+.         se  QSQn QSQz BAD
+QSQm      ke  1048576 0
+.         se  QSQn QSQm QSQ1
+.         so  BAD
+QSQ1      sa  KV04 BW
+QSQ1a     ko  QSQ1 QSQn
+QSQ1b     ta  QSQ1a
+QSQ1c     ke  1 0
+.         su  QSQ1b QSQ1c QSQ2
+.         so  BAD
+QSQ2      sa  KV06 BW
+QSQ2a     ko  QSQ2 QSQn
+QSQ2b     ta  QSQ2a
+QSQ2c     ke  1012 0
+.         ti  QSQ2c QSQ2b
+QSQ2d     ke  1013 0
+.         ti  QSQ2d QSQ2b
+QSQ2e     ke  1060 0
+QSQ2f     ta  QSQ2e
+QSQ2g     ke  2 0
+.         su  QSQ2f QSQ2g QSQ3
+.         so  QSX
+
+# 二つ目の量子ビット
+QSQ3      ke  10 0
+QSQ3a     ta  QSQ3
+QSQ3o     ke  1 0
+QSQ3b     ko  QSQ3a QSQ3o
+QSQ3c     sa  KV02 BW
+QSQ3d     ko  QSQ3c QSQ3b
+QSQ3n     ta  QSQ3d
+QSQ3z     ke  0 0
+.         se  QSQ3n QSQ3z BAD
+QSQ3m     ke  1048576 0
+.         se  QSQ3n QSQ3m QSQ4
+.         so  BAD
+QSQ4      sa  KV04 BW
+QSQ4a     ko  QSQ4 QSQ3n
+QSQ4b     ta  QSQ4a
+QSQ4c     ke  1 0
+.         su  QSQ4b QSQ4c QSQ5
+.         so  BAD
+QSQ5      sa  KV06 BW
+QSQ5a     ko  QSQ5 QSQ3n
+QSQ5b     ta  QSQ5a
+QSQ5c     ke  1013 0
+.         ti  QSQ5c QSQ5b
+.         so  QSX
+
+# ---- 状態を広げる。新しい量子ビットは |0>。上半分は一度も書いていないので零のまま ----
+QSX       ke  1005 0
+QSXn      ta  QSX
+QSXq1     ke  1012 0
+QSXa      ta  QSXq1
+.         se  QSXa QSXn QSX2
+.         so  QSXE
+QSX2      ke  1013 0
+QSX2a     ta  QSX2
+QSX2n     ke  1005 0
+QSX2b     ta  QSX2n
+.         se  QSX2a QSX2b QSXD
+.         so  QSXE
+
+QSXE      ke  1005 0
+QSXEa     ta  QSXE
+QSXEm     ke  1002 0
+QSXEb     ta  QSXEm
+.         se  QSXEa QSXEb QSXE2
+.         so  BAD
+QSXE2     ke  1 0
+QSXEc     ko  QSXEa QSXE2
+.         ti  QSXE QSXEc
+QSXEd     ke  1006 0
+QSXEe     ta  QSXEd
+QSXEf     ko  QSXEe QSXEe
+.         ti  QSXEd QSXEf
+.         so  QSX
+
+# ---- 段の幅 S1 = 2^q1、S2 = 2^q2。入口の種類で分ける ----
+QSXD      ke  1012 0
+QSXDa     ta  QSXD
+QSXDb     ke  1100 0
+QSXDc     ko  QSXDb QSXDa
+QSXDd     ta  QSXDc
+QSXDe     ke  1014 0
+.         ti  QSXDe QSXDd
+QSXDf     ke  1013 0
+QSXDg     ta  QSXDf
+QSXDh     ko  QSXDb QSXDg
+QSXDi     ta  QSXDh
+QSXDj     ke  1015 0
+.         ti  QSXDj QSXDi
+QSXDk     ke  1060 0
+QSXDl     ta  QSXDk
+QSXD6     ke  6 0
+.         su  QSXDl QSXD6 QSROT
+QSXDm     ke  3 0
+.         se  QSXDl QSXDm QSAP
+.         so  QSW
+
+# ================= ゲートの作図 =================
+#
+# SX は H、S、H の三回に分ける。語 1043 が段（0、1、2）を持つ
+
+QSAP      ke  1011 0
+QSAPa     ta  QSAP
+QSAPb     ke  1042 0
+QSAPc     ke  1043 0
+QSAPz     ke  0 0
+.         ti  QSAPc QSAPz
+QSAPd     ke  8 0
+.         su  QSAPa QSAPd QSAP2
+.         ti  QSAPb QSAPa
+.         so  QSAB0
+QSAP2     ke  1042 0
+QSAP2z    ke  0 0
+.         ti  QSAP2 QSAP2z
+.         so  QSAB0
+
+# 一回の作図が終わった。SX なら次の段へ
+QSAF      ke  1011 0
+QSAFa     ta  QSAF
+QSAFb     ke  8 0
+.         su  QSAFa QSAFb QSAF2
+.         so  QSGA
+QSAF2     ke  1043 0
+QSAF2a    ta  QSAF2
+QSAF2o    ke  1 0
+QSAF2b    ko  QSAF2a QSAF2o
+.         ti  QSAF2 QSAF2b
+QSAF2c    ke  1042 0
+.         su  QSAF2b QSAF2o QSAF3
+QSAF2d    ke  2 0
+.         su  QSAF2b QSAF2d QSAF4
+.         so  QSGA
+QSAF3     ke  4 0
+.         ti  QSAF2c QSAF3
+.         so  QSAB0
+QSAF4     ke  0 0
+.         ti  QSAF2c QSAF4
+.         so  QSAB0
+
+# ---- 枝の走査 ----
+QSAB0     ke  1017 0
+QSAB0z    ke  0 0
+.         ti  QSAB0 QSAB0z
+QSAB      ke  1017 0
+QSABb     ta  QSAB
+QSABn     ke  1007 0
+QSABN     ta  QSABn
+.         su  QSABb QSABN QSAF
+QSABs     ke  1008 0
+QSABS     ta  QSABs
+QSABm     sa  QSABb QSABS
+QSABq     ke  1000 0
+QSABQ     ta  QSABq
+QSABr     ko  QSABQ QSABm
+QSABw     ke  1021 0
+.         ti  QSABw QSABr
+QSABk     ke  1018 0
+QSABz     ke  0 0
+.         ti  QSABk QSABz
+QSABc1    ke  1019 0
+.         ti  QSABc1 QSABz
+QSABc2    ke  1020 0
+.         ti  QSABc2 QSABz
+
+# ---- 振幅の走査。c1、c2 は段 q1、q2 の中の位置で、[S ≤ c] がその段の左右になる ----
+QSAK      ke  1018 0
+QSAKk     ta  QSAK
+QSAKd     ke  1006 0
+QSAKD     ta  QSAKd
+.         su  QSAKk QSAKD QSABX
+QSAKg     ke  1042 0
+QSAKG     ta  QSAKg
+QSAK9     ke  9 0
+.         se  QSAKG QSAK9 QSA1
+QSAK12    ke  11 0
+.         se  QSAK12 QSAKG QSA1
+.         so  QSA2
+
+# 一量子ビット：左の領域（[S1 ≤ c1] = 0）の点と、段 q1 で隣の点の対
+QSA1      ke  1019 0
+QSA1c     ta  QSA1
+QSA1s     ke  1014 0
+QSA1S     ta  QSA1s
+.         se  QSA1c QSA1S QSA1P
+.         so  QSAN
+
+QSA1P     ke  1021 0
+QSA1B     ta  QSA1P
+QSA1k     ke  1018 0
+QSA1K     ta  QSA1k
+QSA1f     ke  4 0
+QSA1o     sa  QSA1K QSA1f
+QSA0      ko  QSA1B QSA1o
+QSA1t     ke  1014 0
+QSA1T     ta  QSA1t
+QSA1u     sa  QSA1T QSA1f
+QSA4      ko  QSA0 QSA1u
+QSAo1     ke  1 0
+QSAo2     ke  2 0
+QSAo3     ke  3 0
+QSA0b     ko  QSA0 QSAo1
+QSA0c     ko  QSA0 QSAo2
+QSA0d     ko  QSA0 QSAo3
+QSA4b     ko  QSA4 QSAo1
+QSA4c     ko  QSA4 QSAo2
+QSA4d     ko  QSA4 QSAo3
+QZPa        ta  QSA0
+QZPb        ta  QSA0b
+QZPc        ta  QSA0c
+QZPd        ta  QSA0d
+QZQa        ta  QSA4
+QZQb        ta  QSA4b
+QZQc        ta  QSA4c
+QZQd        ta  QSA4d
+QZPan       si  QZPa
+QZPbn       si  QZPb
+QZPcn       si  QZPc
+QZPdn       si  QZPd
+QZQan       si  QZQa
+QZQbn       si  QZQb
+QZQcn       si  QZQc
+QZQdn       si  QZQd
+QSA1g     ke  1042 0
+QSA1G     ta  QSA1g
+QSAc0     ke  0 0
+.         su  QSA1G QSAc0 QSAH
+QSAc1     ke  1 0
+.         su  QSA1G QSAc1 QSAX
+QSAc2     ke  2 0
+.         su  QSA1G QSAc2 QSAY
+QSAc3     ke  3 0
+.         su  QSA1G QSAc3 QSAZ
+QSAc4     ke  4 0
+.         su  QSA1G QSAc4 QSAS
+QSAc5     ke  5 0
+.         su  QSA1G QSAc5 QSASD
+QSAc6     ke  6 0
+.         su  QSA1G QSAc6 QSAT
+QSAc7     ke  7 0
+.         su  QSA1G QSAc7 QSATD
+QSAc12    ke  12 0
+.         su  QSA1G QSAc12 QSARX
+QSAc13    ke  13 0
+.         su  QSA1G QSAc13 QSARY
+QSAc14    ke  14 0
+.         su  QSA1G QSAc14 QSARZ
+.         so  BAD
+
+# 回転：点 z = (X, Y)（qstate の QSROT が作る）を対の二点へ当てる。ζ²(a,b,c,d) = (−c,−d,a,b)
+#   rx  α0' = X α0 − Y ζ² α1      α1' = −Y ζ² α0 + X α1
+#   ry  α0' = X α0 − Y α1         α1' = Y α0 + X α1
+#   rz  α0' = X α0 − Y ζ² α0      α1' = X α1 + Y ζ² α1
+QSARX     ke  1075 0
+QSRXx     ta  QSARX
+QSRXy0    ke  1076 0
+QSRXy     ta  QSRXy0
+QSRXa     sa  QSRXx QZPa
+QSRXb     sa  QSRXy QZQc
+QSRXc     ko  QSRXa QSRXb
+.         ti  QSA0 QSRXc
+QSRXd     sa  QSRXx QZPb
+QSRXe     sa  QSRXy QZQd
+QSRXf     ko  QSRXd QSRXe
+.         ti  QSA0b QSRXf
+QSRXg     sa  QSRXx QZPc
+QSRXh     sa  QSRXy QZQan
+QSRXi     ko  QSRXg QSRXh
+.         ti  QSA0c QSRXi
+QSRXj     sa  QSRXx QZPd
+QSRXk     sa  QSRXy QZQbn
+QSRXl     ko  QSRXj QSRXk
+.         ti  QSA0d QSRXl
+QSRXm     sa  QSRXy QZPc
+QSRXn     sa  QSRXx QZQa
+QSRXo     ko  QSRXm QSRXn
+.         ti  QSA4 QSRXo
+QSRXp     sa  QSRXy QZPd
+QSRXq     sa  QSRXx QZQb
+QSRXr     ko  QSRXp QSRXq
+.         ti  QSA4b QSRXr
+QSRXs     sa  QSRXy QZPan
+QSRXt     sa  QSRXx QZQc
+QSRXu     ko  QSRXs QSRXt
+.         ti  QSA4c QSRXu
+QSRXv     sa  QSRXy QZPbn
+QSRXw     sa  QSRXx QZQd
+QSRXz     ko  QSRXv QSRXw
+.         ti  QSA4d QSRXz
+.         so  QSAN
+
+QSARY     ke  1075 0
+QSRYx     ta  QSARY
+QSRYy0    ke  1076 0
+QSRYy     ta  QSRYy0
+QSRYa     sa  QSRYx QZPa
+QSRYb     sa  QSRYy QZQan
+QSRYc     ko  QSRYa QSRYb
+.         ti  QSA0 QSRYc
+QSRYd     sa  QSRYx QZPb
+QSRYe     sa  QSRYy QZQbn
+QSRYf     ko  QSRYd QSRYe
+.         ti  QSA0b QSRYf
+QSRYg     sa  QSRYx QZPc
+QSRYh     sa  QSRYy QZQcn
+QSRYi     ko  QSRYg QSRYh
+.         ti  QSA0c QSRYi
+QSRYj     sa  QSRYx QZPd
+QSRYk     sa  QSRYy QZQdn
+QSRYl     ko  QSRYj QSRYk
+.         ti  QSA0d QSRYl
+QSRYm     sa  QSRYy QZPa
+QSRYn     sa  QSRYx QZQa
+QSRYo     ko  QSRYm QSRYn
+.         ti  QSA4 QSRYo
+QSRYp     sa  QSRYy QZPb
+QSRYq     sa  QSRYx QZQb
+QSRYr     ko  QSRYp QSRYq
+.         ti  QSA4b QSRYr
+QSRYs     sa  QSRYy QZPc
+QSRYt     sa  QSRYx QZQc
+QSRYu     ko  QSRYs QSRYt
+.         ti  QSA4c QSRYu
+QSRYv     sa  QSRYy QZPd
+QSRYw     sa  QSRYx QZQd
+QSRYz     ko  QSRYv QSRYw
+.         ti  QSA4d QSRYz
+.         so  QSAN
+
+QSARZ     ke  1075 0
+QSRZx     ta  QSARZ
+QSRZy0    ke  1076 0
+QSRZy     ta  QSRZy0
+QSRZa     sa  QSRZx QZPa
+QSRZb     sa  QSRZy QZPc
+QSRZc     ko  QSRZa QSRZb
+.         ti  QSA0 QSRZc
+QSRZd     sa  QSRZx QZPb
+QSRZe     sa  QSRZy QZPd
+QSRZf     ko  QSRZd QSRZe
+.         ti  QSA0b QSRZf
+QSRZg     sa  QSRZx QZPc
+QSRZh     sa  QSRZy QZPan
+QSRZi     ko  QSRZg QSRZh
+.         ti  QSA0c QSRZi
+QSRZj     sa  QSRZx QZPd
+QSRZk     sa  QSRZy QZPbn
+QSRZl     ko  QSRZj QSRZk
+.         ti  QSA0d QSRZl
+QSRZm     sa  QSRZx QZQa
+QSRZn     sa  QSRZy QZQcn
+QSRZo     ko  QSRZm QSRZn
+.         ti  QSA4 QSRZo
+QSRZp     sa  QSRZx QZQb
+QSRZq     sa  QSRZy QZQdn
+QSRZr     ko  QSRZp QSRZq
+.         ti  QSA4b QSRZr
+QSRZs     sa  QSRZx QZQc
+QSRZt     sa  QSRZy QZQa
+QSRZu     ko  QSRZs QSRZt
+.         ti  QSA4c QSRZu
+QSRZv     sa  QSRZx QZQd
+QSRZw     sa  QSRZy QZQb
+QSRZz     ko  QSRZv QSRZw
+.         ti  QSA4d QSRZz
+.         so  QSAN
+
+# H：和と差
+QSAH      ko  QZPa QZQa
+.         ti  QSA0 QSAH
+QSAHb     ko  QZPb QZQb
+.         ti  QSA0b QSAHb
+QSAHc     ko  QZPc QZQc
+.         ti  QSA0c QSAHc
+QSAHd     ko  QZPd QZQd
+.         ti  QSA0d QSAHd
+QSAHe     ko  QZPa QZQan
+.         ti  QSA4 QSAHe
+QSAHf     ko  QZPb QZQbn
+.         ti  QSA4b QSAHf
+QSAHg     ko  QZPc QZQcn
+.         ti  QSA4c QSAHg
+QSAHh     ko  QZPd QZQdn
+.         ti  QSA4d QSAHh
+.         so  QSAN
+
+# X：入れ替え
+QSAX      ke  0 0
+.         ti  QSA0 QZQa
+.         ti  QSA0b QZQb
+.         ti  QSA0c QZQc
+.         ti  QSA0d QZQd
+.         ti  QSA4 QZPa
+.         ti  QSA4b QZPb
+.         ti  QSA4c QZPc
+.         ti  QSA4d QZPd
+.         so  QSAN
+
+# Y：α0' = ζ⁶ α1 = (c, d, −a, −b)、α1' = ζ² α0 = (−c, −d, a, b)
+QSAY      ke  0 0
+.         ti  QSA0 QZQc
+.         ti  QSA0b QZQd
+.         ti  QSA0c QZQan
+.         ti  QSA0d QZQbn
+.         ti  QSA4 QZPcn
+.         ti  QSA4b QZPdn
+.         ti  QSA4c QZPa
+.         ti  QSA4d QZPb
+.         so  QSAN
+
+# Z：α1 → −α1
+QSAZ      ke  0 0
+.         ti  QSA4 QZQan
+.         ti  QSA4b QZQbn
+.         ti  QSA4c QZQcn
+.         ti  QSA4d QZQdn
+.         so  QSAN
+
+# S：α1 → ζ² α1 = (−c, −d, a, b)
+QSAS      ke  0 0
+.         ti  QSA4 QZQcn
+.         ti  QSA4b QZQdn
+.         ti  QSA4c QZQa
+.         ti  QSA4d QZQb
+.         so  QSAN
+
+# SDG：α1 → ζ⁶ α1 = (c, d, −a, −b)
+QSASD     ke  0 0
+.         ti  QSA4 QZQc
+.         ti  QSA4b QZQd
+.         ti  QSA4c QZQan
+.         ti  QSA4d QZQbn
+.         so  QSAN
+
+# T：α1 → ζ α1 = (−d, a, b, c)
+QSAT      ke  0 0
+.         ti  QSA4 QZQdn
+.         ti  QSA4b QZQa
+.         ti  QSA4c QZQb
+.         ti  QSA4d QZQc
+.         so  QSAN
+
+# TDG：α1 → ζ⁷ α1 = (b, c, d, −a)
+QSATD     ke  0 0
+.         ti  QSA4 QZQb
+.         ti  QSA4b QZQc
+.         ti  QSA4c QZQd
+.         ti  QSA4d QZQan
+.         so  QSAN
+
+# 二量子ビット：q1 が制御（CX、CZ）、SWAP は q1 と q2 の入れ替え
+QSA2      ke  1019 0
+QSA2c     ta  QSA2
+QSA2s     ke  1014 0
+QSA2S     ta  QSA2s
+.         se  QSA2c QSA2S QSAN
+QSA2d     ke  1020 0
+QSA2D     ta  QSA2d
+QSA2t     ke  1015 0
+QSA2T     ta  QSA2t
+QSA2g     ke  1042 0
+QSA2G     ta  QSA2g
+QSA2z     ke  10 0
+.         su  QSA2G QSA2z QSACZ
+.         se  QSA2D QSA2T QSA2P
+.         so  QSAN
+
+# 制御が右、標的が左：入れ替える相手の番地
+QSA2P     ke  1021 0
+QSA2B     ta  QSA2P
+QSA2k     ke  1018 0
+QSA2K     ta  QSA2k
+QSA2f     ke  4 0
+QSA2o     sa  QSA2K QSA2f
+QZR0        ko  QSA2B QSA2o
+QSA2u     sa  QSA2T QSA2f
+QSA2e     ke  11 0
+.         su  QSA2G QSA2e QSA2W
+QZR4        ko  QZR0 QSA2u
+.         so  QSA2V
+QSA2W     sa  QSA2S QSA2f
+QSA2Wn    si  QSA2W
+QSA2Wa    ko  QZR0 QSA2Wn
+QZR4w       ko  QSA2Wa QSA2u
+.         so  QSA2V2
+
+QSA2V     ke  1 0
+QSA2V0    ke  2 0
+QSA2V1    ke  3 0
+QZR0b       ko  QZR0 QSA2V
+QZR0c       ko  QZR0 QSA2V0
+QZR0d       ko  QZR0 QSA2V1
+QZR4b       ko  QZR4 QSA2V
+QZR4c       ko  QZR4 QSA2V0
+QZR4d       ko  QZR4 QSA2V1
+QZUa        ta  QZR0
+QZUb        ta  QZR0b
+QZUc        ta  QZR0c
+QZUd        ta  QZR0d
+QZVa        ta  QZR4
+QZVb        ta  QZR4b
+QZVc        ta  QZR4c
+QZVd        ta  QZR4d
+.         ti  QZR0 QZVa
+.         ti  QZR0b QZVb
+.         ti  QZR0c QZVc
+.         ti  QZR0d QZVd
+.         ti  QZR4 QZUa
+.         ti  QZR4b QZUb
+.         ti  QZR4c QZUc
+.         ti  QZR4d QZUd
+.         so  QSAN
+
+QSA2V2    ke  1 0
+QSA2W0    ke  2 0
+QSA2W1    ke  3 0
+QZW0b       ko  QZR0 QSA2V2
+QZW0c       ko  QZR0 QSA2W0
+QZW0d       ko  QZR0 QSA2W1
+QZW4b       ko  QZR4w QSA2V2
+QZW4c       ko  QZR4w QSA2W0
+QZW4d       ko  QZR4w QSA2W1
+QZXa        ta  QZR0
+QZXb        ta  QZW0b
+QZXc        ta  QZW0c
+QZXd        ta  QZW0d
+QZYa        ta  QZR4w
+QZYb        ta  QZW4b
+QZYc        ta  QZW4c
+QZYd        ta  QZW4d
+.         ti  QZR0 QZYa
+.         ti  QZW0b QZYb
+.         ti  QZW0c QZYc
+.         ti  QZW0d QZYd
+.         ti  QZR4w QZXa
+.         ti  QZW4b QZXb
+.         ti  QZW4c QZXc
+.         ti  QZW4d QZXd
+.         so  QSAN
+
+# CZ：制御も標的も右なら負
+QSACZ     ke  1020 0
+QSACZd    ta  QSACZ
+QSACZt    ke  1015 0
+QSACZT    ta  QSACZt
+.         se  QSACZd QSACZT QSAN
+QSACZb    ke  1021 0
+QSACZB    ta  QSACZb
+QSACZk    ke  1018 0
+QSACZK    ta  QSACZk
+QSACZf    ke  4 0
+QSACZo    sa  QSACZK QSACZf
+QZZ0        ko  QSACZB QSACZo
+QSACZ1    ke  1 0
+QSACZ2    ke  2 0
+QSACZ3    ke  3 0
+QZZ0b       ko  QZZ0 QSACZ1
+QZZ0c       ko  QZZ0 QSACZ2
+QZZ0d       ko  QZZ0 QSACZ3
+QZZa        ta  QZZ0
+QZZb        ta  QZZ0b
+QZZc        ta  QZZ0c
+QZZd        ta  QZZ0d
+QZZan       si  QZZa
+QZZbn       si  QZZb
+QZZcn       si  QZZc
+QZZdn       si  QZZd
+.         ti  QZZ0 QZZan
+.         ti  QZZ0b QZZbn
+.         ti  QZZ0c QZZcn
+.         ti  QZZ0d QZZdn
+.         so  QSAN
+
+# ---- 次の振幅。c1、c2 は段の幅の二倍で一巡する ----
+QSAN      ke  1018 0
+QSANk     ta  QSAN
+QSANo     ke  1 0
+QSANk2    ko  QSANk QSANo
+.         ti  QSAN QSANk2
+QSANa     ke  1019 0
+QSANc     ta  QSANa
+QSANc2    ko  QSANc QSANo
+.         ti  QSANa QSANc2
+QSANs     ke  1014 0
+QSANS     ta  QSANs
+QSANS2    ko  QSANS QSANS
+.         su  QSANc2 QSANS2 QSAN1
+.         so  QSAN2
+QSAN1     ke  1019 0
+QSAN1z    ke  0 0
+.         ti  QSAN1 QSAN1z
+QSAN2     ke  1020 0
+QSAN2c    ta  QSAN2
+QSAN2o    ke  1 0
+QSAN2d    ko  QSAN2c QSAN2o
+.         ti  QSAN2 QSAN2d
+QSAN2s    ke  1015 0
+QSAN2S    ta  QSAN2s
+QSAN2T    ko  QSAN2S QSAN2S
+.         su  QSAN2d QSAN2T QSAN3
+.         so  QSAK
+QSAN3     ke  1020 0
+QSAN3z    ke  0 0
+.         ti  QSAN3 QSAN3z
+.         so  QSAK
+
+# 枝の終わり
+QSABX     ke  1017 0
+QSABXb    ta  QSABX
+QSABXo    ke  1 0
+QSABXc    ko  QSABXb QSABXo
+.         ti  QSABX QSABXc
+.         so  QSAB
+
+# ================= 測定・リセット・移送：枝ごとの重み =================
+
+QSW       ke  1017 0
+QSWz      ke  0 0
+.         ti  QSW QSWz
+QSWB      ke  1017 0
+QSWBb     ta  QSWB
+QSWBn     ke  1007 0
+QSWBN     ta  QSWBn
+.         su  QSWBb QSWBN QSWF
+QSWBs     ke  1008 0
+QSWBS     ta  QSWBs
+QSWBm     sa  QSWBb QSWBS
+QSWBq     ke  1000 0
+QSWBQ     ta  QSWBq
+QSWBr     ko  QSWBQ QSWBm
+QSWBw     ke  1021 0
+.         ti  QSWBw QSWBr
+QSWBk     ke  1018 0
+QSWBz     ke  0 0
+.         ti  QSWBk QSWBz
+QSWBc     ke  1019 0
+.         ti  QSWBc QSWBz
+# 重みの置き場 UMB + 16b + 8..11 を零にする
+QSWBu     ke  1009 0
+QSWBU     ta  QSWBu
+QSWB16    ke  16 0
+QSWBv     sa  QSWBb QSWB16
+QSWBV     ko  QSWBU QSWBv
+QSWB5     ke  8 0
+QSWBa5    ko  QSWBV QSWB5
+.         ti  QSWBa5 QSWBz
+QSWB6     ke  9 0
+QSWBa6    ko  QSWBV QSWB6
+.         ti  QSWBa6 QSWBz
+QSWB7     ke  10 0
+QSWBa7    ko  QSWBV QSWB7
+.         ti  QSWBa7 QSWBz
+QSWB8     ke  11 0
+QSWBa8    ko  QSWBV QSWB8
+.         ti  QSWBa8 QSWBz
+
+QSWK      ke  1018 0
+QSWKk     ta  QSWK
+QSWKd     ke  1006 0
+QSWKD     ta  QSWKd
+.         su  QSWKk QSWKD QSWBX
+QSWKb     ke  1021 0
+QSWKB     ta  QSWKb
+QSWKf     ke  4 0
+QSWKo     sa  QSWKk QSWKf
+QSWA      ko  QSWKB QSWKo
+QSWo1     ke  1 0
+QSWo2     ke  2 0
+QSWo3     ke  3 0
+QSWAb     ko  QSWA QSWo1
+QSWAc     ko  QSWA QSWo2
+QSWAd     ko  QSWA QSWo3
+QZMa        ta  QSWA
+QZMb        ta  QSWAb
+QZMc        ta  QSWAc
+QZMd        ta  QSWAd
+QZMaa       sa  QZMa QZMa
+QZMbb       sa  QZMb QZMb
+QZMcc       sa  QZMc QZMc
+QZMdd       sa  QZMd QZMd
+QZMab       sa  QZMa QZMb
+QZMbc       sa  QZMb QZMc
+QZMcd       sa  QZMc QZMd
+QZMad       sa  QZMa QZMd
+QZMr1       ko  QZMaa QZMbb
+QZMr2       ko  QZMcc QZMdd
+QZMR        ko  QZMr1 QZMr2
+QZMs1       ko  QZMab QZMbc
+QZMs2       si  QZMad
+QZMs3       ko  QZMcd QZMs2
+QZMS        ko  QZMs1 QZMs3
+# 置き場：段 q1 の左なら w0、右なら w1
+QSWKu     ke  1009 0
+QSWKU     ta  QSWKu
+QSWKbb    ke  1017 0
+QSWKbB    ta  QSWKbb
+QSWK16    ke  16 0
+QSWKv     sa  QSWKbB QSWK16
+QSWKV     ko  QSWKU QSWKv
+QSWKc     ke  1019 0
+QSWKC     ta  QSWKc
+QSWKs     ke  1014 0
+QSWKS     ta  QSWKs
+QSWK5     ke  8 0
+QSWK7     ke  10 0
+.         se  QSWKC QSWKS QSWL
+QSWKr     ko  QSWKV QSWK7
+.         so  QSWAD
+QSWL      ko  QSWKV QSWK5
+.         so  QSWAE
+QSWAD     ta  QSWKr
+QSWADa    ko  QSWAD QZMR
+.         ti  QSWKr QSWADa
+QSWADo    ke  1 0
+QSWADb    ko  QSWKr QSWADo
+QSWADc    ta  QSWADb
+QSWADd    ko  QSWADc QZMS
+.         ti  QSWADb QSWADd
+.         so  QSWN
+QSWAE     ta  QSWL
+QSWAEa    ko  QSWAE QZMR
+.         ti  QSWL QSWAEa
+QSWAEo    ke  1 0
+QSWAEb    ko  QSWL QSWAEo
+QSWAEc    ta  QSWAEb
+QSWAEd    ko  QSWAEc QZMS
+.         ti  QSWAEb QSWAEd
+
+QSWN      ke  1018 0
+QSWNk     ta  QSWN
+QSWNo     ke  1 0
+QSWNk2    ko  QSWNk QSWNo
+.         ti  QSWN QSWNk2
+QSWNa     ke  1019 0
+QSWNc     ta  QSWNa
+QSWNc2    ko  QSWNc QSWNo
+.         ti  QSWNa QSWNc2
+QSWNs     ke  1014 0
+QSWNS     ta  QSWNs
+QSWNS2    ko  QSWNS QSWNS
+.         su  QSWNc2 QSWNS2 QSWN1
+.         so  QSWK
+QSWN1     ke  1019 0
+QSWN1z    ke  0 0
+.         ti  QSWN1 QSWN1z
+.         so  QSWK
+
+QSWBX     ke  1017 0
+QSWBXb    ta  QSWBX
+QSWBXo    ke  1 0
+QSWBXc    ko  QSWBXb QSWBXo
+.         ti  QSWBX QSWBXc
+.         so  QSWB
+
+# 重みが出揃った。移送は写像の更新へ、測定とリセットは境界へ
+QSWF      ke  1060 0
+QSWFa     ta  QSWF
+QSWF5     ke  5 0
+.         su  QSWFa QSWF5 QST
+QSWF4     ke  4 0
+.         su  QSWFa QSWF4 QSRC
+.         so  QSM
+
+# リセットは候補が明示されたときだけ
+QSRC      ke  1061 0
+QSRCa     ta  QSRC
+QSRCo     ke  1 0
+.         su  QSRCa QSRCo QSM
+.         so  BAD
+
+# ================= 写像の積：(α β; γ δ) ← (α β; γ δ)·M =================
+#
+# u0 = (α u + β)/(γ u + δ)。作用が u_前 = (m11 u + m12)/(m21 u + m22) なら、写像は右から M を掛ける。
+#   α' = α m11 + β m21    β' = α m12 + β m22    γ' = γ m11 + δ m21    δ' = γ m12 + δ m22
+# 成分は Z[√2] の対 (A, B)。(a + b√2)(c + d√2) = (ac + 2bd) + (ad + bc)√2。
+#
+# 語  1170 元の置き場  1171 先の置き場  1172 戻り先  1173..1180 M（m11 m12 m21 m22 の A、B）
+#     1181 先を届かない枝にする印（1 なら印を立てる。元の印は引き継ぐ）
+# 戻り先  1 枝の分割（子 1）  2 枝の分割（子 0）  3 移送  4 ゲートの候補の作用  5 メビウス・β_a の語
+
+QSMUL     ke  1170 0
+QSMUs     ta  QSMUL
+QSMUo1    ke  1 0
+QSMUo2    ke  2 0
+QSMUo3    ke  3 0
+QSMUo4    ke  4 0
+QSMUo5    ke  5 0
+QSMUo6    ke  6 0
+QSMUo7    ke  7 0
+QSMUo12   ke  12 0
+QSMUs1    ko  QSMUs QSMUo1
+QSMUs2    ko  QSMUs QSMUo2
+QSMUs3    ko  QSMUs QSMUo3
+QSMUs4    ko  QSMUs QSMUo4
+QSMUs5    ko  QSMUs QSMUo5
+QSMUs6    ko  QSMUs QSMUo6
+QSMUs7    ko  QSMUs QSMUo7
+QSMUs12   ko  QSMUs QSMUo12
+QYKaA       ta  QSMUs
+QYKaB       ta  QSMUs1
+QYKbA       ta  QSMUs2
+QYKbB       ta  QSMUs3
+QYKgA       ta  QSMUs4
+QYKgB       ta  QSMUs5
+QYKdA       ta  QSMUs6
+QYKdB       ta  QSMUs7
+QYKX        ta  QSMUs12
+QSMUm     ke  1173 0
+QSMUm1    ke  1174 0
+QSMUm2    ke  1175 0
+QSMUm3    ke  1176 0
+QSMUm4    ke  1177 0
+QSMUm5    ke  1178 0
+QSMUm6    ke  1179 0
+QSMUm7    ke  1180 0
+QYM11A      ta  QSMUm
+QYM11B      ta  QSMUm1
+QYM12A      ta  QSMUm2
+QYM12B      ta  QSMUm3
+QYM21A      ta  QSMUm4
+QYM21B      ta  QSMUm5
+QYM22A      ta  QSMUm6
+QYM22B      ta  QSMUm7
+# α m11
+QYKa1       sa  QYKaA QYM11A
+QYKa2       sa  QYKaB QYM11B
+QYKa3       ko  QYKa2 QYKa2
+QYKa4       ko  QYKa1 QYKa3
+QYKa5       sa  QYKaA QYM11B
+QYKa6       sa  QYKaB QYM11A
+QYKa7       ko  QYKa5 QYKa6
+# β m21
+QYKb1       sa  QYKbA QYM21A
+QYKb2       sa  QYKbB QYM21B
+QYKb3       ko  QYKb2 QYKb2
+QYKb4       ko  QYKb1 QYKb3
+QYKb5       sa  QYKbA QYM21B
+QYKb6       sa  QYKbB QYM21A
+QYKb7       ko  QYKb5 QYKb6
+QYNaA       ko  QYKa4 QYKb4
+QYNaB       ko  QYKa7 QYKb7
+# α m12 + β m22
+QYKc1       sa  QYKaA QYM12A
+QYKc2       sa  QYKaB QYM12B
+QYKc3       ko  QYKc2 QYKc2
+QYKc4       ko  QYKc1 QYKc3
+QYKc5       sa  QYKaA QYM12B
+QYKc6       sa  QYKaB QYM12A
+QYKc7       ko  QYKc5 QYKc6
+QYKd1       sa  QYKbA QYM22A
+QYKd2       sa  QYKbB QYM22B
+QYKd3       ko  QYKd2 QYKd2
+QYKd4       ko  QYKd1 QYKd3
+QYKd5       sa  QYKbA QYM22B
+QYKd6       sa  QYKbB QYM22A
+QYKd7       ko  QYKd5 QYKd6
+QYNbA       ko  QYKc4 QYKd4
+QYNbB       ko  QYKc7 QYKd7
+# γ m11 + δ m21
+QYKe1       sa  QYKgA QYM11A
+QYKe2       sa  QYKgB QYM11B
+QYKe3       ko  QYKe2 QYKe2
+QYKe4       ko  QYKe1 QYKe3
+QYKe5       sa  QYKgA QYM11B
+QYKe6       sa  QYKgB QYM11A
+QYKe7       ko  QYKe5 QYKe6
+QYKf1       sa  QYKdA QYM21A
+QYKf2       sa  QYKdB QYM21B
+QYKf3       ko  QYKf2 QYKf2
+QYKf4       ko  QYKf1 QYKf3
+QYKf5       sa  QYKdA QYM21B
+QYKf6       sa  QYKdB QYM21A
+QYKf7       ko  QYKf5 QYKf6
+QYNgA       ko  QYKe4 QYKf4
+QYNgB       ko  QYKe7 QYKf7
+# γ m12 + δ m22
+QYKh1       sa  QYKgA QYM12A
+QYKh2       sa  QYKgB QYM12B
+QYKh3       ko  QYKh2 QYKh2
+QYKh4       ko  QYKh1 QYKh3
+QYKh5       sa  QYKgA QYM12B
+QYKh6       sa  QYKgB QYM12A
+QYKh7       ko  QYKh5 QYKh6
+QYKi1       sa  QYKdA QYM22A
+QYKi2       sa  QYKdB QYM22B
+QYKi3       ko  QYKi2 QYKi2
+QYKi4       ko  QYKi1 QYKi3
+QYKi5       sa  QYKdA QYM22B
+QYKi6       sa  QYKdB QYM22A
+QYKi7       ko  QYKi5 QYKi6
+QYNdA       ko  QYKh4 QYKi4
+QYNdB       ko  QYKh7 QYKi7
+# 書く
+QSMUt     ke  1171 0
+QSMUT     ta  QSMUt
+QSMUT1    ko  QSMUT QSMUo1
+QSMUT2    ko  QSMUT QSMUo2
+QSMUT3    ko  QSMUT QSMUo3
+QSMUT4    ko  QSMUT QSMUo4
+QSMUT5    ko  QSMUT QSMUo5
+QSMUT6    ko  QSMUT QSMUo6
+QSMUT7    ko  QSMUT QSMUo7
+QSMUT12   ko  QSMUT QSMUo12
+.         ti  QSMUT QYNaA
+.         ti  QSMUT1 QYNaB
+.         ti  QSMUT2 QYNbA
+.         ti  QSMUT3 QYNbB
+.         ti  QSMUT4 QYNgA
+.         ti  QSMUT5 QYNgB
+.         ti  QSMUT6 QYNdA
+.         ti  QSMUT7 QYNdB
+.         ti  QSMUT12 QYKX
+QSMUd     ke  1181 0
+QSMUD     ta  QSMUd
+QSMUz     ke  0 0
+.         su  QSMUD QSMUz QSMUR
+.         ti  QSMUT12 QSMUo1
+.         ti  QSMUd QSMUz
+QSMUR     ke  1172 0
+QSMURr    ta  QSMUR
+.         su  QSMURr QSMUo1 QSSM1
+.         su  QSMURr QSMUo2 QSSM0
+.         su  QSMURr QSMUo3 QSTN
+.         su  QSMURr QSMUo4 QSGN
+.         su  QSMURr QSMUo5 QSFN
+.         so  BAD
+
+# ================= 測定：境界の点を作図し、image の表へ置く =================
+#
+#   T = (α w0 + β N)/(γ w0 + δ N)、N = w0 + w1。θ = ⌈T·2^62⌉ を二分の作図で決める。
+#   C(t) = [T·2^62 ≤ t] ⟺ t·Den − 2^62·Num ≥ 0（Num = α w0 + β N、Den = γ w0 + δ N）
+
+QSM       ke  1017 0
+QSMz      ke  0 0
+.         ti  QSM QSMz
+QSMB      ke  1017 0
+QSMBb     ta  QSMB
+QSMBn     ke  1007 0
+QSMBN     ta  QSMBn
+.         su  QSMBb QSMBN QSMF
+QSMBu     ke  1009 0
+QSMBU     ta  QSMBu
+QSMB16    ke  16 0
+QSMBv     sa  QSMBb QSMB16
+QSMBV     ko  QSMBU QSMBv
+QSMo1     ke  1 0
+QSMo2     ke  2 0
+QSMo3     ke  3 0
+QSMo4     ke  4 0
+QSMo5     ke  5 0
+QSMo6     ke  6 0
+QSMo7     ke  7 0
+QSMo8     ke  8 0
+QSMo9     ke  9 0
+QSMo10    ke  10 0
+QSMo11    ke  11 0
+QSMo12    ke  12 0
+QSMa1     ko  QSMBV QSMo1
+QSMa2     ko  QSMBV QSMo2
+QSMa3     ko  QSMBV QSMo3
+QSMa4     ko  QSMBV QSMo4
+QSMa5     ko  QSMBV QSMo5
+QSMa6     ko  QSMBV QSMo6
+QSMa7     ko  QSMBV QSMo7
+QSMa8     ko  QSMBV QSMo8
+QSMa9     ko  QSMBV QSMo9
+QSMa10    ko  QSMBV QSMo10
+QSMa11    ko  QSMBV QSMo11
+QSMa12    ko  QSMBV QSMo12
+QYLaA       ta  QSMBV
+QYLaB       ta  QSMa1
+QYLbA       ta  QSMa2
+QYLbB       ta  QSMa3
+QYLgA       ta  QSMa4
+QYLgB       ta  QSMa5
+QYLdA       ta  QSMa6
+QYLdB       ta  QSMa7
+QYL0A       ta  QSMa8
+QYL0B       ta  QSMa9
+QYL1A       ta  QSMa10
+QYL1B       ta  QSMa11
+QYLX        ta  QSMa12
+QYLNA       ko  QYL0A QYL1A
+QYLNB       ko  QYL0B QYL1B
+QSMd0     ke  0 0
+QSMm1     ke  -1 0
+QSMth     ke  1040 0
+.         ti  QSMth QSMm1
+.         su  QYLX QSMo1 QSME
+.         se  QSMd0 QYLNA QSMK
+.         so  QSME
+
+# Num = α w0 + β N、Den = γ w0 + δ N
+QSMK      sa  QYLaA QYL0A
+QSMK1     sa  QYLaB QYL0B
+QSMK2     ko  QSMK1 QSMK1
+QSMK3     sa  QYLbA QYLNA
+QSMK4     sa  QYLbB QYLNB
+QSMK5     ko  QSMK4 QSMK4
+QSMK6     ko  QSMK QSMK2
+QSMK7     ko  QSMK3 QSMK5
+QYNumA      ko  QSMK6 QSMK7
+QSML      sa  QYLaA QYL0B
+QSML1     sa  QYLaB QYL0A
+QSML2     sa  QYLbA QYLNB
+QSML3     sa  QYLbB QYLNA
+QSML4     ko  QSML QSML1
+QSML5     ko  QSML2 QSML3
+QYNumB      ko  QSML4 QSML5
+QSMN      sa  QYLgA QYL0A
+QSMN1     sa  QYLgB QYL0B
+QSMN2     ko  QSMN1 QSMN1
+QSMN3     sa  QYLdA QYLNA
+QSMN4     sa  QYLdB QYLNB
+QSMN5     ko  QSMN4 QSMN4
+QSMN6     ko  QSMN QSMN2
+QSMN7     ko  QSMN3 QSMN5
+QYDenA      ko  QSMN6 QSMN7
+QSMO      sa  QYLgA QYL0B
+QSMO1     sa  QYLgB QYL0A
+QSMO2     sa  QYLdA QYLNB
+QSMO3     sa  QYLdB QYLNA
+QSMO4     ko  QSMO QSMO1
+QSMO5     ko  QSMO2 QSMO3
+QYDenB      ko  QSMO4 QSMO5
+QSMp      ke  1162 0
+QYP62       ta  QSMp
+QYE0        sa  QYNumA QYP62
+QYE1        sa  QYNumB QYP62
+QSMt      ke  1038 0
+QSMtm     ke  -1 0
+.         ti  QSMt QSMtm
+QSMj      ke  1039 0
+QSMj62    ke  62 0
+.         ti  QSMj QSMj62
+
+QSMC      ke  1039 0
+QSMCj     ta  QSMC
+QSMCb     ke  1100 0
+QSMCa     ko  QSMCb QSMCj
+QSMCs     ta  QSMCa
+QSMCt     ke  1038 0
+QSMCT     ta  QSMCt
+QYCt        ko  QSMCT QSMCs
+QYCX1       sa  QYCt QYDenA
+QYCE0       si  QYE0
+QYCX        ko  QYCX1 QYCE0
+QYCY1       sa  QYCt QYDenB
+QYCE1       si  QYE1
+QYCY        ko  QYCY1 QYCE1
+QYCXX       sa  QYCX QYCX
+QYCYY       sa  QYCY QYCY
+QYC2YY      ko  QYCYY QYCYY
+QSMCz     ke  0 0
+.         se  QYCX QSMCz QSMCN
+.         se  QYCY QSMCz QSMCP
+.         so  QSMCY
+QSMCP     ke  0 0
+.         se  QYCXX QYC2YY QSMCF
+.         so  QSMCY
+QSMCN     ke  0 0
+.         se  QSMCz QYCY QSMCN2
+.         so  QSMCF
+QSMCN2    ke  0 0
+.         se  QYC2YY QYCXX QSMCF
+.         so  QSMCY
+QSMCF     ke  1038 0
+.         ti  QSMCF QYCt
+QSMCY     ke  1039 0
+QSMCYj    ta  QSMCY
+QSMCYz    ke  0 0
+.         su  QSMCYj QSMCYz QSMCD
+QSMCYm    ke  -1 0
+QSMCYk    ko  QSMCYj QSMCYm
+.         ti  QSMCY QSMCYk
+.         so  QSMC
+QSMCD     ke  1038 0
+QSMCDt    ta  QSMCD
+QSMCDo    ke  1 0
+QSMCDu    ko  QSMCDt QSMCDo
+QSMCDw    ke  1040 0
+.         ti  QSMCDw QSMCDu
+QSMCDr    ke  1070 0
+QSMCDR    ta  QSMCDr
+.         su  QSMCDR QSMCDo QSMV
+.         so  QSME
+
+# ---- 回転の後：桁が重みのずれの上界の範囲で動かないことを確かめる ----
+#
+#   重みのずれ ≤ E·N、E = R·2^{−P}（R = 回転の数、P = 125 + 足す桁）。w0 を w0·2^P ± R·N、N を N·2^P に
+#   置き換えた境界 T± について、T+ ≤ θ/2^62 かつ (θ − 1)/2^62 < T− なら θ は決まる。
+#   T·2^62 = θ（閉包の点が格子に一致）も決まる。どちらでもなければ、語 1095 に印を立てて止める
+#   （host が足す桁を増やして作図をやり直す。閉包の段を深くする）
+
+QSMV      ke  1040 0
+QSMVt     ta  QSMV
+QSMVa     sa  QSMVt QYDenA
+QSMVb     si  QYE0
+QSMVX     ko  QSMVa QSMVb
+QSMVc     sa  QSMVt QYDenB
+QSMVd     si  QYE1
+QSMVY     ko  QSMVc QSMVd
+QSMVz     ke  0 0
+.         su  QSMVX QSMVz QSMV0
+.         so  QSMV1
+QSMV0     ke  0 0
+.         su  QSMVY QSMV0 QSME
+QSMV1     ke  1063 0
+QSMV1a    ta  QSMV1
+QSMV1b    ke  1066 0
+QSMV1c    ta  QSMV1b
+QSMV1d    ke  125 0
+QSMV1e    ko  QSMV1c QSMV1d
+QSMV1f    ko  QSMV1a QSMV1e
+QSMVP     ta  QSMV1f
+QSMVr     ke  1069 0
+QSMVR     ta  QSMVr
+# R·N と、w0·2^P、N·2^P
+QYVRNA      sa  QSMVR QYLNA
+QYVRNB      sa  QSMVR QYLNB
+QYVW0A      sa  QYL0A QSMVP
+QYVW0B      sa  QYL0B QSMVP
+QYVNA       sa  QYLNA QSMVP
+QYVNB       sa  QYLNB QSMVP
+# w0+ = w0·2^P + R·N、w0− = w0·2^P − R·N
+QYVPA       ko  QYVW0A QYVRNA
+QYVPB       ko  QYVW0B QYVRNB
+QYVRNAn     si  QYVRNA
+QYVRNBn     si  QYVRNB
+QYVMA       ko  QYVW0A QYVRNAn
+QYVMB       ko  QYVW0B QYVRNBn
+# 上の境界：Num+ = α w0+ + β N'、Den+ = γ w0+ + δ N'
+QYVu1       sa  QYLaA QYVPA
+QYVu2       sa  QYLaB QYVPB
+QYVu3       ko  QYVu2 QYVu2
+QYVu4       sa  QYLbA QYVNA
+QYVu5       sa  QYLbB QYVNB
+QYVu6       ko  QYVu5 QYVu5
+QYVu7       ko  QYVu1 QYVu3
+QYVu8       ko  QYVu4 QYVu6
+QYVuNA      ko  QYVu7 QYVu8
+QYVv1       sa  QYLaA QYVPB
+QYVv2       sa  QYLaB QYVPA
+QYVv3       sa  QYLbA QYVNB
+QYVv4       sa  QYLbB QYVNA
+QYVv5       ko  QYVv1 QYVv2
+QYVv6       ko  QYVv3 QYVv4
+QYVuNB      ko  QYVv5 QYVv6
+QYVw1       sa  QYLgA QYVPA
+QYVw2       sa  QYLgB QYVPB
+QYVw3       ko  QYVw2 QYVw2
+QYVw4       sa  QYLdA QYVNA
+QYVw5       sa  QYLdB QYVNB
+QYVw6       ko  QYVw5 QYVw5
+QYVw7       ko  QYVw1 QYVw3
+QYVw8       ko  QYVw4 QYVw6
+QYVuDA      ko  QYVw7 QYVw8
+QYVx1       sa  QYLgA QYVPB
+QYVx2       sa  QYLgB QYVPA
+QYVx3       sa  QYLdA QYVNB
+QYVx4       sa  QYLdB QYVNA
+QYVx5       ko  QYVx1 QYVx2
+QYVx6       ko  QYVx3 QYVx4
+QYVuDB      ko  QYVx5 QYVx6
+QYVy1       sa  QSMVt QYVuDA
+QYVy2       sa  QYVuNA QYP62
+QYVy3       si  QYVy2
+QYVupX      ko  QYVy1 QYVy3
+QYVz1       sa  QSMVt QYVuDB
+QYVz2       sa  QYVuNB QYP62
+QYVz3       si  QYVz2
+QYVupY      ko  QYVz1 QYVz3
+QSMVm     ke  1086 0
+.         ti  QSMVm QYVupX
+QSMVn     ke  1087 0
+.         ti  QSMVn QYVupY
+QSMVo     ke  1085 0
+QSMVp     ke  1 0
+.         ti  QSMVo QSMVp
+.         so  QSSG
+# 下の境界：Num− = α w0− + β N'、Den− = γ w0− + δ N'、t = θ − 1
+QSMV2     ke  1088 0
+QSMV2r    ta  QSMV2
+QSMV2z    ke  0 0
+.         su  QSMV2r QSMV2z QSMVU
+QYWu1       sa  QYLaA QYVMA
+QYWu2       sa  QYLaB QYVMB
+QYWu3       ko  QYWu2 QYWu2
+QYWu7       ko  QYWu1 QYWu3
+QYWuNA      ko  QYWu7 QYVu8
+QYWv1       sa  QYLaA QYVMB
+QYWv2       sa  QYLaB QYVMA
+QYWv5       ko  QYWv1 QYWv2
+QYWuNB      ko  QYWv5 QYVv6
+QYWw1       sa  QYLgA QYVMA
+QYWw2       sa  QYLgB QYVMB
+QYWw3       ko  QYWw2 QYWw2
+QYWw7       ko  QYWw1 QYWw3
+QYWuDA      ko  QYWw7 QYVw8
+QYWx1       sa  QYLgA QYVMB
+QYWx2       sa  QYLgB QYVMA
+QYWx5       ko  QYWx1 QYWx2
+QYWuDB      ko  QYWx5 QYVx6
+QSMV2o    ke  -1 0
+QSMV2t    ko  QSMVt QSMV2o
+QYWy1       sa  QSMV2t QYWuDA
+QYWy2       sa  QYWuNA QYP62
+QYWy3       si  QYWy2
+QYWloX      ko  QYWy1 QYWy3
+QYWz1       sa  QSMV2t QYWuDB
+QYWz2       sa  QYWuNB QYP62
+QYWz3       si  QYWz2
+QYWloY      ko  QYWz1 QYWz3
+QSMV2m    ke  1086 0
+.         ti  QSMV2m QYWloX
+QSMV2n    ke  1087 0
+.         ti  QSMV2n QYWloY
+QSMV2p    ke  1085 0
+QSMV2q    ke  2 0
+.         ti  QSMV2p QSMV2q
+.         so  QSSG
+QSMV3     ke  1088 0
+QSMV3r    ta  QSMV3
+QSMV3o    ke  1 0
+.         su  QSMV3r QSMV3o QSMVU
+.         so  QSME
+# 決まらない：印を立てて止める
+QSMVU     ke  1095 0
+QSMVUo    ke  1 0
+.         ti  QSMVU QSMVUo
+.         so  BAD
+
+# ---- 符号の判定 [X + Y√2 ≥ 0]。入力 1086、1087、出力 1088、戻り先 1085（1 → QSMV2、2 → QSMV3）----
+QSSG      ke  1086 0
+QSSGX     ta  QSSG
+QSSGy     ke  1087 0
+QSSGY     ta  QSSGy
+QSSGr     ke  1088 0
+QSSGo     ke  1 0
+.         ti  QSSGr QSSGo
+QSSGXX    sa  QSSGX QSSGX
+QSSGYY    sa  QSSGY QSSGY
+QSSG2     ko  QSSGYY QSSGYY
+QSSGz     ke  0 0
+.         se  QSSGX QSSGz QSSGN
+.         se  QSSGY QSSGz QSSGP
+.         so  QSSGR
+QSSGP     ke  0 0
+.         se  QSSGXX QSSG2 QSSGF
+.         so  QSSGR
+QSSGN     ke  0 0
+.         se  QSSGN QSSGY QSSGN2
+.         so  QSSGF
+QSSGN2    ke  0 0
+.         se  QSSG2 QSSGXX QSSGF
+.         so  QSSGR
+QSSGF     ke  1088 0
+QSSGFz    ke  0 0
+.         ti  QSSGF QSSGFz
+QSSGR     ke  1085 0
+QSSGRr    ta  QSSGR
+QSSGR1    ke  1 0
+.         su  QSSGRr QSSGR1 QSMV2
+.         so  QSMV3
+
+# ---- θ を image の表へ：Cst(θ)、Cst(TBN + b)、Store ----
+QSME      ke  1040 0
+QSMEv     ta  QSME
+QSMEn     ke  6 0
+QSMEN     ta  QSMEn
+QSMEk     sa  KV04 BW
+QSMEka    ko  QSMEk QSMEN
+QSMEo     ke  1 0
+.         ti  QSMEka QSMEo
+QSMEa     sa  KV06 BW
+QSMEaa    ko  QSMEa QSMEN
+.         ti  QSMEaa QSMEv
+QSMEb     sa  KV08 BW
+QSMEba    ko  QSMEb QSMEN
+QSMEz     ke  0 0
+.         ti  QSMEba QSMEz
+QSMEd     sa  KV10 BW
+QSMEda    ko  QSMEd QSMEN
+.         ti  QSMEda QSMEz
+QSMEN1    ko  QSMEN QSMEo
+QSMEt     ke  1010 0
+QSMET     ta  QSMEt
+QSMEb2    ke  1017 0
+QSMEB     ta  QSMEb2
+QSMEad    ko  QSMET QSMEB
+QSMEk1    ko  QSMEk QSMEN1
+.         ti  QSMEk1 QSMEo
+QSMEa1    ko  QSMEa QSMEN1
+.         ti  QSMEa1 QSMEad
+QSMEb1    ko  QSMEb QSMEN1
+.         ti  QSMEb1 QSMEz
+QSMEd1    ko  QSMEd QSMEN1
+.         ti  QSMEd1 QSMEz
+QSMEN2    ko  QSMEN1 QSMEo
+QSMEf     ke  5 0
+QSMEk2    ko  QSMEk QSMEN2
+.         ti  QSMEk2 QSMEf
+QSMEa2    ko  QSMEa QSMEN2
+.         ti  QSMEa2 QSMEN1
+QSMEb3    ko  QSMEb QSMEN2
+.         ti  QSMEb3 QSMEN
+QSMEd2    ko  QSMEd QSMEN2
+.         ti  QSMEd2 QSMEz
+QSMEN3    ko  QSMEN2 QSMEo
+.         ti  QSMEn QSMEN3
+QSMEx     ke  1017 0
+QSMEX     ta  QSMEx
+QSMEX1    ko  QSMEX QSMEo
+.         ti  QSMEx QSMEX1
+.         so  QSMB
+
+# ---- 表の基底の箱 Cst(TBN)、TBN += NBR ----
+QSMF      ke  6 0
+QSMFn     ta  QSMF
+QSMFk     sa  KV04 BW
+QSMFka    ko  QSMFk QSMFn
+QSMFo     ke  1 0
+.         ti  QSMFka QSMFo
+QSMFt     ke  1010 0
+QSMFT     ta  QSMFt
+QSMFa     sa  KV06 BW
+QSMFaa    ko  QSMFa QSMFn
+.         ti  QSMFaa QSMFT
+QSMFb     sa  KV08 BW
+QSMFba    ko  QSMFb QSMFn
+QSMFz     ke  0 0
+.         ti  QSMFba QSMFz
+QSMFd     sa  KV10 BW
+QSMFda    ko  QSMFd QSMFn
+.         ti  QSMFda QSMFz
+QSMFw     ke  1048 0
+.         ti  QSMFw QSMFn
+QSMFn1    ko  QSMFn QSMFo
+.         ti  QSMF QSMFn1
+QSMFr     ke  1007 0
+QSMFR     ta  QSMFr
+QSMFT2    ko  QSMFT QSMFR
+.         ti  QSMFt QSMFT2
+QSMFc     ke  1001 0
+QSMFC     ta  QSMFc
+QSMFR2    ko  QSMFR QSMFR
+QSMFo2    ke  1 0
+QSMFC1    ko  QSMFC QSMFo2
+.         se  QSMFR2 QSMFC1 QSS0
+.         so  BAD
+
+# ================= 枝を分ける。b を大きい方から、子 2b+1、2b の順に書く =================
+#
+#   子 1：M = (w1 w0; 0 N)      子 0：M = (w0 0; 0 N)      重みが 0 の側の子は届かない枝にする
+
+QSS0      ke  1017 0
+QSS0r     ke  1007 0
+QSS0R     ta  QSS0r
+.         ti  QSS0 QSS0R
+
+QSS       ke  1017 0
+QSSb      ta  QSS
+QSSz      ke  0 0
+.         su  QSSb QSSz QSSX
+QSSo      ke  1 0
+QSSm      si  QSSo
+QSSb1     ko  QSSb QSSm
+.         ti  QSS QSSb1
+QSSu      ke  1009 0
+QSSU      ta  QSSu
+QSS16     ke  16 0
+QSSv      sa  QSSb1 QSS16
+QSSV      ko  QSSU QSSv
+QSSc1     ko  QSSb1 QSSb1
+QSSc2     ko  QSSc1 QSSo
+QSSw1     sa  QSSc2 QSS16
+QSSW1     ko  QSSU QSSw1
+QSSw0     sa  QSSc1 QSS16
+QSSW0     ko  QSSU QSSw0
+QSSo8     ke  8 0
+QSSo9     ke  9 0
+QSSo10    ke  10 0
+QSSo11    ke  11 0
+QSSw8     ko  QSSV QSSo8
+QSSw9     ko  QSSV QSSo9
+QSSw10    ko  QSSV QSSo10
+QSSw11    ko  QSSV QSSo11
+QYH0A       ta  QSSw8
+QYH0B       ta  QSSw9
+QYH1A       ta  QSSw10
+QYH1B       ta  QSSw11
+QYHNA       ko  QYH0A QYH1A
+QYHNB       ko  QYH0B QYH1B
+# 子 1
+QSS1a     ke  1170 0
+.         ti  QSS1a QSSV
+QSS1b     ke  1171 0
+.         ti  QSS1b QSSW1
+QSS1m     ke  1173 0
+.         ti  QSS1m QYH1A
+QSS1n     ke  1174 0
+.         ti  QSS1n QYH1B
+QSS1o     ke  1175 0
+.         ti  QSS1o QYH0A
+QSS1p     ke  1176 0
+.         ti  QSS1p QYH0B
+QSS1q     ke  1177 0
+.         ti  QSS1q QSSz
+QSS1r     ke  1178 0
+.         ti  QSS1r QSSz
+QSS1s     ke  1179 0
+.         ti  QSS1s QYHNA
+QSS1t     ke  1180 0
+.         ti  QSS1t QYHNB
+QSS1d     ke  1181 0
+.         ti  QSS1d QSSz
+QSS1w     ke  1172 0
+.         ti  QSS1w QSSo
+.         su  QYH1A QSSz QSS1Z
+.         so  QSMUL
+QSS1Z     ke  1181 0
+.         ti  QSS1Z QSSo
+.         so  QSMUL
+QSSM1     ke  1170 0
+QSSM1v    ke  1009 0
+QSSM1V    ta  QSSM1v
+QSSM1b    ke  1017 0
+QSSM1B    ta  QSSM1b
+QSSM1s    ke  16 0
+QSSM1m    sa  QSSM1B QSSM1s
+QSSM1a    ko  QSSM1V QSSM1m
+.         ti  QSSM1 QSSM1a
+QSSM1c    ko  QSSM1B QSSM1B
+QSSM1d    sa  QSSM1c QSSM1s
+QSSM1e    ko  QSSM1V QSSM1d
+QSSM1f    ke  1171 0
+.         ti  QSSM1f QSSM1e
+QSSM1g    ke  1175 0
+QSSM1z    ke  0 0
+.         ti  QSSM1g QSSM1z
+QSSM1h    ke  1176 0
+.         ti  QSSM1h QSSM1z
+QSSM1i    ke  1173 0
+QSSM1j    ke  1174 0
+QSSM1p    ke  1172 0
+QSSM1q    ke  2 0
+.         ti  QSSM1p QSSM1q
+# 子 0 の M = (w0 0; 0 N)。w0 は親の置き場から読み直す
+QSSM1u    ke  8 0
+QSSM1U    ko  QSSM1a QSSM1u
+QSSM1w    ta  QSSM1U
+QSSM1o    ke  1 0
+QSSM1y    ko  QSSM1U QSSM1o
+QSSM1W    ta  QSSM1y
+.         ti  QSSM1i QSSM1w
+.         ti  QSSM1j QSSM1W
+.         su  QSSM1w QSSM1z QSSM0Z
+.         so  QSMUL
+QSSM0Z    ke  1181 0
+QSSM0Zo   ke  1 0
+.         ti  QSSM0Z QSSM0Zo
+.         so  QSMUL
+QSSM0     ke  0 0
+.         so  QSSC
+
+# ---- 振幅を写す。子 1 は段 q1 の右だけ、子 0 は左だけを残す ----
+QSSC      ke  1008 0
+QSSCs     ta  QSSC
+QSSCq     ke  1000 0
+QSSCQ     ta  QSSCq
+QSSCp     sa  QSSb1 QSSCs
+QSSCP     ko  QSSCQ QSSCp
+QSSCd0    sa  QSSc1 QSSCs
+QSSCD0    ko  QSSCQ QSSCd0
+QSSCd1    sa  QSSc2 QSSCs
+QSSCD1    ko  QSSCQ QSSCd1
+QSSCw     ke  1021 0
+.         ti  QSSCw QSSCP
+QSSCx     ke  1044 0
+.         ti  QSSCx QSSCD0
+QSSCy     ke  1045 0
+.         ti  QSSCy QSSCD1
+QSSCk     ke  1018 0
+QSSCz     ke  0 0
+.         ti  QSSCk QSSCz
+QSSCc     ke  1019 0
+.         ti  QSSCc QSSCz
+
+QSSK      ke  1018 0
+QSSKk     ta  QSSK
+QSSKd     ke  1006 0
+QSSKD     ta  QSSKd
+.         su  QSSKk QSSKD QSSKX
+QSSKf     ke  4 0
+QSSKo     sa  QSSKk QSSKf
+QSSKp     ke  1021 0
+QSSKP     ta  QSSKp
+QSSKx     ke  1044 0
+QSSKX0    ta  QSSKx
+QSSKy     ke  1045 0
+QSSKY0    ta  QSSKy
+QSSs0     ko  QSSKP QSSKo
+QSSd0     ko  QSSKX0 QSSKo
+QSSd1     ko  QSSKY0 QSSKo
+QSSe1     ke  1 0
+QSSe2     ke  2 0
+QSSe3     ke  3 0
+QSSs1     ko  QSSs0 QSSe1
+QSSs2     ko  QSSs0 QSSe2
+QSSs3     ko  QSSs0 QSSe3
+QSSa0     ko  QSSd0 QSSe1
+QSSb0     ko  QSSd0 QSSe2
+QSSc0     ko  QSSd0 QSSe3
+QSSa9     ko  QSSd1 QSSe1
+QSSb9     ko  QSSd1 QSSe2
+QSSc9     ko  QSSd1 QSSe3
+QZFa        ta  QSSs0
+QZFb        ta  QSSs1
+QZFc        ta  QSSs2
+QZFd        ta  QSSs3
+QSSZe     ke  0 0
+QSSKc     ke  1019 0
+QSSKC     ta  QSSKc
+QSSKs     ke  1014 0
+QSSKS     ta  QSSKs
+.         se  QSSKC QSSKS QSSKL
+# 右：子 1 に残し、子 0 は零
+.         ti  QSSd1 QZFa
+.         ti  QSSa9 QZFb
+.         ti  QSSb9 QZFc
+.         ti  QSSc9 QZFd
+.         ti  QSSd0 QSSZe
+.         ti  QSSa0 QSSZe
+.         ti  QSSb0 QSSZe
+.         ti  QSSc0 QSSZe
+.         so  QSSKN
+# 左：子 0 に残し、子 1 は零
+QSSKL     ke  0 0
+.         ti  QSSd1 QSSKL
+.         ti  QSSa9 QSSKL
+.         ti  QSSb9 QSSKL
+.         ti  QSSc9 QSSKL
+.         ti  QSSd0 QZFa
+.         ti  QSSa0 QZFb
+.         ti  QSSb0 QZFc
+.         ti  QSSc0 QZFd
+
+QSSKN     ke  1018 0
+QSSKNk    ta  QSSKN
+QSSKNo    ke  1 0
+QSSKNk2   ko  QSSKNk QSSKNo
+.         ti  QSSKN QSSKNk2
+QSSKNa    ke  1019 0
+QSSKNc    ta  QSSKNa
+QSSKNc2   ko  QSSKNc QSSKNo
+.         ti  QSSKNa QSSKNc2
+QSSKNs    ke  1014 0
+QSSKNS    ta  QSSKNs
+QSSKNS2   ko  QSSKNS QSSKNS
+.         su  QSSKNc2 QSSKNS2 QSSKN1
+.         so  QSSK
+QSSKN1    ke  1019 0
+QSSKN1z   ke  0 0
+.         ti  QSSKN1 QSSKN1z
+.         so  QSSK
+
+# リセットなら、子 1 の右の点を左へ移す（X）。|1> が |0> に戻る
+QSSKX     ke  1060 0
+QSSKXa    ta  QSSKX
+QSSKX4    ke  4 0
+.         su  QSSKXa QSSKX4 QSSR
+.         so  QSS
+
+QSSR      ke  1018 0
+QSSRz     ke  0 0
+.         ti  QSSR QSSRz
+QSSRc     ke  1019 0
+.         ti  QSSRc QSSRz
+QSSRK     ke  1018 0
+QSSRk     ta  QSSRK
+QSSRd     ke  1006 0
+QSSRD     ta  QSSRd
+.         su  QSSRk QSSRD QSS
+QSSRcc    ke  1019 0
+QSSRC     ta  QSSRcc
+QSSRs     ke  1014 0
+QSSRS     ta  QSSRs
+.         se  QSSRC QSSRS QSSRL
+.         so  QSSRN
+QSSRL     ke  1045 0
+QSSRY     ta  QSSRL
+QSSRf     ke  4 0
+QSSRo     sa  QSSRk QSSRf
+QSSRp     sa  QSSRS QSSRf
+QSSRl     ko  QSSRY QSSRo
+QSSRr     ko  QSSRl QSSRp
+QSSR1     ke  1 0
+QSSR2     ke  2 0
+QSSR3     ke  3 0
+QSSRl1    ko  QSSRl QSSR1
+QSSRl2    ko  QSSRl QSSR2
+QSSRl3    ko  QSSRl QSSR3
+QSSRr1    ko  QSSRr QSSR1
+QSSRr2    ko  QSSRr QSSR2
+QSSRr3    ko  QSSRr QSSR3
+QZGa        ta  QSSRr
+QZGb        ta  QSSRr1
+QZGc        ta  QSSRr2
+QZGd        ta  QSSRr3
+.         ti  QSSRl QZGa
+.         ti  QSSRl1 QZGb
+.         ti  QSSRl2 QZGc
+.         ti  QSSRl3 QZGd
+QSSRz2    ke  0 0
+.         ti  QSSRr QSSRz2
+.         ti  QSSRr1 QSSRz2
+.         ti  QSSRr2 QSSRz2
+.         ti  QSSRr3 QSSRz2
+QSSRN     ke  1018 0
+QSSRNk    ta  QSSRN
+QSSRNo    ke  1 0
+QSSRNk2   ko  QSSRNk QSSRNo
+.         ti  QSSRN QSSRNk2
+QSSRNa    ke  1019 0
+QSSRNc    ta  QSSRNa
+QSSRNc2   ko  QSSRNc QSSRNo
+.         ti  QSSRNa QSSRNc2
+QSSRNs    ke  1014 0
+QSSRNS    ta  QSSRNs
+QSSRNS2   ko  QSSRNS QSSRNS
+.         su  QSSRNc2 QSSRNS2 QSSRN1
+.         so  QSSRK
+QSSRN1    ke  1019 0
+QSSRN1z   ke  0 0
+.         ti  QSSRN1 QSSRN1z
+.         so  QSSRK
+
+# ---- 枝が倍になった。測定とリセットの箱を置く ----
+QSSX      ke  1007 0
+QSSXn     ta  QSSX
+QSSXm     ko  QSSXn QSSXn
+.         ti  QSSX QSSXm
+# 箱：種類 13（測定）か 14（リセット）。OPA = 量子ビットの箱、OPB = 表の箱
+QSSXe     ke  1060 0
+QSSXE     ta  QSSXe
+QSSX10    ke  10 0
+QSSXc     ta  QSSX10
+QSSXf     sa  KV02 BW
+QSSXg     ko  QSSXf QSSXc
+QSSXq     ta  QSSXg
+QSSXo     ke  1 0
+QSSXc2    ko  QSSXc QSSXo
+.         ti  QSSX10 QSSXc2
+QSSXb     ke  6 0
+QSSXB     ta  QSSXb
+QSSXk     sa  KV04 BW
+QSSXka    ko  QSSXk QSSXB
+QSSXa     sa  KV06 BW
+QSSXaa    ko  QSSXa QSSXB
+.         ti  QSSXaa QSSXq
+QSSXp     sa  KV08 BW
+QSSXpa    ko  QSSXp QSSXB
+QSSXt     ke  1048 0
+QSSXT     ta  QSSXt
+.         ti  QSSXpa QSSXT
+QSSXd     sa  KV10 BW
+QSSXda    ko  QSSXd QSSXB
+QSSXz     ke  0 0
+.         ti  QSSXda QSSXz
+QSSX4     ke  4 0
+.         su  QSSXE QSSX4 QSSXR
+QSSX13    ke  13 0
+.         ti  QSSXka QSSX13
+.         so  PSB
+QSSXR     ke  14 0
+.         ti  QSSXka QSSXR
+QSSXRb    ko  QSSXB QSSXo
+.         ti  QSSXb QSSXRb
+.         so  CNTW1
+
+# ================= 移送 B_x と部分移送 A_{x,ε}（論文 6.2、15.11）=================
+#
+#   u_後 = ε c + (1 − ε + ε p_x) u_前。写像へ掛ける M = (N·ed  −en·W; 0  K)
+#     W = c·N（x = 0 なら 0、x = 1 なら w0）、K = N(ed − en) + en·w_x、ε = en/ed
+#   ε を置いていなければ（語 1183 = 0）ε = 1（B_x）。K = 0 の枝は届かない枝にする。
+#   x は二本目のワイヤの定数。
+
+QST       ke  10 0
+QSTc      ta  QST
+QSTo      ke  1 0
+QSTc1     ko  QSTc QSTo
+QSTf      sa  KV02 BW
+QSTg      ko  QSTf QSTc1
+QSTn      ta  QSTg
+QSTz      ke  0 0
+.         se  QSTn QSTz BAD
+QSTm      ke  1048576 0
+.         se  QSTn QSTm QST1
+.         so  BAD
+QST1      sa  KV04 BW
+QST1a     ko  QST1 QSTn
+QST1b     ta  QST1a
+QST1c     ke  1 0
+.         su  QST1b QST1c QST2
+.         so  BAD
+QST2      sa  KV06 BW
+QST2a     ko  QST2 QSTn
+QST2b     ta  QST2a
+QST2c     ke  1016 0
+.         ti  QST2c QST2b
+QST2z     ke  0 0
+.         su  QST2b QST2z QSTE
+QST2o     ke  1 0
+.         su  QST2b QST2o QSTE
+.         so  BAD
+QSTE      ke  1183 0
+QSTEd     ta  QSTE
+QSTEz     ke  0 0
+.         su  QSTEd QSTEz QSTE1
+.         so  QSTU0
+QSTE1     ke  1182 0
+QSTE1o    ke  1 0
+.         ti  QSTE1 QSTE1o
+.         ti  QSTE QSTE1o
+
+QSTU0     ke  1017 0
+QSTU0z    ke  0 0
+.         ti  QSTU0 QSTU0z
+QSTU      ke  1017 0
+QSTUb     ta  QSTU
+QSTUn     ke  1007 0
+QSTUN     ta  QSTUn
+.         su  QSTUb QSTUN QSTD
+QSTUu     ke  1009 0
+QSTUU     ta  QSTUu
+QSTU16    ke  16 0
+QSTUv     sa  QSTUb QSTU16
+QSTUV     ko  QSTUU QSTUv
+QSTUo8    ke  8 0
+QSTUo9    ke  9 0
+QSTUo10   ke  10 0
+QSTUo11   ke  11 0
+QSTUa8    ko  QSTUV QSTUo8
+QSTUa9    ko  QSTUV QSTUo9
+QSTUa10   ko  QSTUV QSTUo10
+QSTUa11   ko  QSTUV QSTUo11
+QYJ0A       ta  QSTUa8
+QYJ0B       ta  QSTUa9
+QYJ1A       ta  QSTUa10
+QYJ1B       ta  QSTUa11
+QYJNA       ko  QYJ0A QYJ1A
+QYJNB       ko  QYJ0B QYJ1B
+QSTUe     ke  1182 0
+QYJEN       ta  QSTUe
+QSTUf     ke  1183 0
+QYJED       ta  QSTUf
+# m11 = N·ed
+QYJMA       sa  QYJNA QYJED
+QYJMB       sa  QYJNB QYJED
+QSTUs     ke  1170 0
+.         ti  QSTUs QSTUV
+QSTUt     ke  1171 0
+.         ti  QSTUt QSTUV
+QSTUm11   ke  1173 0
+.         ti  QSTUm11 QYJMA
+QSTUm12   ke  1174 0
+.         ti  QSTUm12 QYJMB
+QSTUz     ke  0 0
+QSTUm21   ke  1177 0
+.         ti  QSTUm21 QSTUz
+QSTUm22   ke  1178 0
+.         ti  QSTUm22 QSTUz
+QSTUx     ke  1016 0
+QSTUX     ta  QSTUx
+.         su  QSTUX QSTUz QSTX0
+# x = 1：W = w0、w_x = w1
+QYJWA1      sa  QYJEN QYJ0A
+QYJWB1      sa  QYJEN QYJ0B
+QYJWAn      si  QYJWA1
+QYJWBn      si  QYJWB1
+QSTX1a    ke  1175 0
+.         ti  QSTX1a QYJWAn
+QSTX1b    ke  1176 0
+.         ti  QSTX1b QYJWBn
+QYJKA1      sa  QYJEN QYJ1A
+QYJKB1      sa  QYJEN QYJ1B
+QSTX1c    ke  1184 0
+.         ti  QSTX1c QYJKA1
+QSTX1d    ke  1185 0
+.         ti  QSTX1d QYJKB1
+.         so  QSTK
+# x = 0：W = 0、w_x = w0
+QSTX0     ke  1175 0
+QSTX0z    ke  0 0
+.         ti  QSTX0 QSTX0z
+QSTX0a    ke  1176 0
+.         ti  QSTX0a QSTX0z
+QYJKA0      sa  QYJEN QYJ0A
+QYJKB0      sa  QYJEN QYJ0B
+QSTX0c    ke  1184 0
+.         ti  QSTX0c QYJKA0
+QSTX0d    ke  1185 0
+.         ti  QSTX0d QYJKB0
+# K = N(ed − en) + en·w_x
+QSTK      ke  1184 0
+QYJXA       ta  QSTK
+QSTKb     ke  1185 0
+QYJXB       ta  QSTKb
+QYJEn       si  QYJEN
+QYJDE       ko  QYJED QYJEn
+QYJKa       sa  QYJNA QYJDE
+QYJKb       sa  QYJNB QYJDE
+QYJKA       ko  QYJKa QYJXA
+QYJKB       ko  QYJKb QYJXB
+QSTKc     ke  1179 0
+.         ti  QSTKc QYJKA
+QSTKd     ke  1180 0
+.         ti  QSTKd QYJKB
+QSTKe     ke  1172 0
+QSTKf     ke  3 0
+.         ti  QSTKe QSTKf
+QSTKz     ke  0 0
+.         su  QYJKA QSTKz QSTKY
+.         so  QSMUL
+QSTKY     ke  0 0
+.         su  QYJKB QSTKY QSTKD
+.         so  QSMUL
+QSTKD     ke  1181 0
+QSTKDo    ke  1 0
+.         ti  QSTKD QSTKDo
+.         so  QSMUL
+
+QSTN      ke  1017 0
+QSTNb     ta  QSTN
+QSTNo     ke  1 0
+QSTNc     ko  QSTNb QSTNo
+.         ti  QSTN QSTNc
+.         so  QSTU
+
+# 一回の移送が終わった。ε を消して箱を置く
+QSTD      ke  1182 0
+QSTDz     ke  0 0
+.         ti  QSTD QSTDz
+QSTDe     ke  1183 0
+.         ti  QSTDe QSTDz
+.         so  GEN
+
+# ================= ε の語（94）：次の移送の割合 ε = en/ed を置く =================
+#   ワイヤは en、ed（どちらも定数）。箱は記録だけ（種類 21）
+QSEPS     ke  10 0
+QSEPc     ta  QSEPS
+QSEPf     sa  KV02 BW
+QSEPg     ko  QSEPf QSEPc
+QSEPn     ta  QSEPg
+QSEPo     ke  1 0
+QSEPc1    ko  QSEPc QSEPo
+QSEPg1    ko  QSEPf QSEPc1
+QSEPn1    ta  QSEPg1
+QSEPk     sa  KV04 BW
+QSEPa     sa  KV06 BW
+QSEPk0    ko  QSEPk QSEPn
+QSEPK0    ta  QSEPk0
+.         su  QSEPK0 QSEPo QSEP1
+.         so  BAD
+QSEP1     ko  QSEPk QSEPn1
+QSEPK1    ta  QSEP1
+.         su  QSEPK1 QSEPo QSEP2
+.         so  BAD
+QSEP2     ko  QSEPa QSEPn
+QSEPv0    ta  QSEP2
+QSEPa1    ko  QSEPa QSEPn1
+QSEPv1    ta  QSEPa1
+QSEPw     ke  1182 0
+.         ti  QSEPw QSEPv0
+QSEPx     ke  1183 0
+.         ti  QSEPx QSEPv1
+.         so  GEN
+
+# ================= メビウスの語（92）：u_後 = f u/(1 − u + f u)（論文 16.5）=================
+#   ワイヤは fn、fd（定数。f = fn/fd > 0）。写像へ M = (fd  0; −(fn − fd)  fn) を掛ける。箱は記録だけ（種類 19）
+#
+# 語  1186 fn  1187 fd
+
+QSMOB     ke  1004 0
+QSMOi     ta  QSMOB
+QSMOz     ke  0 0
+.         su  QSMOi QSMOz QSMOI
+.         so  QSMO0
+QSMOI     ke  1060 0
+QSMOk     ke  7 0
+.         ti  QSMOI QSMOk
+.         so  QSINI
+QSMO0     ke  10 0
+QSMBc     ta  QSMO0
+QSMBf     sa  KV02 BW
+QSMBg     ko  QSMBf QSMBc
+QSMBq0    ta  QSMBg
+QSMBo     ke  1 0
+QSMBc1    ko  QSMBc QSMBo
+QSMBg1    ko  QSMBf QSMBc1
+QSMBn1    ta  QSMBg1
+QSMBk     sa  KV04 BW
+QSMBa     sa  KV06 BW
+QSMBk0    ko  QSMBk QSMBq0
+QSMBK0    ta  QSMBk0
+.         su  QSMBK0 QSMBo QSMB1
+.         so  BAD
+QSMB1     ko  QSMBk QSMBn1
+QSMBK1    ta  QSMB1
+.         su  QSMBK1 QSMBo QSMB2
+.         so  BAD
+QSMB2     ko  QSMBa QSMBq0
+QSMBv0    ta  QSMB2
+QSMBa1    ko  QSMBa QSMBn1
+QSMBv1    ta  QSMBa1
+QSMBw     ke  1186 0
+.         ti  QSMBw QSMBv0
+QSMBx     ke  1187 0
+.         ti  QSMBx QSMBv1
+QSMBr     ke  1189 0
+QSMBR     ke  5 0
+.         ti  QSMBr QSMBR
+.         so  QSFM
+
+# ---- ゲートごとの候補の作用（host の表 1065 + 4g：種類、p1、p2）----
+#   種類 1 メビウス f = p1/p2、2 β_a（a = p1/p2）。表が無ければ（1065 = 0）何もしない
+QSGA      ke  1065 0
+QSGAb     ta  QSGA
+QSGAz     ke  0 0
+.         su  QSGAb QSGAz GEN
+QSGAg     ke  1011 0
+QSGAG     ta  QSGAg
+QSGA4     ke  4 0
+QSGAo     sa  QSGAG QSGA4
+QSGAe     ko  QSGAb QSGAo
+QSGAk     ta  QSGAe
+QSGAo1    ke  1 0
+QSGAe1    ko  QSGAe QSGAo1
+QSGAp     ta  QSGAe1
+QSGAo2    ke  2 0
+QSGAe2    ko  QSGAe QSGAo2
+QSGAq     ta  QSGAe2
+QSGAw     ke  1186 0
+.         ti  QSGAw QSGAp
+QSGAx     ke  1187 0
+.         ti  QSGAx QSGAq
+QSGAr     ke  1189 0
+QSGAR     ke  4 0
+.         ti  QSGAr QSGAR
+.         su  QSGAk QSGAo1 QSFM
+.         su  QSGAk QSGAo2 QSFB
+.         so  GEN
+
+# ---- メビウスの M を置き、全部の枝へ掛ける。戻り先 1189（4 → ゲートの続き、5 → メビウスの語の続き）----
+QSFM      ke  1186 0
+QSFMn     ta  QSFM
+QSFMd0    ke  1187 0
+QSFMd     ta  QSFMd0
+QSFMa     ke  1173 0
+.         ti  QSFMa QSFMd
+QSFMz     ke  0 0
+QSFMb     ke  1174 0
+.         ti  QSFMb QSFMz
+QSFMc     ke  1175 0
+.         ti  QSFMc QSFMz
+QSFMe     ke  1176 0
+.         ti  QSFMe QSFMz
+QSFMdn    si  QSFMd
+QSFMf     ko  QSFMn QSFMdn
+QSFMg     si  QSFMf
+QSFMh     ke  1177 0
+.         ti  QSFMh QSFMg
+QSFMi     ke  1178 0
+.         ti  QSFMi QSFMz
+QSFMj     ke  1179 0
+.         ti  QSFMj QSFMn
+QSFMk     ke  1180 0
+.         ti  QSFMk QSFMz
+.         so  QSFA
+
+# β_a：M = (2 ad  −an; 0  ad)
+QSFB      ke  1186 0
+QSFBn     ta  QSFB
+QSFBd0    ke  1187 0
+QSFBd     ta  QSFBd0
+QSFB2     ko  QSFBd QSFBd
+QSFBa     ke  1173 0
+.         ti  QSFBa QSFB2
+QSFBz     ke  0 0
+QSFBb     ke  1174 0
+.         ti  QSFBb QSFBz
+QSFBm     si  QSFBn
+QSFBc     ke  1175 0
+.         ti  QSFBc QSFBm
+QSFBe     ke  1176 0
+.         ti  QSFBe QSFBz
+QSFBh     ke  1177 0
+.         ti  QSFBh QSFBz
+QSFBi     ke  1178 0
+.         ti  QSFBi QSFBz
+QSFBj     ke  1179 0
+.         ti  QSFBj QSFBd
+QSFBk     ke  1180 0
+.         ti  QSFBk QSFBz
+
+# 全部の枝へ
+QSFA      ke  1017 0
+QSFAz     ke  0 0
+.         ti  QSFA QSFAz
+QSFL      ke  1017 0
+QSFLb     ta  QSFL
+QSFLn     ke  1007 0
+QSFLN     ta  QSFLn
+.         su  QSFLb QSFLN QSFX
+QSFLu     ke  1009 0
+QSFLU     ta  QSFLu
+QSFL16    ke  16 0
+QSFLv     sa  QSFLb QSFL16
+QSFLV     ko  QSFLU QSFLv
+QSFLs     ke  1170 0
+.         ti  QSFLs QSFLV
+QSFLt     ke  1171 0
+.         ti  QSFLt QSFLV
+QSFLr     ke  1172 0
+QSFLR     ke  4 0
+.         ti  QSFLr QSFLR
+.         so  QSMUL
+# 共通の戻り（QSMUL の 4 と 5 はどちらもここ）
+QSGN      ke  0 0
+QSFN      ke  1017 0
+QSFNb     ta  QSFN
+QSFNo     ke  1 0
+QSFNc     ko  QSFNb QSFNo
+.         ti  QSFN QSFNc
+.         so  QSFL
+QSFX      ke  1189 0
+QSFXr     ta  QSFX
+QSFX5     ke  5 0
+.         su  QSFXr QSFX5 GEN
+.         so  GEN
+
+# ================= 回転：角の閉包から点 z を作図する =================
+#
+# 角 θ = m / 2^e（host の表。float の値そのもの）、φ = θ/2。z は Π_i の点で、閉包
+#
+#     z = lim_{d→∞} (1 + iε)^{2^d},     ε = φ / 2^d
+#
+# の d 段目を、大きさ 2^K の整数の点 (X, Y) で持つ。初めの点は (2^K, m·2^128)（Y/X = ε）。
+# 二乗 (X² − Y², 2XY) の後、二分の作図で 2^K の桁へ戻す（QSHR）。大きさ |1+iε|^{2^d} は対の二点に
+# 同じく掛かるので、重みの比では消える。
+#
+#   |φ| ≤ 2^B、d = 3·max(B, 0) + 64 + X、K = (e + 1) + d + 128 + X（X は host が足す桁、語 1066）
+#   角のずれ  ≤ φ³/(3·4^d) + 2^{d+2−K} ≤ 2^{−126−X}
+#
+# 語  1062 ANGB 角の表（ANGB + 2c に m、+ 2c + 1 に e）  1063 POWB  1064 POWN  1070 回転の印
+#     1071 m  1072 e+1  1073 d  1074 K  1075 X  1076 Y  1077 残りの段  1078 2^K  1090 |m|
+
+QSROT     ke  10 0
+QSRc      ta  QSROT
+QSRo      ke  1 0
+QSRc1     ko  QSRc QSRo
+QSRf      sa  KV02 BW
+QSRg      ko  QSRf QSRc1
+QSRn      ta  QSRg
+QSRz      ke  0 0
+.         se  QSRn QSRz BAD
+QSRm      ke  1048576 0
+.         se  QSRn QSRm QSR1
+.         so  BAD
+QSR1      sa  KV04 BW
+QSR1a     ko  QSR1 QSRn
+QSR1b     ta  QSR1a
+QSR1c     ke  1 0
+.         su  QSR1b QSR1c QSR2
+.         so  BAD
+QSR2      sa  KV06 BW
+QSR2a     ko  QSR2 QSRn
+QSR2b     ta  QSR2a
+QSR2c     ke  1062 0
+QSR2d     ta  QSR2c
+QSR2e     ko  QSR2b QSR2b
+QSR2f     ko  QSR2d QSR2e
+QSRm0     ta  QSR2f
+QSR2g     ko  QSR2f QSRo
+QSRe0     ta  QSR2g
+QSRE1     ko  QSRe0 QSRo
+QSR3      ke  1071 0
+.         ti  QSR3 QSRm0
+QSR3a     ke  1072 0
+.         ti  QSR3a QSRE1
+QSR3b     ke  1090 0
+.         ti  QSR3b QSRm0
+.         se  QSRz QSRm0 QSR4
+QSR3c     si  QSRm0
+.         ti  QSR3b QSR3c
+
+# |m| の桁 j（|m| < 2^j の最小）。語 1041 を走りに使う
+QSR4      ke  1041 0
+QSR4z     ke  0 0
+.         ti  QSR4 QSR4z
+QSR4L     ke  1041 0
+QSR4j     ta  QSR4L
+QSR4p     ke  1063 0
+QSR4P     ta  QSR4p
+QSR4q     ko  QSR4P QSR4j
+QSR4v     ta  QSR4q
+QSR4a     ke  1090 0
+QSR4A     ta  QSR4a
+.         se  QSR4A QSR4v QSR5
+QSR4o     ke  1 0
+QSR4k     ko  QSR4j QSR4o
+.         ti  QSR4L QSR4k
+.         so  QSR4L
+
+# B = j − (e+1)、d = 3·max(B, 0) + 64、K = (e+1) + d + 128
+QSR5      ke  1072 0
+QSR5E     ta  QSR5
+QSR5n     si  QSR5E
+QSR5B     ko  QSR4j QSR5n
+QSR5z     ke  0 0
+QSR5w     ke  1091 0
+.         ti  QSR5w QSR5z
+.         se  QSR5B QSR5z QSR6
+.         ti  QSR5w QSR5B
+QSR6      ke  1091 0
+QSR6B     ta  QSR6
+QSR6a     ko  QSR6B QSR6B
+QSR6b     ko  QSR6a QSR6B
+QSR6c     ke  64 0
+QSR6x     ke  1066 0
+QSR6X     ta  QSR6x
+QSR6w     ko  QSR6b QSR6c
+QSR6d     ko  QSR6w QSR6X
+QSR6e     ke  1073 0
+.         ti  QSR6e QSR6d
+QSR6f     ke  1077 0
+.         ti  QSR6f QSR6d
+QSR6g     ke  128 0
+QSR6v     ko  QSR6d QSR6g
+QSR6h     ko  QSR6v QSR6X
+QSR6i     ko  QSR6h QSR5E
+QSR6j     ke  1074 0
+.         ti  QSR6j QSR6i
+QSR6k     ke  1063 0
+QSR6K     ta  QSR6k
+QSR6l     ko  QSR6K QSR6i
+QSR6P     ta  QSR6l
+QSR6m     ke  1078 0
+.         ti  QSR6m QSR6P
+QSR6n     ke  1075 0
+.         ti  QSR6n QSR6P
+QSR6o     ko  QSR6K QSR6g
+QSR6p     ta  QSR6o
+QSR6q     ke  1071 0
+QSR6Q     ta  QSR6q
+QSR6r     sa  QSR6Q QSR6p
+QSR6s     ke  1076 0
+.         ti  QSR6s QSR6r
+
+# ---- d 回の二乗。各回の後に 2^K の桁へ戻す ----
+QSR7      ke  1077 0
+QSR7r     ta  QSR7
+QSR7z     ke  0 0
+.         su  QSR7r QSR7z QSR9
+QSR7o     ke  -1 0
+QSR7s     ko  QSR7r QSR7o
+.         ti  QSR7 QSR7s
+QSR7x     ke  1075 0
+QSR7X     ta  QSR7x
+QSR7y     ke  1076 0
+QSR7Y     ta  QSR7y
+QSR7a     sa  QSR7X QSR7X
+QSR7b     sa  QSR7Y QSR7Y
+QSR7c     si  QSR7b
+QSR7d     ko  QSR7a QSR7c
+QSR7e     sa  QSR7X QSR7Y
+QSR7f     ko  QSR7e QSR7e
+QSR7g     ke  1092 0
+.         ti  QSR7g QSR7f
+QSR7v     ke  1081 0
+.         ti  QSR7v QSR7d
+QSR7w     ke  1080 0
+QSR7t     ke  1 0
+.         ti  QSR7w QSR7t
+.         so  QSHR
+QSR8      ke  1082 0
+QSR8q     ta  QSR8
+QSR8x     ke  1075 0
+.         ti  QSR8x QSR8q
+QSR8g     ke  1092 0
+QSR8G     ta  QSR8g
+QSR8v     ke  1081 0
+.         ti  QSR8v QSR8G
+QSR8w     ke  1080 0
+QSR8t     ke  2 0
+.         ti  QSR8w QSR8t
+.         so  QSHR
+QSR8y     ke  1082 0
+QSR8Y     ta  QSR8y
+QSR8z     ke  1076 0
+.         ti  QSR8z QSR8Y
+.         so  QSR7
+
+# 点ができた。回転の印を立て、対の二点へ当てる（QSAP）
+QSR9      ke  1070 0
+QSR9o     ke  1 0
+.         ti  QSR9 QSR9o
+QSR9n     ke  1069 0
+QSR9N     ta  QSR9n
+QSR9m     ko  QSR9N QSR9o
+.         ti  QSR9n QSR9m
+.         so  QSAP
+
+# ---- 二分の作図による 2^K での割り算（0 へ向けて切る）。入力 1081、出力 1082、戻り先 1080 ----
+#
+#   q = Σ 2^j（j = K+4 … 0）のうち、(q + 2^j)·2^K ≤ |v| を満たすものを上から足す
+QSHR      ke  1081 0
+QSHRv     ta  QSHR
+QSHRa     ke  1093 0
+.         ti  QSHRa QSHRv
+QSHRs     ke  1094 0
+QSHRp     ke  1 0
+.         ti  QSHRs QSHRp
+QSHRz     ke  0 0
+.         se  QSHRz QSHRv QSHR1
+.         su  QSHRv QSHRz QSHR1
+QSHRn     si  QSHRv
+.         ti  QSHRa QSHRn
+QSHRm     ke  -1 0
+.         ti  QSHRs QSHRm
+QSHR1     ke  1082 0
+QSHR1z    ke  0 0
+.         ti  QSHR1 QSHR1z
+QSHR1k    ke  1074 0
+QSHR1K    ta  QSHR1k
+QSHR1f    ke  4 0
+QSHR1j    ko  QSHR1K QSHR1f
+QSHR1w    ke  1083 0
+.         ti  QSHR1w QSHR1j
+QSHRL     ke  1083 0
+QSHRj     ta  QSHRL
+QSHRp0    ke  1063 0
+QSHRP     ta  QSHRp0
+QSHRq     ko  QSHRP QSHRj
+QSHR2j    ta  QSHRq
+QSHRq0    ke  1082 0
+QSHRQ     ta  QSHRq0
+QSHRc     ko  QSHRQ QSHR2j
+QSHRk0    ke  1078 0
+QSHRK     ta  QSHRk0
+QSHRm2    sa  QSHRc QSHRK
+QSHRa0    ke  1093 0
+QSHRA     ta  QSHRa0
+.         se  QSHRA QSHRm2 QSHRN
+.         ti  QSHRq0 QSHRc
+QSHRN     ke  1083 0
+QSHRNj    ta  QSHRN
+QSHRNz    ke  0 0
+.         su  QSHRNj QSHRNz QSHRD
+QSHRNo    ke  -1 0
+QSHRNk    ko  QSHRNj QSHRNo
+.         ti  QSHRN QSHRNk
+.         so  QSHRL
+QSHRD     ke  1082 0
+QSHRDq    ta  QSHRD
+QSHRDs    ke  1094 0
+QSHRDS    ta  QSHRDs
+QSHRDr    sa  QSHRDq QSHRDS
+.         ti  QSHRD QSHRDr
+QSHRDw    ke  1080 0
+QSHRDW    ta  QSHRDw
+QSHRD1    ke  1 0
+.         su  QSHRDW QSHRD1 QSR8
+.         so  QSR8y
+
+
+# ================= 状態の保存（90）：いまの全部の枝の状態を host の書き出し場所へ写す =================
+#
+#   書き出し場所 EXB（語 1067）の位置 EXP（語 1068）から、[NQ、NBR、枝 0 の 4·DIM 語、枝 1 …] を並べる。
+#   実行時の箱は記録だけで、shot ごとの枝の番号 BI を host が受け取る。量子の語がまだ無ければ |0> の一枝。
+
+QSSAV     ke  1004 0
+QSVi      ta  QSSAV
+QSVz      ke  0 0
+QSVo      ke  1 0
+QSVe      ke  1067 0
+QSVE      ta  QSVe
+QSVp      ke  1068 0
+QSVP      ta  QSVp
+QSVa      ko  QSVE QSVP
+.         su  QSVi QSVz QSVN
+QSVq      ke  1005 0
+QSVQ      ta  QSVq
+.         ti  QSVa QSVQ
+QSVa1     ko  QSVa QSVo
+QSVr      ke  1007 0
+QSVR      ta  QSVr
+.         ti  QSVa1 QSVR
+QSVo2     ke  2 0
+QSVP2     ko  QSVP QSVo2
+.         ti  QSVp QSVP2
+QSVw      ke  1017 0
+.         ti  QSVw QSVz
+QSVB      ke  1017 0
+QSVBb     ta  QSVB
+QSVBn     ke  1007 0
+QSVBN     ta  QSVBn
+.         su  QSVBb QSVBN GEN
+QSVBs     ke  1008 0
+QSVBS     ta  QSVBs
+QSVBm     sa  QSVBb QSVBS
+QSVBq     ke  1000 0
+QSVBQ     ta  QSVBq
+QSVBr     ko  QSVBQ QSVBm
+QSVBw     ke  1021 0
+.         ti  QSVBw QSVBr
+QSVBk     ke  1018 0
+QSVBz     ke  0 0
+.         ti  QSVBk QSVBz
+QSVK      ke  1018 0
+QSVKk     ta  QSVK
+QSVKd     ke  1006 0
+QSVKD     ta  QSVKd
+QSVKf     ke  4 0
+QSVK4     sa  QSVKD QSVKf
+.         su  QSVKk QSVK4 QSVX
+QSVKb     ke  1021 0
+QSVKB     ta  QSVKb
+QSVKa     ko  QSVKB QSVKk
+QSVKv     ta  QSVKa
+QSVKe     ke  1067 0
+QSVKE     ta  QSVKe
+QSVKp     ke  1068 0
+QSVKP     ta  QSVKp
+QSVKt     ko  QSVKE QSVKP
+.         ti  QSVKt QSVKv
+QSVKo     ke  1 0
+QSVKP1    ko  QSVKP QSVKo
+.         ti  QSVKp QSVKP1
+QSVKk1    ko  QSVKk QSVKo
+.         ti  QSVK QSVKk1
+.         so  QSVK
+QSVX      ke  1017 0
+QSVXb     ta  QSVX
+QSVXo     ke  1 0
+QSVXc     ko  QSVXb QSVXo
+.         ti  QSVX QSVXc
+.         so  QSVB
+# 量子の語がまだ無い：[0, 1, 1, 0, 0, 0]
+QSVN      ke  0 0
+.         ti  QSVa QSVN
+QSVN1     ke  1 0
+QSVNa     ko  QSVa QSVN1
+.         ti  QSVNa QSVN1
+QSVN2     ke  2 0
+QSVNb     ko  QSVa QSVN2
+.         ti  QSVNb QSVN1
+QSVN6     ke  6 0
+QSVNc     ko  QSVP QSVN6
+.         ti  QSVp QSVNc
+.         so  GEN

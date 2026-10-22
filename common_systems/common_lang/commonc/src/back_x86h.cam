@@ -1,0 +1,2810 @@
+# commonc 後段 — 疑似命令列を x86-64 hosted の image へ落とす
+#
+# 仕様は docs/common-compiler/program/19 §4.4 と 18 章。前段が置いた
+# OPK / OPA / OPB / OPD / OPL と刻み BW を読み、IMG 26B へ byte を積む。
+#
+# 覆いは 19 式 (6.1) の λ(w) = 語 64+w になる。register は RAX と RCX だけ。
+#
+# ================= 第 4 段：変位の byte 分解（19 §3.4）=================
+#
+# disp(w) = 512 + 8w。除算が無いので、w の昇順に桁上げを持ち回る
+
+E4B       ke  24 0
+z24       ke  0 0
+.         ti  E4B z24
+w25       ke  25 0
+v2D       ke  2 0
+.         ti  w25 v2D
+w26       ke  26 0
+.         ti  w26 z24
+w20D      ke  20 0
+.         ti  w20D z24
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW5     ke  0 0
+L4W5      ke  20 0
+j4W5      ta  L4W5
+w6DxW5    ke  6 0
+n4DW5     ta  w6DxW5
+.         se  j4W5 n4DW5 L4
+.         so  E4C
+L4        ke  20 0
+j4        ta  L4
+w6Dx      ke  6 0
+n4D       ta  w6Dx
+
+L4B       ke  24 0
+da        ta  L4B
+bDA4      sa  KV14 BW
+aA4       ko  bDA4 j4
+.         ti  aA4 da
+w25b      ke  25 0
+db        ta  w25b
+bDB4      sa  KV16 BW
+aB4       ko  bDB4 j4
+.         ti  aB4 db
+w26b      ke  26 0
+dc        ta  w26b
+bDC4      sa  KV18 BW
+aC4       ko  bDC4 j4
+.         ti  aC4 dc
+
+# 次の変位。da += 8、繰り上がりは 256 ごと
+v8D       ke  8 0
+da2       ko  da v8D
+c256      ke  256 0
+.         se  da2 c256 L4A
+n256      si  c256
+da3       ko  da2 n256
+w24c      ke  24 0
+.         ti  w24c da3
+w25c      ke  25 0
+dbb       ta  w25c
+o14       ke  1 0
+db2       ko  dbb o14
+.         se  db2 c256 L4C
+db3       ko  db2 n256
+.         ti  w25c db3
+w26c      ke  26 0
+dcc       ta  w26c
+dc2       ko  dcc o14
+.         ti  w26c dc2
+.         so  L4D
+
+L4C       ke  25 0
+.         ti  L4C db2
+.         so  L4D
+
+L4A       ke  24 0
+.         ti  L4A da2
+.         so  L4D
+
+L4D       ke  20 0
+j4b       ta  L4D
+o14b      ke  1 0
+j4c       ko  j4b o14b
+.         ti  L4D j4c
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW5     ke  0 0
+L4W5z     ke  20 0
+j4W5z     ta  L4W5z
+w6DxW5z   ke  6 0
+n4DW5z    ta  w6DxW5z
+.         se  j4W5z n4DW5z L4
+.         so  E4C                        # 境界に届いた
+
+# ================= 第 4b 段：箱ごとの byte 位置 =================
+#
+# 分岐の変位は byte 位置の差になる。除算が無いので、箱の昇順に桁上げを持ち回る。
+# 一命令の長さは 33 を越えないので、桁上げは一段で足りる
+
+E4C       ke  24 0
+o11C      ke  11 0
+.         ti  E4C o11C
+w25C      ke  25 0
+z4C       ke  0 0
+.         ti  w25C z4C
+w26C      ke  26 0
+.         ti  w26C z4C
+w20C2     ke  20 0
+.         ti  w20C2 z4C
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW6     ke  0 0
+L4B2W6    ke  20 0
+j4BW6     ta  L4B2W6
+w6B2W6    ke  6 0
+n4BW6     ta  w6B2W6
+.         se  j4BW6 n4BW6 L4B2
+.         so  E5
+L4B2      ke  20 0
+j4B       ta  L4B2
+w6B2      ke  6 0
+n4B       ta  w6B2
+
+L4C2      ke  24 0
+daB       ta  L4C2
+bBA4      sa  KV20 BW
+aBA4      ko  bBA4 j4B
+.         ti  aBA4 daB
+w25D      ke  25 0
+dbB       ta  w25D
+bBB4      sa  KV22 BW
+aBB4      ko  bBB4 j4B
+.         ti  aBB4 dbB
+w26D      ke  26 0
+dcB       ta  w26D
+bBC4      sa  KV24 BW
+aBC4      ko  bBC4 j4B
+.         ti  aBC4 dcB
+
+w20Dz     ke  20 0
+j4D       ta  w20Dz
+bKB       sa  KV04 BW
+aKB       ko  bKB j4D
+kB4       ta  aKB
+c1B       ke  1 0
+.         su  kB4 c1B N17
+c5B       ke  5 0
+.         su  kB4 c5B N25
+c6B       ke  6 0
+.         su  kB4 c6B N19
+c7B       ke  7 0
+.         su  kB4 c7B N25
+c8B       ke  8 0
+.         su  kB4 c8B N31
+c9B       ke  9 0
+.         su  kB4 c9B N31
+c10B      ke  10 0
+.         su  kB4 c10B N19
+c11B      ke  11 0
+.         su  kB4 c11B NZ0
+.         so  N33
+
+NZ0       ke  0 0
+.         so  L4F
+
+N17       ke  17 0
+w24e      ke  24 0
+daC       ta  w24e
+daD       ko  daC N17
+.         ti  w24e daD
+.         so  L4F
+N19       ke  19 0
+w24f      ke  24 0
+daE       ta  w24f
+daF       ko  daE N19
+.         ti  w24f daF
+.         so  L4F
+N25       ke  25 0
+w24g      ke  24 0
+daG       ta  w24g
+daH       ko  daG N25
+.         ti  w24g daH
+.         so  L4F
+N31       ke  31 0
+w24h      ke  24 0
+daI       ta  w24h
+daJ       ko  daI N31
+.         ti  w24h daJ
+.         so  L4F
+N33       ke  33 0
+w24i      ke  24 0
+daK       ta  w24i
+daL       ko  daK N33
+.         ti  w24i daL
+.         so  L4F
+
+L4F       ke  24 0
+daM       ta  L4F
+c256B     ke  256 0
+.         se  daM c256B L4G
+n256B     si  c256B
+daN       ko  daM n256B
+w24j      ke  24 0
+.         ti  w24j daN
+w25E      ke  25 0
+dbC       ta  w25E
+o1B4      ke  1 0
+dbD       ko  dbC o1B4
+c256C     ke  256 0
+.         se  dbD c256C L4H
+n256D     si  c256C
+dbE       ko  dbD n256D
+.         ti  w25E dbE
+w26E      ke  26 0
+dcC       ta  w26E
+o1B5      ke  1 0
+dcD       ko  dcC o1B5
+.         ti  w26E dcD
+.         so  L4G
+
+L4H       ke  25 0
+.         ti  L4H dbD
+.         so  L4G
+
+L4G       ke  20 0
+j4E       ta  L4G
+o1B6      ke  1 0
+j4F       ko  j4E o1B6
+.         ti  L4G j4F
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW6     ke  0 0
+L4B2W6z   ke  20 0
+j4BW6z    ta  L4B2W6z
+w6B2W6z   ke  6 0
+n4BW6z    ta  w6B2W6z
+.         se  j4BW6z n4BW6z L4B2
+.         so  E5                         # 境界に届いた
+
+# ================= 第 5 段：Emit（19 §4.4）=================
+
+E5        ke  15 0
+z5E       ke  0 0
+.         ti  E5 z5E
+
+# ---- prologue（18 式 5.1）。11 byte ----
+#   53 55 41 55 41 56 41 57 4C 8B FF
+bIP       sa  KV54 BW
+o1Q       ke  1 0
+q53       ke  83 0
+.         ti  bIP q53
+p01       ko  bIP o1Q
+q55       ke  85 0
+.         ti  p01 q55
+p02       ko  p01 o1Q
+q41       ke  65 0
+.         ti  p02 q41
+p03       ko  p02 o1Q
+q55b      ke  85 0
+.         ti  p03 q55b
+p04       ko  p03 o1Q
+q41b      ke  65 0
+.         ti  p04 q41b
+p05       ko  p04 o1Q
+q56       ke  86 0
+.         ti  p05 q56
+p06       ko  p05 o1Q
+q41c      ke  65 0
+.         ti  p06 q41c
+p07       ko  p06 o1Q
+q57       ke  87 0
+.         ti  p07 q57
+p08       ko  p07 o1Q
+q4C       ke  76 0
+.         ti  p08 q4C
+p09       ko  p08 o1Q
+q8Bp      ke  139 0
+.         ti  p09 q8Bp
+p0A       ko  p09 o1Q
+qFF       ke  255 0
+.         ti  p0A qFF
+w15Q      ke  15 0
+e11       ke  11 0
+.         ti  w15Q e11
+
+# ---- 箱ごとの走査 ----
+E5B       ke  20 0
+z5B       ke  0 0
+.         ti  E5B z5B
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW7     ke  0 0
+L5W7      ke  20 0
+j5W7      ta  L5W7
+w6LW7     ke  6 0
+n5W7      ta  w6LW7
+.         se  j5W7 n5W7 L5
+.         so  E6
+L5        ke  20 0
+j5        ta  L5
+w6L       ke  6 0
+n5        ta  w6L
+
+L5B       sa  KV04 BW
+aK5       ko  L5B j5
+k5        ta  aK5
+kc1       ke  1 0
+.         su  k5 kc1 EMC
+kc2       ke  2 0
+.         su  k5 kc2 EMA
+kc3       ke  3 0
+.         su  k5 kc3 EMM
+kc4       ke  4 0
+.         su  k5 kc4 EMN
+kc5       ke  5 0
+.         su  k5 kc5 EMS
+kc6       ke  6 0
+.         su  k5 kc6 EMO
+kc7       ke  7 0
+.         su  k5 kc7 EMLD
+kc8       ke  8 0
+.         su  k5 kc8 EBE
+kc9       ke  9 0
+.         su  k5 kc9 EBL
+kc10      ke  10 0
+.         su  k5 kc10 EMKO
+kc11      ke  11 0
+.         su  k5 kc11 EMPU
+.         so  BAD
+
+# 次の箱へ
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW8     ke  0 0
+L5NW8     ke  20 0
+j5NW8     ta  L5NW8
+o1N5W8    ke  1 0
+j5MW8     ko  j5NW8 o1N5W8
+.         ti  L5NW8 j5MW8
+CNTW7W8   ke  0 0
+L5W7zW8   ke  20 0
+j5W7zW8   ta  L5W7zW8
+w6LW7zW8  ke  6 0
+n5W7zW8   ta  w6LW7zW8
+.         se  j5W7zW8 n5W7zW8 L5
+.         so  E6
+EMCW8     ke  15 0
+eCW8      ta  EMCW8
+bICW8     sa  KV54 BW
+c00W8     ko  bICW8 eCW8
+o1CW8     ke  1 0
+q48cW8    ke  72 0
+.         ti  c00W8 q48cW8
+c01W8     ko  c00W8 o1CW8
+qB8cW8    ke  184 0
+.         ti  c01W8 qB8cW8
+c02W8     ko  c01W8 o1CW8
+w20CW8    ke  20 0
+jCW8      ta  w20CW8
+bACW8     sa  KV06 BW
+aACW8     ko  bACW8 jCW8
+xCW8      ta  aACW8
+.         ti  c02W8 xCW8
+zCW8      ke  0 0
+c03W8     ko  c02W8 o1CW8
+.         ti  c03W8 zCW8
+c04W8     ko  c03W8 o1CW8
+.         ti  c04W8 zCW8
+c05W8     ko  c04W8 o1CW8
+.         ti  c05W8 zCW8
+c06W8     ko  c05W8 o1CW8
+.         ti  c06W8 zCW8
+c07W8     ko  c06W8 o1CW8
+.         ti  c07W8 zCW8
+c08W8     ko  c07W8 o1CW8
+.         ti  c08W8 zCW8
+c09W8     ko  c08W8 o1CW8
+.         ti  c09W8 zCW8
+c0AW8     ko  c09W8 o1CW8
+q49cW8    ke  73 0
+.         ti  c0AW8 q49cW8
+c0BW8     ko  c0AW8 o1CW8
+q89cW8    ke  137 0
+.         ti  c0BW8 q89cW8
+c0CW8     ko  c0BW8 o1CW8
+q87cW8    ke  135 0
+.         ti  c0CW8 q87cW8
+c0DW8     ko  c0CW8 o1CW8
+bDAcW8    sa  KV14 BW
+aDAcW8    ko  bDAcW8 jCW8
+dAcW8     ta  aDAcW8
+.         ti  c0DW8 dAcW8
+c0EW8     ko  c0DW8 o1CW8
+bDBcW8    sa  KV16 BW
+aDBcW8    ko  bDBcW8 jCW8
+dBcW8     ta  aDBcW8
+.         ti  c0EW8 dBcW8
+c0FW8     ko  c0EW8 o1CW8
+bDCcW8    sa  KV18 BW
+aDCcW8    ko  bDCcW8 jCW8
+dCcW8     ta  aDCcW8
+.         ti  c0FW8 dCcW8
+c10xW8    ko  c0FW8 o1CW8
+z10cW8    ke  0 0
+.         ti  c10xW8 z10cW8
+e17cW8    ke  17 0
+eC2W8     ko  eCW8 e17cW8
+.         ti  EMCW8 eC2W8
+.         so  L5NW8
+EMAW8     ke  20 0
+jAW8      ta  EMAW8
+bAAW8     sa  KV06 BW
+aAAW8     ko  bAAW8 jAW8
+uA5W8     ta  aAAW8
+w12AW8    ke  12 0
+.         ti  w12AW8 uA5W8
+bBA5W8    sa  KV08 BW
+aBA9W8    ko  bBA5W8 jAW8
+vA5W8     ta  aBA9W8
+w13AW8    ke  13 0
+.         ti  w13AW8 vA5W8
+bDA5W8    sa  KV10 BW
+aDjW8     ko  bDA5W8 jAW8
+djW8      ta  aDjW8
+aDu5W8    ko  bDA5W8 uA5W8
+du5W8     ta  aDu5W8
+nduW8     si  du5W8
+su5W8     ko  djW8 nduW8
+w29AW8    ke  29 0
+.         ti  w29AW8 su5W8
+w13BxW8   ke  13 0
+vA6W8     ta  w13BxW8
+bDA6W8    sa  KV10 BW
+aDv5W8    ko  bDA6W8 vA6W8
+dv5W8     ta  aDv5W8
+ndvW8     si  dv5W8
+w20AW8    ke  20 0
+jA2W8     ta  w20AW8
+aDj2W8    ko  bDA6W8 jA2W8
+dj2W8     ta  aDj2W8
+sv5W8     ko  dj2W8 ndvW8
+w30AW8    ke  30 0
+.         ti  w30AW8 sv5W8
+w32AW8    ke  32 0
+o0AW8     ke  72 0
+.         ti  w32AW8 o0AW8
+w33AW8    ke  33 0
+o1AW8     ke  1 0
+.         ti  w33AW8 o1AW8
+w34AW8    ke  34 0
+o2AW8     ke  200 0
+.         ti  w34AW8 o2AW8
+w35AW8    ke  35 0
+o3AW8     ke  144 0
+.         ti  w35AW8 o3AW8
+.         so  UNIW8
+EMMW8     ke  20 0
+jMW8      ta  EMMW8
+bAMW8     sa  KV06 BW
+aAMW8     ko  bAMW8 jMW8
+uMW8      ta  aAMW8
+w12MW8    ke  12 0
+.         ti  w12MW8 uMW8
+bBMW8     sa  KV08 BW
+aBMW8     ko  bBMW8 jMW8
+vMxW8     ta  aBMW8
+w13MW8    ke  13 0
+.         ti  w13MW8 vMxW8
+zMW8      ke  0 0
+w29MW8    ke  29 0
+.         ti  w29MW8 zMW8
+w30MW8    ke  30 0
+.         ti  w30MW8 zMW8
+w32MW8    ke  32 0
+o0MW8     ke  72 0
+.         ti  w32MW8 o0MW8
+w33MW8    ke  33 0
+o1MW8     ke  15 0
+.         ti  w33MW8 o1MW8
+w34MW8    ke  34 0
+o2MW8     ke  175 0
+.         ti  w34MW8 o2MW8
+w35MW8    ke  35 0
+o3MW8     ke  193 0
+.         ti  w35MW8 o3MW8
+.         so  UNIW8
+EMNW8     ke  20 0
+jNW8      ta  EMNW8
+bANW8     sa  KV06 BW
+aANW8     ko  bANW8 jNW8
+uNW8      ta  aANW8
+w12NW8    ke  12 0
+.         ti  w12NW8 uNW8
+w13NW8    ke  13 0
+.         ti  w13NW8 uNW8
+zNW8      ke  0 0
+w29NW8    ke  29 0
+.         ti  w29NW8 zNW8
+w30NW8    ke  30 0
+.         ti  w30NW8 zNW8
+w32NW8    ke  32 0
+o0NW8     ke  72 0
+.         ti  w32NW8 o0NW8
+w33NW8    ke  33 0
+o1NW8     ke  247 0
+.         ti  w33NW8 o1NW8
+w34NW8    ke  34 0
+o2NW8     ke  216 0
+.         ti  w34NW8 o2NW8
+w35NW8    ke  35 0
+o3NW8     ke  144 0
+.         ti  w35NW8 o3NW8
+.         so  UNIW8
+UNIW8     ke  15 0
+eUW8      ta  UNIW8
+bIUW8     sa  KV54 BW
+u00W8     ko  bIUW8 eUW8
+o1UW8     ke  1 0
+q49W8     ke  73 0
+.         ti  u00W8 q49W8
+u01W8     ko  u00W8 o1UW8
+q8BW8     ke  139 0
+.         ti  u01W8 q8BW8
+u02W8     ko  u01W8 o1UW8
+q87W8     ke  135 0
+.         ti  u02W8 q87W8
+u03W8     ko  u02W8 o1UW8
+w12UW8    ke  12 0
+uUxW8     ta  w12UW8
+bDAUW8    sa  KV14 BW
+aAUW8     ko  bDAUW8 uUxW8
+dAUW8     ta  aAUW8
+.         ti  u03W8 dAUW8
+u04W8     ko  u03W8 o1UW8
+bDBUW8    sa  KV16 BW
+aBUW8     ko  bDBUW8 uUxW8
+dBUW8     ta  aBUW8
+.         ti  u04W8 dBUW8
+u05W8     ko  u04W8 o1UW8
+bDCUW8    sa  KV18 BW
+aCUW8     ko  bDCUW8 uUxW8
+dCUW8     ta  aCUW8
+.         ti  u05W8 dCUW8
+u06W8     ko  u05W8 o1UW8
+zUW8      ke  0 0
+.         ti  u06W8 zUW8
+u07W8     ko  u06W8 o1UW8
+q48W8     ke  72 0
+.         ti  u07W8 q48W8
+u08W8     ko  u07W8 o1UW8
+qC1W8     ke  193 0
+.         ti  u08W8 qC1W8
+u09W8     ko  u08W8 o1UW8
+qE0W8     ke  224 0
+.         ti  u09W8 qE0W8
+u0AW8     ko  u09W8 o1UW8
+w29UW8    ke  29 0
+suUW8     ta  w29UW8
+.         ti  u0AW8 suUW8
+u0BW8     ko  u0AW8 o1UW8
+q49bW8    ke  73 0
+.         ti  u0BW8 q49bW8
+u0CW8     ko  u0BW8 o1UW8
+q8BbW8    ke  139 0
+.         ti  u0CW8 q8BbW8
+u0DW8     ko  u0CW8 o1UW8
+q8FW8     ke  143 0
+.         ti  u0DW8 q8FW8
+u0EW8     ko  u0DW8 o1UW8
+w13UW8    ke  13 0
+vUW8      ta  w13UW8
+bDAVW8    sa  KV14 BW
+aAVW8     ko  bDAVW8 vUW8
+dAVW8     ta  aAVW8
+.         ti  u0EW8 dAVW8
+u0FW8     ko  u0EW8 o1UW8
+bDBVW8    sa  KV16 BW
+aBVW8     ko  bDBVW8 vUW8
+dBVW8     ta  aBVW8
+.         ti  u0FW8 dBVW8
+u10W8     ko  u0FW8 o1UW8
+bDCVW8    sa  KV18 BW
+aCVW8     ko  bDCVW8 vUW8
+dCVW8     ta  aCVW8
+.         ti  u10W8 dCVW8
+u11W8     ko  u10W8 o1UW8
+zU2W8     ke  0 0
+.         ti  u11W8 zU2W8
+u12W8     ko  u11W8 o1UW8
+q48bW8    ke  72 0
+.         ti  u12W8 q48bW8
+u13W8     ko  u12W8 o1UW8
+qC1bW8    ke  193 0
+.         ti  u13W8 qC1bW8
+u14W8     ko  u13W8 o1UW8
+qE1W8     ke  225 0
+.         ti  u14W8 qE1W8
+u15W8     ko  u14W8 o1UW8
+w30UW8    ke  30 0
+svUW8     ta  w30UW8
+.         ti  u15W8 svUW8
+u16W8     ko  u15W8 o1UW8
+w32UW8    ke  32 0
+p0UW8     ta  w32UW8
+.         ti  u16W8 p0UW8
+u17W8     ko  u16W8 o1UW8
+w33UW8    ke  33 0
+p1UW8     ta  w33UW8
+.         ti  u17W8 p1UW8
+u18W8     ko  u17W8 o1UW8
+w34UW8    ke  34 0
+p2UW8     ta  w34UW8
+.         ti  u18W8 p2UW8
+u19W8     ko  u18W8 o1UW8
+w35UW8    ke  35 0
+p3UW8     ta  w35UW8
+.         ti  u19W8 p3UW8
+u1AW8     ko  u19W8 o1UW8
+q49c2W8   ke  73 0
+.         ti  u1AW8 q49c2W8
+u1BW8     ko  u1AW8 o1UW8
+q89W8     ke  137 0
+.         ti  u1BW8 q89W8
+u1CW8     ko  u1BW8 o1UW8
+q87bW8    ke  135 0
+.         ti  u1CW8 q87bW8
+u1DW8     ko  u1CW8 o1UW8
+w20UxW8   ke  20 0
+jUW8      ta  w20UxW8
+bDAKW8    sa  KV14 BW
+aAKW8     ko  bDAKW8 jUW8
+dAKW8     ta  aAKW8
+.         ti  u1DW8 dAKW8
+u1EW8     ko  u1DW8 o1UW8
+bDBKW8    sa  KV16 BW
+aBK5W8    ko  bDBKW8 jUW8
+dBKW8     ta  aBK5W8
+.         ti  u1EW8 dBKW8
+u1FW8     ko  u1EW8 o1UW8
+bDCKW8    sa  KV18 BW
+aCKW8     ko  bDCKW8 jUW8
+dCKW8     ta  aCKW8
+.         ti  u1FW8 dCKW8
+u20W8     ko  u1FW8 o1UW8
+zU3W8     ke  0 0
+.         ti  u20W8 zU3W8
+e33W8     ke  33 0
+eU2W8     ko  eUW8 e33W8
+.         ti  UNIW8 eU2W8
+.         so  L5NW8
+EMSW8     ke  20 0
+jS5W8     ta  EMSW8
+bAS5W8    sa  KV06 BW
+aAS5W8    ko  bAS5W8 jS5W8
+aS5W8     ta  aAS5W8
+w12S5W8   ke  12 0
+.         ti  w12S5W8 aS5W8
+bBS5W8    sa  KV08 BW
+aBS5W8    ko  bBS5W8 jS5W8
+uS5W8     ta  aBS5W8
+w13S5W8   ke  13 0
+.         ti  w13S5W8 uS5W8
+w15SW8    ke  15 0
+eSW8      ta  w15SW8
+bISW8     sa  KV54 BW
+s00W8     ko  bISW8 eSW8
+o1S7W8    ke  1 0
+q49sW8    ke  73 0
+.         ti  s00W8 q49sW8
+s01W8     ko  s00W8 o1S7W8
+q8BsW8    ke  139 0
+.         ti  s01W8 q8BsW8
+s02W8     ko  s01W8 o1S7W8
+q87sW8    ke  135 0
+.         ti  s02W8 q87sW8
+s03W8     ko  s02W8 o1S7W8
+w12T5W8   ke  12 0
+aT5zW8    ta  w12T5W8
+bDAsW8    sa  KV14 BW
+aDAsW8    ko  bDAsW8 aT5zW8
+dAsW8     ta  aDAsW8
+.         ti  s03W8 dAsW8
+s04W8     ko  s03W8 o1S7W8
+bDBsW8    sa  KV16 BW
+aDBsW8    ko  bDBsW8 aT5zW8
+dBsW8     ta  aDBsW8
+.         ti  s04W8 dBsW8
+s05W8     ko  s04W8 o1S7W8
+bDCsW8    sa  KV18 BW
+aDCsW8    ko  bDCsW8 aT5zW8
+dCsW8     ta  aDCsW8
+.         ti  s05W8 dCsW8
+s06W8     ko  s05W8 o1S7W8
+zSW8      ke  0 0
+.         ti  s06W8 zSW8
+s07W8     ko  s06W8 o1S7W8
+q48sW8    ke  72 0
+.         ti  s07W8 q48sW8
+s08W8     ko  s07W8 o1S7W8
+qC1sW8    ke  193 0
+.         ti  s08W8 qC1sW8
+s09W8     ko  s08W8 o1S7W8
+qE0sW8    ke  224 0
+.         ti  s09W8 qE0sW8
+s0AW8     ko  s09W8 o1S7W8
+q03sW8    ke  3 0
+.         ti  s0AW8 q03sW8
+s0BW8     ko  s0AW8 o1S7W8
+q4CsW8    ke  76 0
+.         ti  s0BW8 q4CsW8
+s0CW8     ko  s0BW8 o1S7W8
+q01sW8    ke  1 0
+.         ti  s0CW8 q01sW8
+s0DW8     ko  s0CW8 o1S7W8
+qF8sW8    ke  248 0
+.         ti  s0DW8 qF8sW8
+s0EW8     ko  s0DW8 o1S7W8
+q49tW8    ke  73 0
+.         ti  s0EW8 q49tW8
+s0FW8     ko  s0EW8 o1S7W8
+q8BtW8    ke  139 0
+.         ti  s0FW8 q8BtW8
+s10W8     ko  s0FW8 o1S7W8
+q8FsW8    ke  143 0
+.         ti  s10W8 q8FsW8
+s11W8     ko  s10W8 o1S7W8
+w13T5W8   ke  13 0
+uT5W8     ta  w13T5W8
+bDAtW8    sa  KV14 BW
+aDAtW8    ko  bDAtW8 uT5W8
+dAtW8     ta  aDAtW8
+.         ti  s11W8 dAtW8
+s12W8     ko  s11W8 o1S7W8
+bDBtW8    sa  KV16 BW
+aDBtW8    ko  bDBtW8 uT5W8
+dBtW8     ta  aDBtW8
+.         ti  s12W8 dBtW8
+s13W8     ko  s12W8 o1S7W8
+bDCtW8    sa  KV18 BW
+aDCtW8    ko  bDCtW8 uT5W8
+dCtW8     ta  aDCtW8
+.         ti  s13W8 dCtW8
+s14W8     ko  s13W8 o1S7W8
+zS2W8     ke  0 0
+.         ti  s14W8 zS2W8
+s15W8     ko  s14W8 o1S7W8
+q48tW8    ke  72 0
+.         ti  s15W8 q48tW8
+s16W8     ko  s15W8 o1S7W8
+q89sW8    ke  137 0
+.         ti  s16W8 q89sW8
+s17W8     ko  s16W8 o1S7W8
+q48uW8    ke  72 0
+.         ti  s17W8 q48uW8
+s18W8     ko  s17W8 o1S7W8
+zS3W8     ke  0 0
+.         ti  s18W8 zS3W8
+e25sW8    ke  25 0
+eS2W8     ko  eSW8 e25sW8
+.         ti  w15SW8 eS2W8
+.         so  L5NW8
+EMOW8     ke  15 0
+eOW8      ta  EMOW8
+bIOW8     sa  KV54 BW
+r00W8     ko  bIOW8 eOW8
+o1OW8     ke  1 0
+q48oW8    ke  72 0
+.         ti  r00W8 q48oW8
+r01W8     ko  r00W8 o1OW8
+qB8oW8    ke  184 0
+.         ti  r01W8 qB8oW8
+zOW8      ke  0 0
+r02W8     ko  r01W8 o1OW8
+.         ti  r02W8 zOW8
+r03W8     ko  r02W8 o1OW8
+.         ti  r03W8 zOW8
+r04W8     ko  r03W8 o1OW8
+.         ti  r04W8 zOW8
+r05W8     ko  r04W8 o1OW8
+.         ti  r05W8 zOW8
+r06W8     ko  r05W8 o1OW8
+.         ti  r06W8 zOW8
+r07W8     ko  r06W8 o1OW8
+.         ti  r07W8 zOW8
+r08W8     ko  r07W8 o1OW8
+.         ti  r08W8 zOW8
+r09W8     ko  r08W8 o1OW8
+.         ti  r09W8 zOW8
+r0AW8     ko  r09W8 o1OW8
+q41oW8    ke  65 0
+.         ti  r0AW8 q41oW8
+r0BW8     ko  r0AW8 o1OW8
+q5FW8     ke  95 0
+.         ti  r0BW8 q5FW8
+r0CW8     ko  r0BW8 o1OW8
+q41pW8    ke  65 0
+.         ti  r0CW8 q41pW8
+r0DW8     ko  r0CW8 o1OW8
+q5EW8     ke  94 0
+.         ti  r0DW8 q5EW8
+r0EW8     ko  r0DW8 o1OW8
+q41qW8    ke  65 0
+.         ti  r0EW8 q41qW8
+r0FW8     ko  r0EW8 o1OW8
+q5DW8     ke  93 0
+.         ti  r0FW8 q5DW8
+r10W8     ko  r0FW8 o1OW8
+q5DbW8    ke  93 0
+.         ti  r10W8 q5DbW8
+r11W8     ko  r10W8 o1OW8
+q5BW8     ke  91 0
+.         ti  r11W8 q5BW8
+r12W8     ko  r11W8 o1OW8
+qC3W8     ke  195 0
+.         ti  r12W8 qC3W8
+e19oW8    ke  19 0
+eO2W8     ko  eOW8 e19oW8
+.         ti  EMOW8 eO2W8
+.         so  L5NW8
+EMLDW8    ke  20 0
+jLW8      ta  EMLDW8
+bALaW8    sa  KV06 BW
+aALaW8    ko  bALaW8 jLW8
+aLW8      ta  aALaW8
+w48LW8    ke  48 0
+.         ti  w48LW8 aLW8
+w15LW8    ke  15 0
+eLW8      ta  w15LW8
+bILW8     sa  KV54 BW
+l00W8     ko  bILW8 eLW8
+o1LW8     ke  1 0
+q49LW8    ke  73 0
+.         ti  l00W8 q49LW8
+l01W8     ko  l00W8 o1LW8
+q8BLW8    ke  139 0
+.         ti  l01W8 q8BLW8
+l02W8     ko  l01W8 o1LW8
+q87LW8    ke  135 0
+.         ti  l02W8 q87LW8
+l03W8     ko  l02W8 o1LW8
+w48MW8    ke  48 0
+aL2W8     ta  w48MW8
+bDALW8    sa  KV14 BW
+aDALW8    ko  bDALW8 aL2W8
+dALW8     ta  aDALW8
+.         ti  l03W8 dALW8
+l04W8     ko  l03W8 o1LW8
+w48NW8    ke  48 0
+aL3W8     ta  w48NW8
+bDBLW8    sa  KV16 BW
+aDBLW8    ko  bDBLW8 aL3W8
+dBLW8     ta  aDBLW8
+.         ti  l04W8 dBLW8
+l05W8     ko  l04W8 o1LW8
+w48OW8    ke  48 0
+aL4W8     ta  w48OW8
+bDCLW8    sa  KV18 BW
+aDCLW8    ko  bDCLW8 aL4W8
+dCLW8     ta  aDCLW8
+.         ti  l05W8 dCLW8
+l06W8     ko  l05W8 o1LW8
+zLW8      ke  0 0
+.         ti  l06W8 zLW8
+l07W8     ko  l06W8 o1LW8
+q48LW8    ke  72 0
+.         ti  l07W8 q48LW8
+l08W8     ko  l07W8 o1LW8
+qC1LW8    ke  193 0
+.         ti  l08W8 qC1LW8
+l09W8     ko  l08W8 o1LW8
+qE0LW8    ke  224 0
+.         ti  l09W8 qE0LW8
+l0AW8     ko  l09W8 o1LW8
+q03LW8    ke  3 0
+.         ti  l0AW8 q03LW8
+l0BW8     ko  l0AW8 o1LW8
+q4CLW8    ke  76 0
+.         ti  l0BW8 q4CLW8
+l0CW8     ko  l0BW8 o1LW8
+q01LW8    ke  1 0
+.         ti  l0CW8 q01LW8
+l0DW8     ko  l0CW8 o1LW8
+qF8LW8    ke  248 0
+.         ti  l0DW8 qF8LW8
+l0EW8     ko  l0DW8 o1LW8
+q48MW8    ke  72 0
+.         ti  l0EW8 q48MW8
+l0FW8     ko  l0EW8 o1LW8
+q8BMW8    ke  139 0
+.         ti  l0FW8 q8BMW8
+l10W8     ko  l0FW8 o1LW8
+q40LW8    ke  64 0
+.         ti  l10W8 q40LW8
+l11W8     ko  l10W8 o1LW8
+zL2W8     ke  0 0
+.         ti  l11W8 zL2W8
+l12W8     ko  l11W8 o1LW8
+q49MW8    ke  73 0
+.         ti  l12W8 q49MW8
+l13W8     ko  l12W8 o1LW8
+q89LW8    ke  137 0
+.         ti  l13W8 q89LW8
+l14W8     ko  l13W8 o1LW8
+q87MW8    ke  135 0
+.         ti  l14W8 q87MW8
+l15W8     ko  l14W8 o1LW8
+w20LW8    ke  20 0
+jL2W8     ta  w20LW8
+bDAMW8    sa  KV14 BW
+aDAMW8    ko  bDAMW8 jL2W8
+dAMW8     ta  aDAMW8
+.         ti  l15W8 dAMW8
+l16W8     ko  l15W8 o1LW8
+w20M2W8   ke  20 0
+jL3W8     ta  w20M2W8
+bDBMW8    sa  KV16 BW
+aDBMW8    ko  bDBMW8 jL3W8
+dBMW8     ta  aDBMW8
+.         ti  l16W8 dBMW8
+l17W8     ko  l16W8 o1LW8
+w20NW8    ke  20 0
+jL4W8     ta  w20NW8
+bDCMW8    sa  KV18 BW
+aDCMW8    ko  bDCMW8 jL4W8
+dCMW8     ta  aDCMW8
+.         ti  l17W8 dCMW8
+l18W8     ko  l17W8 o1LW8
+zL3W8     ke  0 0
+.         ti  l18W8 zL3W8
+w15MW8    ke  15 0
+e25LW8    ke  25 0
+eL3W8     ta  w15MW8
+eL2W8     ko  eL3W8 e25LW8
+.         ti  w15MW8 eL2W8
+.         so  L5NW8
+EBEW8     ke  53 0
+q84BW8    ke  132 0
+.         ti  EBEW8 q84BW8
+.         so  BRAW8
+EBLW8     ke  53 0
+q8CBW8    ke  140 0
+.         ti  EBLW8 q8CBW8
+.         so  BRAW8
+BRAW8     ke  20 0
+jRW8      ta  BRAW8
+bARaW8    sa  KV06 BW
+aARaW8    ko  bARaW8 jRW8
+uRW8      ta  aARaW8
+w12RW8    ke  12 0
+.         ti  w12RW8 uRW8
+w20RW8    ke  20 0
+jR2W8     ta  w20RW8
+bBRaW8    sa  KV08 BW
+aBRaW8    ko  bBRaW8 jR2W8
+vRbW8     ta  aBRaW8
+w13RW8    ke  13 0
+.         ti  w13RW8 vRbW8
+w20R2W8   ke  20 0
+jR3W8     ta  w20R2W8
+dDRW8     sa  KV10 BW
+aDRW8     ko  dDRW8 jR3W8
+dRW8      ta  aDRW8
+w14RW8    ke  14 0
+.         ti  w14RW8 dRW8
+w12R2W8   ke  12 0
+uR2W8     ta  w12R2W8
+dDR2W8    sa  KV10 BW
+aDR2W8    ko  dDR2W8 uR2W8
+duRW8     ta  aDR2W8
+nduRW8    si  duRW8
+w14R2W8   ke  14 0
+dR2W8     ta  w14R2W8
+suRW8     ko  dR2W8 nduRW8
+w57RW8    ke  57 0
+.         ti  w57RW8 suRW8
+w13R2W8   ke  13 0
+vR2W8     ta  w13R2W8
+dDR3W8    sa  KV10 BW
+aDR3W8    ko  dDR3W8 vR2W8
+dvRW8     ta  aDR3W8
+ndvRW8    si  dvRW8
+w14R3W8   ke  14 0
+dR3W8     ta  w14R3W8
+svRW8     ko  dR3W8 ndvRW8
+w58RW8    ke  58 0
+.         ti  w58RW8 svRW8
+w20R3W8   ke  20 0
+jR4W8     ta  w20R3W8
+bBARW8    sa  KV20 BW
+aBARW8    ko  bBARW8 jR4W8
+saRW8     ta  aBARW8
+c31RW8    ke  31 0
+saR2W8    ko  saRW8 c31RW8
+w20R4W8   ke  20 0
+jR5W8     ta  w20R4W8
+bBBRW8    sa  KV22 BW
+aBBRW8    ko  bBBRW8 jR5W8
+sbRW8     ta  aBBRW8
+w20R5W8   ke  20 0
+jR6W8     ta  w20R5W8
+bBCRW8    sa  KV24 BW
+aBCRW8    ko  bBCRW8 jR6W8
+scRW8     ta  aBCRW8
+w59RW8    ke  59 0
+.         ti  w59RW8 scRW8
+c256RW8   ke  256 0
+M1W8      ke  -1 0
+BMW8      ko  c256RW8 M1W8               # 境界 b - 1
+.         se  BMW8 saR2W8 L5N
+.         so  BR1
+L5N       ke  20 0
+j5N       ta  L5N
+o1N5      ke  1 0
+j5M       ko  j5N o1N5
+.         ti  L5N j5M
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW7     ke  0 0
+L5W7z     ke  20 0
+j5W7z     ta  L5W7z
+w6LW7z    ke  6 0
+n5W7z     ta  w6LW7z
+.         se  j5W7z n5W7z L5N
+.         so  E6                         # 境界に届いた
+
+# ---- Cst：48 B8 x 00×7 | 49 89 87 d(k)。17 byte ----
+EMC       ke  15 0
+eC        ta  EMC
+bIC       sa  KV54 BW
+c00       ko  bIC eC
+o1C       ke  1 0
+q48c      ke  72 0
+.         ti  c00 q48c
+c01       ko  c00 o1C
+qB8c      ke  184 0
+.         ti  c01 qB8c
+c02       ko  c01 o1C
+w20C      ke  20 0
+jC        ta  w20C
+bAC       sa  KV06 BW
+aAC       ko  bAC jC
+xC        ta  aAC
+
+# 分子は符号つきの 64 bit になる。|x| < 256 の範囲で、負なら上位七 byte を
+# 255 で埋める。二の補数はこの埋めで閉じる
+zC        ke  0 0
+.         se  xC zC CSNEG
+c256c     ke  256 0
+.         se  xC c256c CSPOS
+.         so  BAD
+CSPOS     ke  0 0
+.         ti  c02 xC
+w95c      ke  95 0
+.         ti  w95c zC
+.         so  CSFIL
+CSNEG     ke  -256 0
+.         se  CSNEG xC CSNG2
+.         so  BAD
+CSNG2     ke  256 0
+xCn       ko  CSNG2 xC
+.         ti  c02 xCn
+w95cn     ke  95 0
+qFFc      ke  255 0
+.         ti  w95cn qFFc
+.         so  CSFIL
+
+CSFIL     ke  95 0
+fCx        ta  CSFIL
+c03       ko  c02 o1C
+.         ti  c03 fCx
+c04       ko  c03 o1C
+.         ti  c04 fCx
+c05       ko  c04 o1C
+.         ti  c05 fCx
+c06       ko  c05 o1C
+.         ti  c06 fCx
+c07       ko  c06 o1C
+.         ti  c07 fCx
+c08       ko  c07 o1C
+.         ti  c08 fCx
+c09       ko  c08 o1C
+.         ti  c09 fCx
+c0A       ko  c09 o1C
+q49c      ke  73 0
+.         ti  c0A q49c
+c0B       ko  c0A o1C
+q89c      ke  137 0
+.         ti  c0B q89c
+c0C       ko  c0B o1C
+q87c      ke  135 0
+.         ti  c0C q87c
+c0D       ko  c0C o1C
+bDAc      sa  KV14 BW
+aDAc      ko  bDAc jC
+dAc       ta  aDAc
+.         ti  c0D dAc
+c0E       ko  c0D o1C
+bDBc      sa  KV16 BW
+aDBc      ko  bDBc jC
+dBc       ta  aDBc
+.         ti  c0E dBc
+c0F       ko  c0E o1C
+bDCc      sa  KV18 BW
+aDCc      ko  bDCc jC
+dCc       ta  aDCc
+.         ti  c0F dCc
+c10x      ko  c0F o1C
+z10c      ke  0 0
+.         ti  c10x z10c
+e17c      ke  17 0
+eC2       ko  eC e17c
+.         ti  EMC eC2
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- Add：一様形。深度をそろえる左シフトが入る（core/01 式 4.3）----
+EMA       ke  20 0
+jA        ta  EMA
+bAA       sa  KV06 BW
+aAA       ko  bAA jA
+uA5       ta  aAA
+w12A      ke  12 0
+.         ti  w12A uA5
+bBA5      sa  KV08 BW
+aBA9      ko  bBA5 jA
+vA5       ta  aBA9
+w13A      ke  13 0
+.         ti  w13A vA5
+bDA5      sa  KV10 BW
+aDj       ko  bDA5 jA
+dj        ta  aDj
+aDu5      ko  bDA5 uA5
+du5       ta  aDu5
+ndu       si  du5
+su5       ko  dj ndu
+w29A      ke  29 0
+.         ti  w29A su5
+w13Bx     ke  13 0
+vA6       ta  w13Bx
+bDA6      sa  KV10 BW
+aDv5      ko  bDA6 vA6
+dv5       ta  aDv5
+ndv       si  dv5
+w20A      ke  20 0
+jA2       ta  w20A
+aDj2      ko  bDA6 jA2
+dj2       ta  aDj2
+sv5       ko  dj2 ndv
+w30A      ke  30 0
+.         ti  w30A sv5
+w32A      ke  32 0
+o0A       ke  72 0
+.         ti  w32A o0A
+w33A      ke  33 0
+o1A       ke  1 0
+.         ti  w33A o1A
+w34A      ke  34 0
+o2A       ke  200 0
+.         ti  w34A o2A
+w35A      ke  35 0
+o3A       ke  144 0
+.         ti  w35A o3A
+.         so  UNI
+
+# ---- Mul：一様形。シフトは無い。深度は和になる ----
+EMM       ke  20 0
+jM        ta  EMM
+bAM       sa  KV06 BW
+aAM       ko  bAM jM
+uM        ta  aAM
+w12M      ke  12 0
+.         ti  w12M uM
+bBM       sa  KV08 BW
+aBM       ko  bBM jM
+vMx       ta  aBM
+w13M      ke  13 0
+.         ti  w13M vMx
+zM        ke  0 0
+w29M      ke  29 0
+.         ti  w29M zM
+w30M      ke  30 0
+.         ti  w30M zM
+w32M      ke  32 0
+o0M       ke  72 0
+.         ti  w32M o0M
+w33M      ke  33 0
+o1M       ke  15 0
+.         ti  w33M o1M
+w34M      ke  34 0
+o2M       ke  175 0
+.         ti  w34M o2M
+w35M      ke  35 0
+o3M       ke  193 0
+.         ti  w35M o3M
+.         so  UNI
+
+# ---- Neg：一様形。第二入力は使わないので第一と同じにする ----
+EMN       ke  20 0
+jN        ta  EMN
+bAN       sa  KV06 BW
+aAN       ko  bAN jN
+uN        ta  aAN
+w12N      ke  12 0
+.         ti  w12N uN
+w13N      ke  13 0
+.         ti  w13N uN
+zN        ke  0 0
+w29N      ke  29 0
+.         ti  w29N zN
+w30N      ke  30 0
+.         ti  w30N zN
+w32N      ke  32 0
+o0N       ke  72 0
+.         ti  w32N o0N
+w33N      ke  33 0
+o1N       ke  247 0
+.         ti  w33N o1N
+w34N      ke  34 0
+o2N       ke  216 0
+.         ti  w34N o2N
+w35N      ke  35 0
+o3N       ke  144 0
+.         ti  w35N o3N
+.         so  UNI
+
+# ---- 一様形の本体。33 byte ----
+#
+#   49 8B 87 d(u)   rax ← 語 64+u
+#   48 C1 E0 su     shl rax, su
+#   49 8B 8F d(v)   rcx ← 語 64+v
+#   48 C1 E1 sv     shl rcx, sv
+#   op0 op1 op2 op3 演算
+#   49 89 87 d(k)   語 64+k ← rax
+
+UNI       ke  15 0
+eU        ta  UNI
+bIU       sa  KV54 BW
+u00       ko  bIU eU
+o1U       ke  1 0
+q49       ke  73 0
+.         ti  u00 q49
+u01       ko  u00 o1U
+q8B       ke  139 0
+.         ti  u01 q8B
+u02       ko  u01 o1U
+q87       ke  135 0
+.         ti  u02 q87
+u03       ko  u02 o1U
+w12U      ke  12 0
+uUx       ta  w12U
+bDAU      sa  KV14 BW
+aAU       ko  bDAU uUx
+dAU       ta  aAU
+.         ti  u03 dAU
+u04       ko  u03 o1U
+bDBU      sa  KV16 BW
+aBU       ko  bDBU uUx
+dBU       ta  aBU
+.         ti  u04 dBU
+u05       ko  u04 o1U
+bDCU      sa  KV18 BW
+aCU       ko  bDCU uUx
+dCU       ta  aCU
+.         ti  u05 dCU
+u06       ko  u05 o1U
+zU        ke  0 0
+.         ti  u06 zU
+u07       ko  u06 o1U
+q48       ke  72 0
+.         ti  u07 q48
+u08       ko  u07 o1U
+qC1       ke  193 0
+.         ti  u08 qC1
+u09       ko  u08 o1U
+qE0       ke  224 0
+.         ti  u09 qE0
+u0A       ko  u09 o1U
+w29U      ke  29 0
+suU       ta  w29U
+.         ti  u0A suU
+u0B       ko  u0A o1U
+q49b      ke  73 0
+.         ti  u0B q49b
+u0C       ko  u0B o1U
+q8Bb      ke  139 0
+.         ti  u0C q8Bb
+u0D       ko  u0C o1U
+q8F       ke  143 0
+.         ti  u0D q8F
+u0E       ko  u0D o1U
+w13U      ke  13 0
+vU        ta  w13U
+bDAV      sa  KV14 BW
+aAV       ko  bDAV vU
+dAV       ta  aAV
+.         ti  u0E dAV
+u0F       ko  u0E o1U
+bDBV      sa  KV16 BW
+aBV       ko  bDBV vU
+dBV       ta  aBV
+.         ti  u0F dBV
+u10       ko  u0F o1U
+bDCV      sa  KV18 BW
+aCV       ko  bDCV vU
+dCV       ta  aCV
+.         ti  u10 dCV
+u11       ko  u10 o1U
+zU2       ke  0 0
+.         ti  u11 zU2
+u12       ko  u11 o1U
+q48b      ke  72 0
+.         ti  u12 q48b
+u13       ko  u12 o1U
+qC1b      ke  193 0
+.         ti  u13 qC1b
+u14       ko  u13 o1U
+qE1       ke  225 0
+.         ti  u14 qE1
+u15       ko  u14 o1U
+w30U      ke  30 0
+svU       ta  w30U
+.         ti  u15 svU
+u16       ko  u15 o1U
+w32U      ke  32 0
+p0U       ta  w32U
+.         ti  u16 p0U
+u17       ko  u16 o1U
+w33U      ke  33 0
+p1U       ta  w33U
+.         ti  u17 p1U
+u18       ko  u17 o1U
+w34U      ke  34 0
+p2U       ta  w34U
+.         ti  u18 p2U
+u19       ko  u18 o1U
+w35U      ke  35 0
+p3U       ta  w35U
+.         ti  u19 p3U
+u1A       ko  u19 o1U
+q49c2     ke  73 0
+.         ti  u1A q49c2
+u1B       ko  u1A o1U
+q89       ke  137 0
+.         ti  u1B q89
+u1C       ko  u1B o1U
+q87b      ke  135 0
+.         ti  u1C q87b
+u1D       ko  u1C o1U
+w20Ux     ke  20 0
+jU        ta  w20Ux
+bDAK      sa  KV14 BW
+aAK       ko  bDAK jU
+dAK       ta  aAK
+.         ti  u1D dAK
+u1E       ko  u1D o1U
+bDBK      sa  KV16 BW
+aBK5      ko  bDBK jU
+dBK       ta  aBK5
+.         ti  u1E dBK
+u1F       ko  u1E o1U
+bDCK      sa  KV18 BW
+aCK       ko  bDCK jU
+dCK       ta  aCK
+.         ti  u1F dCK
+u20       ko  u1F o1U
+zU3       ke  0 0
+.         ti  u20 zU3
+e33       ke  33 0
+eU2       ko  eU e33
+.         ti  UNI eU2
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- Store：語番号を 8 倍して基底へ足し、その番地へ書く。25 byte ----
+#
+#   49 8B 87 d(a)   rax ← 語 64+a
+#   48 C1 E0 03     shl rax, 3
+#   4C 01 F8        add rax, r15
+#   49 8B 8F d(u)   rcx ← 語 64+u
+#   48 89 48 00     [rax] ← rcx
+
+EMS       ke  20 0
+jS5       ta  EMS
+bAS5      sa  KV06 BW
+aAS5      ko  bAS5 jS5
+aS5       ta  aAS5
+w12S5     ke  12 0
+.         ti  w12S5 aS5
+bBS5      sa  KV08 BW
+aBS5      ko  bBS5 jS5
+uS5       ta  aBS5
+w13S5     ke  13 0
+.         ti  w13S5 uS5
+
+w15S      ke  15 0
+eS        ta  w15S
+bIS       sa  KV54 BW
+s00       ko  bIS eS
+o1S7      ke  1 0
+q49s      ke  73 0
+.         ti  s00 q49s
+s01       ko  s00 o1S7
+q8Bs      ke  139 0
+.         ti  s01 q8Bs
+s02       ko  s01 o1S7
+q87s      ke  135 0
+.         ti  s02 q87s
+s03       ko  s02 o1S7
+w12T5     ke  12 0
+aT5z      ta  w12T5
+bDAs      sa  KV14 BW
+aDAs      ko  bDAs aT5z
+dAs       ta  aDAs
+.         ti  s03 dAs
+s04       ko  s03 o1S7
+bDBs      sa  KV16 BW
+aDBs      ko  bDBs aT5z
+dBs       ta  aDBs
+.         ti  s04 dBs
+s05       ko  s04 o1S7
+bDCs      sa  KV18 BW
+aDCs      ko  bDCs aT5z
+dCs       ta  aDCs
+.         ti  s05 dCs
+s06       ko  s05 o1S7
+zS        ke  0 0
+.         ti  s06 zS
+s07       ko  s06 o1S7
+q48s      ke  72 0
+.         ti  s07 q48s
+s08       ko  s07 o1S7
+qC1s      ke  193 0
+.         ti  s08 qC1s
+s09       ko  s08 o1S7
+qE0s      ke  224 0
+.         ti  s09 qE0s
+s0A       ko  s09 o1S7
+q03s      ke  3 0
+.         ti  s0A q03s
+s0B       ko  s0A o1S7
+q4Cs      ke  76 0
+.         ti  s0B q4Cs
+s0C       ko  s0B o1S7
+q01s      ke  1 0
+.         ti  s0C q01s
+s0D       ko  s0C o1S7
+qF8s      ke  248 0
+.         ti  s0D qF8s
+s0E       ko  s0D o1S7
+q49t      ke  73 0
+.         ti  s0E q49t
+s0F       ko  s0E o1S7
+q8Bt      ke  139 0
+.         ti  s0F q8Bt
+s10       ko  s0F o1S7
+q8Fs      ke  143 0
+.         ti  s10 q8Fs
+s11       ko  s10 o1S7
+w13T5     ke  13 0
+uT5       ta  w13T5
+bDAt      sa  KV14 BW
+aDAt      ko  bDAt uT5
+dAt       ta  aDAt
+.         ti  s11 dAt
+s12       ko  s11 o1S7
+bDBt      sa  KV16 BW
+aDBt      ko  bDBt uT5
+dBt       ta  aDBt
+.         ti  s12 dBt
+s13       ko  s12 o1S7
+bDCt      sa  KV18 BW
+aDCt      ko  bDCt uT5
+dCt       ta  aDCt
+.         ti  s13 dCt
+s14       ko  s13 o1S7
+zS2       ke  0 0
+.         ti  s14 zS2
+s15       ko  s14 o1S7
+q48t      ke  72 0
+.         ti  s15 q48t
+s16       ko  s15 o1S7
+q89s      ke  137 0
+.         ti  s16 q89s
+s17       ko  s16 o1S7
+q48u      ke  72 0
+.         ti  s17 q48u
+s18       ko  s17 o1S7
+zS3       ke  0 0
+.         ti  s18 zS3
+e25s      ke  25 0
+eS2       ko  eS e25s
+.         ti  w15S eS2
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- Ok：報告して host へ戻る（18 式 4.2）。19 byte ----
+#
+#   48 B8 00×8      rax ← 0
+#   41 5F 41 5E 41 5D 5D 5B   退避した register を戻す
+#   C3              復帰
+
+EMO       ke  15 0
+eO        ta  EMO
+bIO       sa  KV54 BW
+r00       ko  bIO eO
+o1O       ke  1 0
+q48o      ke  72 0
+.         ti  r00 q48o
+r01       ko  r00 o1O
+qB8o      ke  184 0
+.         ti  r01 qB8o
+zO        ke  0 0
+r02       ko  r01 o1O
+.         ti  r02 zO
+r03       ko  r02 o1O
+.         ti  r03 zO
+r04       ko  r03 o1O
+.         ti  r04 zO
+r05       ko  r04 o1O
+.         ti  r05 zO
+r06       ko  r05 o1O
+.         ti  r06 zO
+r07       ko  r06 o1O
+.         ti  r07 zO
+r08       ko  r07 o1O
+.         ti  r08 zO
+r09       ko  r08 o1O
+.         ti  r09 zO
+r0A       ko  r09 o1O
+q41o      ke  65 0
+.         ti  r0A q41o
+r0B       ko  r0A o1O
+q5F       ke  95 0
+.         ti  r0B q5F
+r0C       ko  r0B o1O
+q41p      ke  65 0
+.         ti  r0C q41p
+r0D       ko  r0C o1O
+q5E       ke  94 0
+.         ti  r0D q5E
+r0E       ko  r0D o1O
+q41q      ke  65 0
+.         ti  r0E q41q
+r0F       ko  r0E o1O
+q5D       ke  93 0
+.         ti  r0F q5D
+r10       ko  r0F o1O
+q5Db      ke  93 0
+.         ti  r10 q5Db
+r11       ko  r10 o1O
+q5B       ke  91 0
+.         ti  r11 q5B
+r12       ko  r11 o1O
+qC3       ke  195 0
+.         ti  r12 qC3
+e19o      ke  19 0
+eO2       ko  eO e19o
+.         ti  EMO eO2
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- Ko：失敗を報告して host へ戻る。Ok と同じ形で値だけ 1 になる ----
+#
+#   48 B8 01 00×7   rax <- 1
+
+EMKO      ke  15 0
+eOK       ta  EMKO
+bIOK      sa  KV54 BW
+r00K      ko  bIOK eOK
+o1OK      ke  1 0
+q48oK     ke  72 0
+.         ti  r00K q48oK
+r01K      ko  r00K o1OK
+qB8oK     ke  184 0
+.         ti  r01K qB8oK
+zOK       ke  0 0
+oneOK     ke  1 0
+r02K      ko  r01K o1OK
+.         ti  r02K oneOK
+r03K      ko  r02K o1OK
+.         ti  r03K zOK
+r04K      ko  r03K o1OK
+.         ti  r04K zOK
+r05K      ko  r04K o1OK
+.         ti  r05K zOK
+r06K      ko  r05K o1OK
+.         ti  r06K zOK
+r07K      ko  r06K o1OK
+.         ti  r07K zOK
+r08K      ko  r07K o1OK
+.         ti  r08K zOK
+r09K      ko  r08K o1OK
+.         ti  r09K zOK
+r0AK      ko  r09K o1OK
+q41oK     ke  65 0
+.         ti  r0AK q41oK
+r0BK      ko  r0AK o1OK
+q5FK      ke  95 0
+.         ti  r0BK q5FK
+r0CK      ko  r0BK o1OK
+q41pK     ke  65 0
+.         ti  r0CK q41pK
+r0DK      ko  r0CK o1OK
+q5EK      ke  94 0
+.         ti  r0DK q5EK
+r0EK      ko  r0DK o1OK
+q41qK     ke  65 0
+.         ti  r0EK q41qK
+r0FK      ko  r0EK o1OK
+q5DK      ke  93 0
+.         ti  r0FK q5DK
+r10K      ko  r0FK o1OK
+q5DbK     ke  93 0
+.         ti  r10K q5DbK
+r11K      ko  r10K o1OK
+q5BK      ke  91 0
+.         ti  r11K q5BK
+r12K      ko  r11K o1OK
+qC3K      ke  195 0
+.         ti  r12K qC3K
+e19oK     ke  19 0
+eO2K      ko  eOK e19oK
+.         ti  EMKO eO2K
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- Put：hosted では byte を出さない。host が作業領域から読む（18 §7.2）----
+EMPU      ke  0 0
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- Load：語番号を 8 倍して基底へ足し、その番地から読む。25 byte ----
+#
+#   49 8B 87 d(a)  48 C1 E0 03  4C 01 F8  48 8B 40 00  49 89 87 d(w)
+
+EMLD      ke  20 0
+jL        ta  EMLD
+bALa      sa  KV06 BW
+aALa      ko  bALa jL
+aL        ta  aALa
+w48L      ke  48 0
+.         ti  w48L aL
+
+w15L      ke  15 0
+eL        ta  w15L
+bIL       sa  KV54 BW
+l00       ko  bIL eL
+o1L       ke  1 0
+q49L      ke  73 0
+.         ti  l00 q49L
+l01       ko  l00 o1L
+q8BL      ke  139 0
+.         ti  l01 q8BL
+l02       ko  l01 o1L
+q87L      ke  135 0
+.         ti  l02 q87L
+l03       ko  l02 o1L
+w48M      ke  48 0
+aL2       ta  w48M
+bDAL      sa  KV14 BW
+aDAL      ko  bDAL aL2
+dAL       ta  aDAL
+.         ti  l03 dAL
+l04       ko  l03 o1L
+w48N      ke  48 0
+aL3       ta  w48N
+bDBL      sa  KV16 BW
+aDBL      ko  bDBL aL3
+dBL       ta  aDBL
+.         ti  l04 dBL
+l05       ko  l04 o1L
+w48O      ke  48 0
+aL4       ta  w48O
+bDCL      sa  KV18 BW
+aDCL      ko  bDCL aL4
+dCL       ta  aDCL
+.         ti  l05 dCL
+l06       ko  l05 o1L
+zL        ke  0 0
+.         ti  l06 zL
+l07       ko  l06 o1L
+q48L      ke  72 0
+.         ti  l07 q48L
+l08       ko  l07 o1L
+qC1L      ke  193 0
+.         ti  l08 qC1L
+l09       ko  l08 o1L
+qE0L      ke  224 0
+.         ti  l09 qE0L
+l0A       ko  l09 o1L
+q03L      ke  3 0
+.         ti  l0A q03L
+l0B       ko  l0A o1L
+q4CL      ke  76 0
+.         ti  l0B q4CL
+l0C       ko  l0B o1L
+q01L      ke  1 0
+.         ti  l0C q01L
+l0D       ko  l0C o1L
+qF8L      ke  248 0
+.         ti  l0D qF8L
+l0E       ko  l0D o1L
+q48M      ke  72 0
+.         ti  l0E q48M
+l0F       ko  l0E o1L
+q8BM      ke  139 0
+.         ti  l0F q8BM
+l10       ko  l0F o1L
+q40L      ke  64 0
+.         ti  l10 q40L
+l11       ko  l10 o1L
+zL2       ke  0 0
+.         ti  l11 zL2
+l12       ko  l11 o1L
+q49M      ke  73 0
+.         ti  l12 q49M
+l13       ko  l12 o1L
+q89L      ke  137 0
+.         ti  l13 q89L
+l14       ko  l13 o1L
+q87M      ke  135 0
+.         ti  l14 q87M
+l15       ko  l14 o1L
+w20L      ke  20 0
+jL2       ta  w20L
+bDAM      sa  KV14 BW
+aDAM      ko  bDAM jL2
+dAM       ta  aDAM
+.         ti  l15 dAM
+l16       ko  l15 o1L
+w20M2     ke  20 0
+jL3       ta  w20M2
+bDBM      sa  KV16 BW
+aDBM      ko  bDBM jL3
+dBM       ta  aDBM
+.         ti  l16 dBM
+l17       ko  l16 o1L
+w20N      ke  20 0
+jL4       ta  w20N
+bDCM      sa  KV18 BW
+aDCM      ko  bDCM jL4
+dCM       ta  aDCM
+.         ti  l17 dCM
+l18       ko  l17 o1L
+zL3       ke  0 0
+.         ti  l18 zL3
+w15M      ke  15 0
+e25L      ke  25 0
+eL3       ta  w15M
+eL2       ko  eL3 e25L
+.         ti  w15M eL2
+.         so  CNTW8                      # 閉じへ寄せる前方分離
+
+# ---- 分岐。閉包の後退辺になる。31 byte ----
+#
+#   49 8B 87 d(u)  48 C1 E0 su  49 8B 8F d(v)  48 C1 E1 sv  48 39 C8  0F op rel32
+
+EBE       ke  53 0
+q84B      ke  132 0
+.         ti  EBE q84B
+.         so  BRA
+
+EBL       ke  53 0
+q8CB      ke  140 0
+.         ti  EBL q8CB
+.         so  BRA
+
+# u と v と左シフト量を語へ置く
+BRA       ke  20 0
+jR        ta  BRA
+bARa      sa  KV06 BW
+aARa      ko  bARa jR
+uR        ta  aARa
+w12R      ke  12 0
+.         ti  w12R uR
+w20R      ke  20 0
+jR2       ta  w20R
+bBRa      sa  KV08 BW
+aBRa      ko  bBRa jR2
+vRb       ta  aBRa
+w13R      ke  13 0
+.         ti  w13R vRb
+w20R2     ke  20 0
+jR3       ta  w20R2
+dDR       sa  KV10 BW
+aDR       ko  dDR jR3
+dR        ta  aDR
+w14R      ke  14 0
+.         ti  w14R dR
+w12R2     ke  12 0
+uR2       ta  w12R2
+dDR2      sa  KV10 BW
+aDR2      ko  dDR2 uR2
+duR       ta  aDR2
+nduR      si  duR
+w14R2     ke  14 0
+dR2       ta  w14R2
+suR       ko  dR2 nduR
+w57R      ke  57 0
+.         ti  w57R suR
+w13R2     ke  13 0
+vR2       ta  w13R2
+dDR3      sa  KV10 BW
+aDR3      ko  dDR3 vR2
+dvR       ta  aDR3
+ndvR      si  dvR
+w14R3     ke  14 0
+dR3       ta  w14R3
+svR       ko  dR3 ndvR
+w58R      ke  58 0
+.         ti  w58R svR
+
+# src = BOF[j] + 31 を byte で持つ
+w20R3     ke  20 0
+jR4       ta  w20R3
+bBAR      sa  KV20 BW
+aBAR      ko  bBAR jR4
+saR       ta  aBAR
+c31R      ke  31 0
+saR2      ko  saR c31R
+w20R4     ke  20 0
+jR5       ta  w20R4
+bBBR      sa  KV22 BW
+aBBR      ko  bBBR jR5
+sbR       ta  aBBR
+w20R5     ke  20 0
+jR6       ta  w20R5
+bBCR      sa  KV24 BW
+aBCR      ko  bBCR jR6
+scR       ta  aBCR
+w59R      ke  59 0
+.         ti  w59R scR
+
+# src + 31 が一 byte に収まるかを見る。b - 1 = 255 を越えたら桁上げする
+cBM1R     ke  256 0
+cBM2R     ke  -1 0
+BMR       ko  cBM1R cBM2R                # 境界 b - 1
+.         se  BMR saR2 c256R             # 越えた → 桁上げの側へ
+.         so  BR1                        # 収まる → そのまま書く
+
+c256R     ke  256 0
+n256R     si  c256R
+saR3      ko  saR2 n256R
+w56R      ke  56 0
+.         ti  w56R saR3
+o1R       ke  1 0
+sbR2      ko  sbR o1R
+w60R      ke  60 0
+.         ti  w60R sbR2
+.         so  BR2
+
+BR1       ke  56 0
+.         ti  BR1 saR2
+w60R2     ke  60 0
+.         ti  w60R2 sbR
+.         so  BR2
+
+# 目標の byte 位置
+BR2       ke  20 0
+jR7       ta  BR2
+bLR       sa  KV12 BW
+aLR       ko  bLR jR7
+lR        ta  aLR
+w61R      ke  61 0
+.         ti  w61R lR
+
+# r0 = BA[l] − sa
+w61a      ke  61 0
+lR2       ta  w61a
+bBAS      sa  KV20 BW
+aBAS      ko  bBAS lR2
+taR       ta  aBAS
+w56a      ke  56 0
+saR4      ta  w56a
+nsaR      si  saR4
+r0R       ko  taR nsaR
+z0R       ke  0 0
+.         se  r0R z0R BR3
+w62R      ke  62 0
+.         ti  w62R r0R
+w63R      ke  63 0
+.         ti  w63R z0R
+.         so  BR4
+
+BR3       ke  256 0
+r0R2      ko  r0R BR3
+w62R2     ke  62 0
+.         ti  w62R2 r0R2
+w63R2     ke  63 0
+o1R2      ke  1 0
+.         ti  w63R2 o1R2
+.         so  BR4
+
+# r1 = BB[l] − sb − 借り
+BR4       ke  61 0
+lR3       ta  BR4
+bBBS      sa  KV22 BW
+aBBS      ko  bBBS lR3
+tbR       ta  aBBS
+w60a      ke  60 0
+sbR3      ta  w60a
+nsbR      si  sbR3
+r1a       ko  tbR nsbR
+w63a      ke  63 0
+bwR       ta  w63a
+nbwR      si  bwR
+r1R       ko  r1a nbwR
+z1R       ke  0 0
+.         se  r1R z1R BR5
+w31R      ke  31 0
+.         ti  w31R r1R
+w63b      ke  63 0
+.         ti  w63b z1R
+.         so  BR6
+
+BR5       ke  256 0
+r1R2      ko  r1R BR5
+w31R2     ke  31 0
+.         ti  w31R2 r1R2
+w63c      ke  63 0
+o1R3      ke  1 0
+.         ti  w63c o1R3
+.         so  BR6
+
+# r2 = BC[l] − sc − 借り
+BR6       ke  61 0
+lR4       ta  BR6
+bBCS      sa  KV24 BW
+aBCS      ko  bBCS lR4
+tcR       ta  aBCS
+w59a      ke  59 0
+scR2      ta  w59a
+nscR      si  scR2
+r2a       ko  tcR nscR
+w63d      ke  63 0
+bwR2      ta  w63d
+nbwR2     si  bwR2
+r2R       ko  r2a nbwR2
+z2R       ke  0 0
+.         se  r2R z2R BR7
+w32R      ke  32 0
+.         ti  w32R r2R
+w33R      ke  33 0
+.         ti  w33R z2R
+.         so  BR8
+
+BR7       ke  256 0
+r2R2      ko  r2R BR7
+w32R2     ke  32 0
+.         ti  w32R2 r2R2
+w33R2     ke  33 0
+o1R4      ke  1 0
+.         ti  w33R2 o1R4
+.         so  BR8
+
+# r3 = 借りがあれば 255、無ければ 0
+BR8       ke  33 0
+bw3R      ta  BR8
+z3R       ke  0 0
+.         su  bw3R z3R BR9
+w34R      ke  34 0
+v255      ke  255 0
+.         ti  w34R v255
+.         so  BRE
+
+BR9       ke  34 0
+z3R2      ke  0 0
+.         ti  BR9 z3R2
+.         so  BRE
+
+# 31 byte を出す
+BRE       ke  15 0
+eR        ta  BRE
+bIR       sa  KV54 BW
+y00       ko  bIR eR
+o1R5      ke  1 0
+q49R      ke  73 0
+.         ti  y00 q49R
+y01       ko  y00 o1R5
+q8BR      ke  139 0
+.         ti  y01 q8BR
+y02       ko  y01 o1R5
+q87R      ke  135 0
+.         ti  y02 q87R
+y03       ko  y02 o1R5
+w12R3     ke  12 0
+uR3       ta  w12R3
+bDAR      sa  KV14 BW
+aDAR      ko  bDAR uR3
+dAR       ta  aDAR
+.         ti  y03 dAR
+y04       ko  y03 o1R5
+w12R4     ke  12 0
+uR4       ta  w12R4
+bDBR      sa  KV16 BW
+aDBR      ko  bDBR uR4
+dBR       ta  aDBR
+.         ti  y04 dBR
+y05       ko  y04 o1R5
+w12R5     ke  12 0
+uR5       ta  w12R5
+bDCR      sa  KV18 BW
+aDCR      ko  bDCR uR5
+dCR       ta  aDCR
+.         ti  y05 dCR
+y06       ko  y05 o1R5
+zR        ke  0 0
+.         ti  y06 zR
+y07       ko  y06 o1R5
+q48R      ke  72 0
+.         ti  y07 q48R
+y08       ko  y07 o1R5
+qC1R      ke  193 0
+.         ti  y08 qC1R
+y09       ko  y08 o1R5
+qE0R      ke  224 0
+.         ti  y09 qE0R
+y0A       ko  y09 o1R5
+w57a      ke  57 0
+suR2      ta  w57a
+.         ti  y0A suR2
+y0B       ko  y0A o1R5
+q49S      ke  73 0
+.         ti  y0B q49S
+y0C       ko  y0B o1R5
+q8BS      ke  139 0
+.         ti  y0C q8BS
+y0D       ko  y0C o1R5
+q8FR      ke  143 0
+.         ti  y0D q8FR
+y0E       ko  y0D o1R5
+w13R3     ke  13 0
+vR3       ta  w13R3
+bDAT      sa  KV14 BW
+aDAT      ko  bDAT vR3
+dAT       ta  aDAT
+.         ti  y0E dAT
+y0F       ko  y0E o1R5
+w13R4     ke  13 0
+vR4       ta  w13R4
+bDBT      sa  KV16 BW
+aDBT      ko  bDBT vR4
+dBT       ta  aDBT
+.         ti  y0F dBT
+y10       ko  y0F o1R5
+w13R5     ke  13 0
+vR5       ta  w13R5
+bDCT      sa  KV18 BW
+aDCT      ko  bDCT vR5
+dCT       ta  aDCT
+.         ti  y10 dCT
+y11       ko  y10 o1R5
+zR2       ke  0 0
+.         ti  y11 zR2
+y12       ko  y11 o1R5
+q48S      ke  72 0
+.         ti  y12 q48S
+y13       ko  y12 o1R5
+qC1S      ke  193 0
+.         ti  y13 qC1S
+y14       ko  y13 o1R5
+qE1R      ke  225 0
+.         ti  y14 qE1R
+y15       ko  y14 o1R5
+w58a      ke  58 0
+svR2      ta  w58a
+.         ti  y15 svR2
+y16       ko  y15 o1R5
+q48T      ke  72 0
+.         ti  y16 q48T
+y17       ko  y16 o1R5
+q39R      ke  57 0
+.         ti  y17 q39R
+y18       ko  y17 o1R5
+qC8R      ke  200 0
+.         ti  y18 qC8R
+y19       ko  y18 o1R5
+q0FR      ke  15 0
+.         ti  y19 q0FR
+y1A       ko  y19 o1R5
+w53R      ke  53 0
+opR       ta  w53R
+.         ti  y1A opR
+y1B       ko  y1A o1R5
+w62a      ke  62 0
+b0R       ta  w62a
+.         ti  y1B b0R
+y1C       ko  y1B o1R5
+w31a      ke  31 0
+b1R       ta  w31a
+.         ti  y1C b1R
+y1D       ko  y1C o1R5
+w32a      ke  32 0
+b2R       ta  w32a
+.         ti  y1D b2R
+y1E       ko  y1D o1R5
+w34a      ke  34 0
+b3R       ta  w34a
+.         ti  y1E b3R
+w15R      ke  15 0
+e31R      ke  31 0
+eR2       ta  w15R
+eR3       ko  eR2 e31R
+.         ti  w15R eR3
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW8     ke  0 0
+L5NW8z    ke  20 0
+j5NW8z    ta  L5NW8z
+o1N5W8z   ke  1 0
+j5MW8z    ko  j5NW8z o1N5W8z
+.         ti  L5NW8z j5MW8z
+CNTW7W8z  ke  0 0
+L5W7zW8z  ke  20 0
+j5W7zW8z  ta  L5W7zW8z
+w6LW7zW8z ke  6 0
+n5W7zW8z  ta  w6LW7zW8z
+.         se  j5W7zW8z n5W7zW8z L5       # まだ箱が残る → 走査へ戻る
+.         so  E6                         # 境界に届いた
+EMCW8z    ke  15 0
+eCW8z     ta  EMCW8z
+bICW8z    sa  KV54 BW
+c00W8z    ko  bICW8z eCW8z
+o1CW8z    ke  1 0
+q48cW8z   ke  72 0
+.         ti  c00W8z q48cW8z
+c01W8z    ko  c00W8z o1CW8z
+qB8cW8z   ke  184 0
+.         ti  c01W8z qB8cW8z
+c02W8z    ko  c01W8z o1CW8z
+w20CW8z   ke  20 0
+jCW8z     ta  w20CW8z
+bACW8z    sa  KV06 BW
+aACW8z    ko  bACW8z jCW8z
+xCW8z     ta  aACW8z
+
+# 分子は符号つきの 64 bit になる。負なら上位七 byte を 255 で埋める
+zCW8z     ke  0 0
+.         se  xCW8z zCW8z CSNW8z
+c256W8z   ke  256 0
+.         se  xCW8z c256W8z CSPW8z
+.         so  BAD
+CSPW8z    ke  0 0
+.         ti  c02W8z xCW8z
+w95W8z    ke  95 0
+.         ti  w95W8z zCW8z
+.         so  CSFW8z
+CSNW8z    ke  -256 0
+.         se  CSNW8z xCW8z CSN2W8z
+.         so  BAD
+CSN2W8z   ke  256 0
+xCnW8z    ko  CSN2W8z xCW8z
+.         ti  c02W8z xCnW8z
+w95nW8z   ke  95 0
+qFFW8z    ke  255 0
+.         ti  w95nW8z qFFW8z
+.         so  CSFW8z
+
+CSFW8z    ke  95 0
+fxW8z     ta  CSFW8z
+c03W8z    ko  c02W8z o1CW8z
+.         ti  c03W8z fxW8z
+c04W8z    ko  c03W8z o1CW8z
+.         ti  c04W8z fxW8z
+c05W8z    ko  c04W8z o1CW8z
+.         ti  c05W8z fxW8z
+c06W8z    ko  c05W8z o1CW8z
+.         ti  c06W8z fxW8z
+c07W8z    ko  c06W8z o1CW8z
+.         ti  c07W8z fxW8z
+c08W8z    ko  c07W8z o1CW8z
+.         ti  c08W8z fxW8z
+c09W8z    ko  c08W8z o1CW8z
+.         ti  c09W8z fxW8z
+c0AW8z    ko  c09W8z o1CW8z
+q49cW8z   ke  73 0
+.         ti  c0AW8z q49cW8z
+c0BW8z    ko  c0AW8z o1CW8z
+q89cW8z   ke  137 0
+.         ti  c0BW8z q89cW8z
+c0CW8z    ko  c0BW8z o1CW8z
+q87cW8z   ke  135 0
+.         ti  c0CW8z q87cW8z
+c0DW8z    ko  c0CW8z o1CW8z
+bDAcW8z   sa  KV14 BW
+aDAcW8z   ko  bDAcW8z jCW8z
+dAcW8z    ta  aDAcW8z
+.         ti  c0DW8z dAcW8z
+c0EW8z    ko  c0DW8z o1CW8z
+bDBcW8z   sa  KV16 BW
+aDBcW8z   ko  bDBcW8z jCW8z
+dBcW8z    ta  aDBcW8z
+.         ti  c0EW8z dBcW8z
+c0FW8z    ko  c0EW8z o1CW8z
+bDCcW8z   sa  KV18 BW
+aDCcW8z   ko  bDCcW8z jCW8z
+dCcW8z    ta  aDCcW8z
+.         ti  c0FW8z dCcW8z
+c10xW8z   ko  c0FW8z o1CW8z
+z10cW8z   ke  0 0
+.         ti  c10xW8z z10cW8z
+e17cW8z   ke  17 0
+eC2W8z    ko  eCW8z e17cW8z
+.         ti  EMCW8z eC2W8z
+.         so  L5NW8z
+EMAW8z    ke  20 0
+jAW8z     ta  EMAW8z
+bAAW8z    sa  KV06 BW
+aAAW8z    ko  bAAW8z jAW8z
+uA5W8z    ta  aAAW8z
+w12AW8z   ke  12 0
+.         ti  w12AW8z uA5W8z
+bBA5W8z   sa  KV08 BW
+aBA9W8z   ko  bBA5W8z jAW8z
+vA5W8z    ta  aBA9W8z
+w13AW8z   ke  13 0
+.         ti  w13AW8z vA5W8z
+bDA5W8z   sa  KV10 BW
+aDjW8z    ko  bDA5W8z jAW8z
+djW8z     ta  aDjW8z
+aDu5W8z   ko  bDA5W8z uA5W8z
+du5W8z    ta  aDu5W8z
+nduW8z    si  du5W8z
+su5W8z    ko  djW8z nduW8z
+w29AW8z   ke  29 0
+.         ti  w29AW8z su5W8z
+w13BxW8z  ke  13 0
+vA6W8z    ta  w13BxW8z
+bDA6W8z   sa  KV10 BW
+aDv5W8z   ko  bDA6W8z vA6W8z
+dv5W8z    ta  aDv5W8z
+ndvW8z    si  dv5W8z
+w20AW8z   ke  20 0
+jA2W8z    ta  w20AW8z
+aDj2W8z   ko  bDA6W8z jA2W8z
+dj2W8z    ta  aDj2W8z
+sv5W8z    ko  dj2W8z ndvW8z
+w30AW8z   ke  30 0
+.         ti  w30AW8z sv5W8z
+w32AW8z   ke  32 0
+o0AW8z    ke  72 0
+.         ti  w32AW8z o0AW8z
+w33AW8z   ke  33 0
+o1AW8z    ke  1 0
+.         ti  w33AW8z o1AW8z
+w34AW8z   ke  34 0
+o2AW8z    ke  200 0
+.         ti  w34AW8z o2AW8z
+w35AW8z   ke  35 0
+o3AW8z    ke  144 0
+.         ti  w35AW8z o3AW8z
+.         so  UNIW8z
+EMMW8z    ke  20 0
+jMW8z     ta  EMMW8z
+bAMW8z    sa  KV06 BW
+aAMW8z    ko  bAMW8z jMW8z
+uMW8z     ta  aAMW8z
+w12MW8z   ke  12 0
+.         ti  w12MW8z uMW8z
+bBMW8z    sa  KV08 BW
+aBMW8z    ko  bBMW8z jMW8z
+vMxW8z    ta  aBMW8z
+w13MW8z   ke  13 0
+.         ti  w13MW8z vMxW8z
+zMW8z     ke  0 0
+w29MW8z   ke  29 0
+.         ti  w29MW8z zMW8z
+w30MW8z   ke  30 0
+.         ti  w30MW8z zMW8z
+w32MW8z   ke  32 0
+o0MW8z    ke  72 0
+.         ti  w32MW8z o0MW8z
+w33MW8z   ke  33 0
+o1MW8z    ke  15 0
+.         ti  w33MW8z o1MW8z
+w34MW8z   ke  34 0
+o2MW8z    ke  175 0
+.         ti  w34MW8z o2MW8z
+w35MW8z   ke  35 0
+o3MW8z    ke  193 0
+.         ti  w35MW8z o3MW8z
+.         so  UNIW8z
+EMNW8z    ke  20 0
+jNW8z     ta  EMNW8z
+bANW8z    sa  KV06 BW
+aANW8z    ko  bANW8z jNW8z
+uNW8z     ta  aANW8z
+w12NW8z   ke  12 0
+.         ti  w12NW8z uNW8z
+w13NW8z   ke  13 0
+.         ti  w13NW8z uNW8z
+zNW8z     ke  0 0
+w29NW8z   ke  29 0
+.         ti  w29NW8z zNW8z
+w30NW8z   ke  30 0
+.         ti  w30NW8z zNW8z
+w32NW8z   ke  32 0
+o0NW8z    ke  72 0
+.         ti  w32NW8z o0NW8z
+w33NW8z   ke  33 0
+o1NW8z    ke  247 0
+.         ti  w33NW8z o1NW8z
+w34NW8z   ke  34 0
+o2NW8z    ke  216 0
+.         ti  w34NW8z o2NW8z
+w35NW8z   ke  35 0
+o3NW8z    ke  144 0
+.         ti  w35NW8z o3NW8z
+.         so  UNIW8z
+UNIW8z    ke  15 0
+eUW8z     ta  UNIW8z
+bIUW8z    sa  KV54 BW
+u00W8z    ko  bIUW8z eUW8z
+o1UW8z    ke  1 0
+q49W8z    ke  73 0
+.         ti  u00W8z q49W8z
+u01W8z    ko  u00W8z o1UW8z
+q8BW8z    ke  139 0
+.         ti  u01W8z q8BW8z
+u02W8z    ko  u01W8z o1UW8z
+q87W8z    ke  135 0
+.         ti  u02W8z q87W8z
+u03W8z    ko  u02W8z o1UW8z
+w12UW8z   ke  12 0
+uUxW8z    ta  w12UW8z
+bDAUW8z   sa  KV14 BW
+aAUW8z    ko  bDAUW8z uUxW8z
+dAUW8z    ta  aAUW8z
+.         ti  u03W8z dAUW8z
+u04W8z    ko  u03W8z o1UW8z
+bDBUW8z   sa  KV16 BW
+aBUW8z    ko  bDBUW8z uUxW8z
+dBUW8z    ta  aBUW8z
+.         ti  u04W8z dBUW8z
+u05W8z    ko  u04W8z o1UW8z
+bDCUW8z   sa  KV18 BW
+aCUW8z    ko  bDCUW8z uUxW8z
+dCUW8z    ta  aCUW8z
+.         ti  u05W8z dCUW8z
+u06W8z    ko  u05W8z o1UW8z
+zUW8z     ke  0 0
+.         ti  u06W8z zUW8z
+u07W8z    ko  u06W8z o1UW8z
+q48W8z    ke  72 0
+.         ti  u07W8z q48W8z
+u08W8z    ko  u07W8z o1UW8z
+qC1W8z    ke  193 0
+.         ti  u08W8z qC1W8z
+u09W8z    ko  u08W8z o1UW8z
+qE0W8z    ke  224 0
+.         ti  u09W8z qE0W8z
+u0AW8z    ko  u09W8z o1UW8z
+w29UW8z   ke  29 0
+suUW8z    ta  w29UW8z
+.         ti  u0AW8z suUW8z
+u0BW8z    ko  u0AW8z o1UW8z
+q49bW8z   ke  73 0
+.         ti  u0BW8z q49bW8z
+u0CW8z    ko  u0BW8z o1UW8z
+q8BbW8z   ke  139 0
+.         ti  u0CW8z q8BbW8z
+u0DW8z    ko  u0CW8z o1UW8z
+q8FW8z    ke  143 0
+.         ti  u0DW8z q8FW8z
+u0EW8z    ko  u0DW8z o1UW8z
+w13UW8z   ke  13 0
+vUW8z     ta  w13UW8z
+bDAVW8z   sa  KV14 BW
+aAVW8z    ko  bDAVW8z vUW8z
+dAVW8z    ta  aAVW8z
+.         ti  u0EW8z dAVW8z
+u0FW8z    ko  u0EW8z o1UW8z
+bDBVW8z   sa  KV16 BW
+aBVW8z    ko  bDBVW8z vUW8z
+dBVW8z    ta  aBVW8z
+.         ti  u0FW8z dBVW8z
+u10W8z    ko  u0FW8z o1UW8z
+bDCVW8z   sa  KV18 BW
+aCVW8z    ko  bDCVW8z vUW8z
+dCVW8z    ta  aCVW8z
+.         ti  u10W8z dCVW8z
+u11W8z    ko  u10W8z o1UW8z
+zU2W8z    ke  0 0
+.         ti  u11W8z zU2W8z
+u12W8z    ko  u11W8z o1UW8z
+q48bW8z   ke  72 0
+.         ti  u12W8z q48bW8z
+u13W8z    ko  u12W8z o1UW8z
+qC1bW8z   ke  193 0
+.         ti  u13W8z qC1bW8z
+u14W8z    ko  u13W8z o1UW8z
+qE1W8z    ke  225 0
+.         ti  u14W8z qE1W8z
+u15W8z    ko  u14W8z o1UW8z
+w30UW8z   ke  30 0
+svUW8z    ta  w30UW8z
+.         ti  u15W8z svUW8z
+u16W8z    ko  u15W8z o1UW8z
+w32UW8z   ke  32 0
+p0UW8z    ta  w32UW8z
+.         ti  u16W8z p0UW8z
+u17W8z    ko  u16W8z o1UW8z
+w33UW8z   ke  33 0
+p1UW8z    ta  w33UW8z
+.         ti  u17W8z p1UW8z
+u18W8z    ko  u17W8z o1UW8z
+w34UW8z   ke  34 0
+p2UW8z    ta  w34UW8z
+.         ti  u18W8z p2UW8z
+u19W8z    ko  u18W8z o1UW8z
+w35UW8z   ke  35 0
+p3UW8z    ta  w35UW8z
+.         ti  u19W8z p3UW8z
+u1AW8z    ko  u19W8z o1UW8z
+q49c2W8z  ke  73 0
+.         ti  u1AW8z q49c2W8z
+u1BW8z    ko  u1AW8z o1UW8z
+q89W8z    ke  137 0
+.         ti  u1BW8z q89W8z
+u1CW8z    ko  u1BW8z o1UW8z
+q87bW8z   ke  135 0
+.         ti  u1CW8z q87bW8z
+u1DW8z    ko  u1CW8z o1UW8z
+w20UxW8z  ke  20 0
+jUW8z     ta  w20UxW8z
+bDAKW8z   sa  KV14 BW
+aAKW8z    ko  bDAKW8z jUW8z
+dAKW8z    ta  aAKW8z
+.         ti  u1DW8z dAKW8z
+u1EW8z    ko  u1DW8z o1UW8z
+bDBKW8z   sa  KV16 BW
+aBK5W8z   ko  bDBKW8z jUW8z
+dBKW8z    ta  aBK5W8z
+.         ti  u1EW8z dBKW8z
+u1FW8z    ko  u1EW8z o1UW8z
+bDCKW8z   sa  KV18 BW
+aCKW8z    ko  bDCKW8z jUW8z
+dCKW8z    ta  aCKW8z
+.         ti  u1FW8z dCKW8z
+u20W8z    ko  u1FW8z o1UW8z
+zU3W8z    ke  0 0
+.         ti  u20W8z zU3W8z
+e33W8z    ke  33 0
+eU2W8z    ko  eUW8z e33W8z
+.         ti  UNIW8z eU2W8z
+.         so  L5NW8z
+EMSW8z    ke  20 0
+jS5W8z    ta  EMSW8z
+bAS5W8z   sa  KV06 BW
+aAS5W8z   ko  bAS5W8z jS5W8z
+aS5W8z    ta  aAS5W8z
+w12S5W8z  ke  12 0
+.         ti  w12S5W8z aS5W8z
+bBS5W8z   sa  KV08 BW
+aBS5W8z   ko  bBS5W8z jS5W8z
+uS5W8z    ta  aBS5W8z
+w13S5W8z  ke  13 0
+.         ti  w13S5W8z uS5W8z
+w15SW8z   ke  15 0
+eSW8z     ta  w15SW8z
+bISW8z    sa  KV54 BW
+s00W8z    ko  bISW8z eSW8z
+o1S7W8z   ke  1 0
+q49sW8z   ke  73 0
+.         ti  s00W8z q49sW8z
+s01W8z    ko  s00W8z o1S7W8z
+q8BsW8z   ke  139 0
+.         ti  s01W8z q8BsW8z
+s02W8z    ko  s01W8z o1S7W8z
+q87sW8z   ke  135 0
+.         ti  s02W8z q87sW8z
+s03W8z    ko  s02W8z o1S7W8z
+w12T5W8z  ke  12 0
+aT5zW8z   ta  w12T5W8z
+bDAsW8z   sa  KV14 BW
+aDAsW8z   ko  bDAsW8z aT5zW8z
+dAsW8z    ta  aDAsW8z
+.         ti  s03W8z dAsW8z
+s04W8z    ko  s03W8z o1S7W8z
+bDBsW8z   sa  KV16 BW
+aDBsW8z   ko  bDBsW8z aT5zW8z
+dBsW8z    ta  aDBsW8z
+.         ti  s04W8z dBsW8z
+s05W8z    ko  s04W8z o1S7W8z
+bDCsW8z   sa  KV18 BW
+aDCsW8z   ko  bDCsW8z aT5zW8z
+dCsW8z    ta  aDCsW8z
+.         ti  s05W8z dCsW8z
+s06W8z    ko  s05W8z o1S7W8z
+zSW8z     ke  0 0
+.         ti  s06W8z zSW8z
+s07W8z    ko  s06W8z o1S7W8z
+q48sW8z   ke  72 0
+.         ti  s07W8z q48sW8z
+s08W8z    ko  s07W8z o1S7W8z
+qC1sW8z   ke  193 0
+.         ti  s08W8z qC1sW8z
+s09W8z    ko  s08W8z o1S7W8z
+qE0sW8z   ke  224 0
+.         ti  s09W8z qE0sW8z
+s0AW8z    ko  s09W8z o1S7W8z
+q03sW8z   ke  3 0
+.         ti  s0AW8z q03sW8z
+s0BW8z    ko  s0AW8z o1S7W8z
+q4CsW8z   ke  76 0
+.         ti  s0BW8z q4CsW8z
+s0CW8z    ko  s0BW8z o1S7W8z
+q01sW8z   ke  1 0
+.         ti  s0CW8z q01sW8z
+s0DW8z    ko  s0CW8z o1S7W8z
+qF8sW8z   ke  248 0
+.         ti  s0DW8z qF8sW8z
+s0EW8z    ko  s0DW8z o1S7W8z
+q49tW8z   ke  73 0
+.         ti  s0EW8z q49tW8z
+s0FW8z    ko  s0EW8z o1S7W8z
+q8BtW8z   ke  139 0
+.         ti  s0FW8z q8BtW8z
+s10W8z    ko  s0FW8z o1S7W8z
+q8FsW8z   ke  143 0
+.         ti  s10W8z q8FsW8z
+s11W8z    ko  s10W8z o1S7W8z
+w13T5W8z  ke  13 0
+uT5W8z    ta  w13T5W8z
+bDAtW8z   sa  KV14 BW
+aDAtW8z   ko  bDAtW8z uT5W8z
+dAtW8z    ta  aDAtW8z
+.         ti  s11W8z dAtW8z
+s12W8z    ko  s11W8z o1S7W8z
+bDBtW8z   sa  KV16 BW
+aDBtW8z   ko  bDBtW8z uT5W8z
+dBtW8z    ta  aDBtW8z
+.         ti  s12W8z dBtW8z
+s13W8z    ko  s12W8z o1S7W8z
+bDCtW8z   sa  KV18 BW
+aDCtW8z   ko  bDCtW8z uT5W8z
+dCtW8z    ta  aDCtW8z
+.         ti  s13W8z dCtW8z
+s14W8z    ko  s13W8z o1S7W8z
+zS2W8z    ke  0 0
+.         ti  s14W8z zS2W8z
+s15W8z    ko  s14W8z o1S7W8z
+q48tW8z   ke  72 0
+.         ti  s15W8z q48tW8z
+s16W8z    ko  s15W8z o1S7W8z
+q89sW8z   ke  137 0
+.         ti  s16W8z q89sW8z
+s17W8z    ko  s16W8z o1S7W8z
+q48uW8z   ke  72 0
+.         ti  s17W8z q48uW8z
+s18W8z    ko  s17W8z o1S7W8z
+zS3W8z    ke  0 0
+.         ti  s18W8z zS3W8z
+e25sW8z   ke  25 0
+eS2W8z    ko  eSW8z e25sW8z
+.         ti  w15SW8z eS2W8z
+.         so  L5NW8z
+EMOW8z    ke  15 0
+eOW8z     ta  EMOW8z
+bIOW8z    sa  KV54 BW
+r00W8z    ko  bIOW8z eOW8z
+o1OW8z    ke  1 0
+q48oW8z   ke  72 0
+.         ti  r00W8z q48oW8z
+r01W8z    ko  r00W8z o1OW8z
+qB8oW8z   ke  184 0
+.         ti  r01W8z qB8oW8z
+zOW8z     ke  0 0
+r02W8z    ko  r01W8z o1OW8z
+.         ti  r02W8z zOW8z
+r03W8z    ko  r02W8z o1OW8z
+.         ti  r03W8z zOW8z
+r04W8z    ko  r03W8z o1OW8z
+.         ti  r04W8z zOW8z
+r05W8z    ko  r04W8z o1OW8z
+.         ti  r05W8z zOW8z
+r06W8z    ko  r05W8z o1OW8z
+.         ti  r06W8z zOW8z
+r07W8z    ko  r06W8z o1OW8z
+.         ti  r07W8z zOW8z
+r08W8z    ko  r07W8z o1OW8z
+.         ti  r08W8z zOW8z
+r09W8z    ko  r08W8z o1OW8z
+.         ti  r09W8z zOW8z
+r0AW8z    ko  r09W8z o1OW8z
+q41oW8z   ke  65 0
+.         ti  r0AW8z q41oW8z
+r0BW8z    ko  r0AW8z o1OW8z
+q5FW8z    ke  95 0
+.         ti  r0BW8z q5FW8z
+r0CW8z    ko  r0BW8z o1OW8z
+q41pW8z   ke  65 0
+.         ti  r0CW8z q41pW8z
+r0DW8z    ko  r0CW8z o1OW8z
+q5EW8z    ke  94 0
+.         ti  r0DW8z q5EW8z
+r0EW8z    ko  r0DW8z o1OW8z
+q41qW8z   ke  65 0
+.         ti  r0EW8z q41qW8z
+r0FW8z    ko  r0EW8z o1OW8z
+q5DW8z    ke  93 0
+.         ti  r0FW8z q5DW8z
+r10W8z    ko  r0FW8z o1OW8z
+q5DbW8z   ke  93 0
+.         ti  r10W8z q5DbW8z
+r11W8z    ko  r10W8z o1OW8z
+q5BW8z    ke  91 0
+.         ti  r11W8z q5BW8z
+r12W8z    ko  r11W8z o1OW8z
+qC3W8z    ke  195 0
+.         ti  r12W8z qC3W8z
+e19oW8z   ke  19 0
+eO2W8z    ko  eOW8z e19oW8z
+.         ti  EMOW8z eO2W8z
+.         so  L5NW8z
+EMLDW8z   ke  20 0
+jLW8z     ta  EMLDW8z
+bALaW8z   sa  KV06 BW
+aALaW8z   ko  bALaW8z jLW8z
+aLW8z     ta  aALaW8z
+w48LW8z   ke  48 0
+.         ti  w48LW8z aLW8z
+w15LW8z   ke  15 0
+eLW8z     ta  w15LW8z
+bILW8z    sa  KV54 BW
+l00W8z    ko  bILW8z eLW8z
+o1LW8z    ke  1 0
+q49LW8z   ke  73 0
+.         ti  l00W8z q49LW8z
+l01W8z    ko  l00W8z o1LW8z
+q8BLW8z   ke  139 0
+.         ti  l01W8z q8BLW8z
+l02W8z    ko  l01W8z o1LW8z
+q87LW8z   ke  135 0
+.         ti  l02W8z q87LW8z
+l03W8z    ko  l02W8z o1LW8z
+w48MW8z   ke  48 0
+aL2W8z    ta  w48MW8z
+bDALW8z   sa  KV14 BW
+aDALW8z   ko  bDALW8z aL2W8z
+dALW8z    ta  aDALW8z
+.         ti  l03W8z dALW8z
+l04W8z    ko  l03W8z o1LW8z
+w48NW8z   ke  48 0
+aL3W8z    ta  w48NW8z
+bDBLW8z   sa  KV16 BW
+aDBLW8z   ko  bDBLW8z aL3W8z
+dBLW8z    ta  aDBLW8z
+.         ti  l04W8z dBLW8z
+l05W8z    ko  l04W8z o1LW8z
+w48OW8z   ke  48 0
+aL4W8z    ta  w48OW8z
+bDCLW8z   sa  KV18 BW
+aDCLW8z   ko  bDCLW8z aL4W8z
+dCLW8z    ta  aDCLW8z
+.         ti  l05W8z dCLW8z
+l06W8z    ko  l05W8z o1LW8z
+zLW8z     ke  0 0
+.         ti  l06W8z zLW8z
+l07W8z    ko  l06W8z o1LW8z
+q48LW8z   ke  72 0
+.         ti  l07W8z q48LW8z
+l08W8z    ko  l07W8z o1LW8z
+qC1LW8z   ke  193 0
+.         ti  l08W8z qC1LW8z
+l09W8z    ko  l08W8z o1LW8z
+qE0LW8z   ke  224 0
+.         ti  l09W8z qE0LW8z
+l0AW8z    ko  l09W8z o1LW8z
+q03LW8z   ke  3 0
+.         ti  l0AW8z q03LW8z
+l0BW8z    ko  l0AW8z o1LW8z
+q4CLW8z   ke  76 0
+.         ti  l0BW8z q4CLW8z
+l0CW8z    ko  l0BW8z o1LW8z
+q01LW8z   ke  1 0
+.         ti  l0CW8z q01LW8z
+l0DW8z    ko  l0CW8z o1LW8z
+qF8LW8z   ke  248 0
+.         ti  l0DW8z qF8LW8z
+l0EW8z    ko  l0DW8z o1LW8z
+q48MW8z   ke  72 0
+.         ti  l0EW8z q48MW8z
+l0FW8z    ko  l0EW8z o1LW8z
+q8BMW8z   ke  139 0
+.         ti  l0FW8z q8BMW8z
+l10W8z    ko  l0FW8z o1LW8z
+q40LW8z   ke  64 0
+.         ti  l10W8z q40LW8z
+l11W8z    ko  l10W8z o1LW8z
+zL2W8z    ke  0 0
+.         ti  l11W8z zL2W8z
+l12W8z    ko  l11W8z o1LW8z
+q49MW8z   ke  73 0
+.         ti  l12W8z q49MW8z
+l13W8z    ko  l12W8z o1LW8z
+q89LW8z   ke  137 0
+.         ti  l13W8z q89LW8z
+l14W8z    ko  l13W8z o1LW8z
+q87MW8z   ke  135 0
+.         ti  l14W8z q87MW8z
+l15W8z    ko  l14W8z o1LW8z
+w20LW8z   ke  20 0
+jL2W8z    ta  w20LW8z
+bDAMW8z   sa  KV14 BW
+aDAMW8z   ko  bDAMW8z jL2W8z
+dAMW8z    ta  aDAMW8z
+.         ti  l15W8z dAMW8z
+l16W8z    ko  l15W8z o1LW8z
+w20M2W8z  ke  20 0
+jL3W8z    ta  w20M2W8z
+bDBMW8z   sa  KV16 BW
+aDBMW8z   ko  bDBMW8z jL3W8z
+dBMW8z    ta  aDBMW8z
+.         ti  l16W8z dBMW8z
+l17W8z    ko  l16W8z o1LW8z
+w20NW8z   ke  20 0
+jL4W8z    ta  w20NW8z
+bDCMW8z   sa  KV18 BW
+aDCMW8z   ko  bDCMW8z jL4W8z
+dCMW8z    ta  aDCMW8z
+.         ti  l17W8z dCMW8z
+l18W8z    ko  l17W8z o1LW8z
+zL3W8z    ke  0 0
+.         ti  l18W8z zL3W8z
+w15MW8z   ke  15 0
+e25LW8z   ke  25 0
+eL3W8z    ta  w15MW8z
+eL2W8z    ko  eL3W8z e25LW8z
+.         ti  w15MW8z eL2W8z
+.         so  L5NW8z
+EBEW8z    ke  53 0
+q84BW8z   ke  132 0
+.         ti  EBEW8z q84BW8z
+.         so  BRAW8z
+EBLW8z    ke  53 0
+q8CBW8z   ke  140 0
+.         ti  EBLW8z q8CBW8z
+.         so  BRAW8z
+BRAW8z    ke  20 0
+jRW8z     ta  BRAW8z
+bARaW8z   sa  KV06 BW
+aARaW8z   ko  bARaW8z jRW8z
+uRW8z     ta  aARaW8z
+w12RW8z   ke  12 0
+.         ti  w12RW8z uRW8z
+w20RW8z   ke  20 0
+jR2W8z    ta  w20RW8z
+bBRaW8z   sa  KV08 BW
+aBRaW8z   ko  bBRaW8z jR2W8z
+vRbW8z    ta  aBRaW8z
+w13RW8z   ke  13 0
+.         ti  w13RW8z vRbW8z
+w20R2W8z  ke  20 0
+jR3W8z    ta  w20R2W8z
+dDRW8z    sa  KV10 BW
+aDRW8z    ko  dDRW8z jR3W8z
+dRW8z     ta  aDRW8z
+w14RW8z   ke  14 0
+.         ti  w14RW8z dRW8z
+w12R2W8z  ke  12 0
+uR2W8z    ta  w12R2W8z
+dDR2W8z   sa  KV10 BW
+aDR2W8z   ko  dDR2W8z uR2W8z
+duRW8z    ta  aDR2W8z
+nduRW8z   si  duRW8z
+w14R2W8z  ke  14 0
+dR2W8z    ta  w14R2W8z
+suRW8z    ko  dR2W8z nduRW8z
+w57RW8z   ke  57 0
+.         ti  w57RW8z suRW8z
+w13R2W8z  ke  13 0
+vR2W8z    ta  w13R2W8z
+dDR3W8z   sa  KV10 BW
+aDR3W8z   ko  dDR3W8z vR2W8z
+dvRW8z    ta  aDR3W8z
+ndvRW8z   si  dvRW8z
+w14R3W8z  ke  14 0
+dR3W8z    ta  w14R3W8z
+svRW8z    ko  dR3W8z ndvRW8z
+w58RW8z   ke  58 0
+.         ti  w58RW8z svRW8z
+w20R3W8z  ke  20 0
+jR4W8z    ta  w20R3W8z
+bBARW8z   sa  KV20 BW
+aBARW8z   ko  bBARW8z jR4W8z
+saRW8z    ta  aBARW8z
+c31RW8z   ke  31 0
+saR2W8z   ko  saRW8z c31RW8z
+w20R4W8z  ke  20 0
+jR5W8z    ta  w20R4W8z
+bBBRW8z   sa  KV22 BW
+aBBRW8z   ko  bBBRW8z jR5W8z
+sbRW8z    ta  aBBRW8z
+w20R5W8z  ke  20 0
+jR6W8z    ta  w20R5W8z
+bBCRW8z   sa  KV24 BW
+aBCRW8z   ko  bBCRW8z jR6W8z
+scRW8z    ta  aBCRW8z
+w59RW8z   ke  59 0
+.         ti  w59RW8z scRW8z
+c256RW8z  ke  256 0
+M1W8z     ke  -1 0
+BMW8z     ko  c256RW8z M1W8z             # 境界 b - 1
+.         so  BR1                        # 境界に届いた
+
+# ================= 第 6 段：host へ返す =================
+
+E6        ke  1 0
+bI6       sa  KV54 BW
+.         ti  E6 bI6
+w2E       ke  2 0
+w15E      ke  15 0
+eE        ta  w15E
+.         ti  w2E eE
+
+.         tu
+
+BAD       te

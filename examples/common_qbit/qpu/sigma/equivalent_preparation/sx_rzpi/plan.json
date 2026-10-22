@@ -1,0 +1,12 @@
+{
+ "id": "sigma/equivalent_preparation/sx_rzpi",
+ "function": "sigma",
+ "family": "equivalent_preparation",
+ "section": "式 19.2〜19.5",
+ "role": "標準の終点が同じで構成語が違う準備の後の系列。分布が違えば h が α に入る",
+ "phi": null,
+ "meta": {
+  "rounds": 8
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

@@ -1,0 +1,13 @@
+{
+ "id": "X_g/idle/t64_p1",
+ "function": "X_g",
+ "family": "idle",
+ "section": "式 11.1",
+ "role": "待機時間 t の後の z_j",
+ "phi": 1.5707963267948966,
+ "meta": {
+  "tag": "t64",
+  "t": 64
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

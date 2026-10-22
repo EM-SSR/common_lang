@@ -1,0 +1,36 @@
+{
+ "id": "depth/n2",
+ "section": "式 13.1、13.2",
+ "level": 9,
+ "note": "β を n 回。d=n、z_j=2^{-n}z_0",
+ "initial_u0": null,
+ "world": {
+  "zj0": [
+   "16",
+   "8"
+  ],
+  "gate_L": {},
+  "mobius": {}
+ },
+ "result": {
+  "h": [
+   [
+    "β"
+   ],
+   [
+    "β"
+   ]
+  ],
+  "zj": [
+   "4",
+   "2"
+  ],
+  "d": 2,
+  "probes": [],
+  "chi": null,
+  "omega": null,
+  "memory": [
+   "0"
+  ]
+ }
+}

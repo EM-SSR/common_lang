@@ -1,0 +1,13 @@
+{
+ "id": "A_g/virtual_mobius/vba_N16",
+ "function": "A_g",
+ "family": "virtual_mobius",
+ "section": "式 10.1、16.8",
+ "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+ "phi": null,
+ "meta": {
+  "word": "vba",
+  "N": 16
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

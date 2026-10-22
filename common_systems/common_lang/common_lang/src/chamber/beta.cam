@@ -1,0 +1,2503 @@
+# 基準点付き二分割と折返し
+# doc: beta.def beta.transport beta.table beta.compose boundary.beta obs.beta
+#
+#   Common-Lang/Common言語のチェンバー構文と構成語の意味的正規形 §8、§9.1、§9.2
+#
+# 二分割は基準点を明示すると一つの式になる。
+#
+#     beta_a(x) = a + (x - a)/2 = (x + a)/2,     beta_a(a) = a
+#     beta_a^{-1}(x) = 2x - a
+#     beta_a^{(n)}(x) = a + 2^{-n}(x - a) = (x + (2^n - 1) a) / 2^n
+#
+# ここに出る写像はすべてアフィンである。だから一つの表現で足りる。
+#
+#     F(x) = (M x + t) / 2^s          七語 (m00, m01, m10, m11, t_r, t_w, s)
+#
+# 合成は
+#
+#     G(F(x)) = (M_G M_F x + M_G t_F + 2^{s_F} t_G) / 2^{s_F + s_G}
+#
+# になり、写像としての一致は交差乗算
+#
+#     M_A 2^{s_B} = M_B 2^{s_A},      t_A 2^{s_B} = t_B 2^{s_A}
+#
+# で判定できる。除算も深度そろえも要らない。
+#
+# この一つの合成器の上で、doc の恒等式を順に確かめる。
+#
+#   (1) 定理 8.1   R ∘ beta_a = beta_{R(a)} ∘ R          9 x 8 本
+#   (2) §8.1       n 回の反復 = 閉形 beta_a^{(n)}        9 x 6 本
+#   (3) §8.1       beta_a^{-1} ∘ beta_a = id             9 本
+#   (4) §9.2       phi_d ∘ beta_a = beta_{phi_d(a)} ∘ phi_d   9 本
+#   (5) §8.6       beta_b ∘ beta_a = (I, a + 2b, 2)、および非可換性   9 x 9 本
+#   (6) §9.1       境界作用素と細分の交換（線形部が a に依らない）    9 x 9 本
+#
+# 合成器と一致判定は、呼び出しごとに展開して置く。分岐先が literal だけなので、
+# 戻り先を振り分ける形にすると制御流れグラフが一つの強連結成分になり、
+# 生存区間が program 全体へ広がって landmark が尽きる。
+#
+# 作業領域
+#   語 0    a    基準点の番号
+#   語 1    b    もう一方の基準点、または折返しの番号
+#   語 2    n    反復回数
+#   語 3    cnt  確かめた恒等式の本数
+#   語 4    i    内側の走査位置
+#   語 11   RA   R(a) または phi_d(a) の点番号
+#   語 32   POW  冪表 2^k
+#   語 64   MAP  写像スロット。一スロット七語、五スロット
+#   語 128  REF  折返し行列
+#   語 160  PT   正準点
+
+mu i
+d  0
+
+# ---- 冪表 POW[k] = 2^k ----
+w00a      ke  32 0
+w00v      ke  1 0
+.         ti  w00a w00v
+w01a      ke  33 0
+w01v      ke  2 0
+.         ti  w01a w01v
+w02a      ke  34 0
+w02v      ke  4 0
+.         ti  w02a w02v
+w03a      ke  35 0
+w03v      ke  8 0
+.         ti  w03a w03v
+w04a      ke  36 0
+w04v      ke  16 0
+.         ti  w04a w04v
+w05a      ke  37 0
+w05v      ke  32 0
+.         ti  w05a w05v
+w06a      ke  38 0
+w06v      ke  64 0
+.         ti  w06a w06v
+w07a      ke  39 0
+w07v      ke  128 0
+.         ti  w07a w07v
+w08a      ke  40 0
+w08v      ke  256 0
+.         ti  w08a w08v
+w09a      ke  41 0
+w09v      ke  512 0
+.         ti  w09a w09v
+w10a      ke  42 0
+w10v      ke  1024 0
+.         ti  w10a w10v
+w11a      ke  43 0
+w11v      ke  2048 0
+.         ti  w11a w11v
+w12a      ke  44 0
+w12v      ke  4096 0
+.         ti  w12a w12v
+w13a      ke  45 0
+w13v      ke  8192 0
+.         ti  w13a w13v
+w14a      ke  46 0
+w14v      ke  16384 0
+.         ti  w14a w14v
+w15a      ke  47 0
+w15v      ke  32768 0
+.         ti  w15a w15v
+w16a      ke  48 0
+w16v      ke  65536 0
+.         ti  w16a w16v
+w17a      ke  49 0
+w17v      ke  131072 0
+.         ti  w17a w17v
+w18a      ke  50 0
+w18v      ke  262144 0
+.         ti  w18a w18v
+w19a      ke  51 0
+w19v      ke  524288 0
+.         ti  w19a w19v
+w20a      ke  52 0
+w20v      ke  1048576 0
+.         ti  w20a w20v
+
+# ---- 折返し行列 REF ----
+#   E
+r00a      ke  128 0
+r00v      ke  1 0
+.         ti  r00a r00v
+r01a      ke  129 0
+r01v      ke  0 0
+.         ti  r01a r01v
+r02a      ke  130 0
+r02v      ke  0 0
+.         ti  r02a r02v
+r03a      ke  131 0
+r03v      ke  1 0
+.         ti  r03a r03v
+#   R_r
+r04a      ke  132 0
+r04v      ke  1 0
+.         ti  r04a r04v
+r05a      ke  133 0
+r05v      ke  0 0
+.         ti  r05a r05v
+r06a      ke  134 0
+r06v      ke  0 0
+.         ti  r06a r06v
+r07a      ke  135 0
+r07v      ke  -1 0
+.         ti  r07a r07v
+#   R_w
+r08a      ke  136 0
+r08v      ke  -1 0
+.         ti  r08a r08v
+r09a      ke  137 0
+r09v      ke  0 0
+.         ti  r09a r09v
+r10a      ke  138 0
+r10v      ke  0 0
+.         ti  r10a r10v
+r11a      ke  139 0
+r11v      ke  1 0
+.         ti  r11a r11v
+#   R_ij
+r12a      ke  140 0
+r12v      ke  0 0
+.         ti  r12a r12v
+r13a      ke  141 0
+r13v      ke  1 0
+.         ti  r13a r13v
+r14a      ke  142 0
+r14v      ke  1 0
+.         ti  r14a r14v
+r15a      ke  143 0
+r15v      ke  0 0
+.         ti  r15a r15v
+#   R_ji
+r16a      ke  144 0
+r16v      ke  0 0
+.         ti  r16a r16v
+r17a      ke  145 0
+r17v      ke  -1 0
+.         ti  r17a r17v
+r18a      ke  146 0
+r18v      ke  -1 0
+.         ti  r18a r18v
+r19a      ke  147 0
+r19v      ke  0 0
+.         ti  r19a r19v
+#   Q+
+r20a      ke  148 0
+r20v      ke  0 0
+.         ti  r20a r20v
+r21a      ke  149 0
+r21v      ke  -1 0
+.         ti  r21a r21v
+r22a      ke  150 0
+r22v      ke  1 0
+.         ti  r22a r22v
+r23a      ke  151 0
+r23v      ke  0 0
+.         ti  r23a r23v
+#   Q-
+r24a      ke  152 0
+r24v      ke  0 0
+.         ti  r24a r24v
+r25a      ke  153 0
+r25v      ke  1 0
+.         ti  r25a r25v
+r26a      ke  154 0
+r26v      ke  -1 0
+.         ti  r26a r26v
+r27a      ke  155 0
+r27v      ke  0 0
+.         ti  r27a r27v
+#   C_pi
+r28a      ke  156 0
+r28v      ke  -1 0
+.         ti  r28a r28v
+r29a      ke  157 0
+r29v      ke  0 0
+.         ti  r29a r29v
+r30a      ke  158 0
+r30v      ke  0 0
+.         ti  r30a r30v
+r31a      ke  159 0
+r31v      ke  -1 0
+.         ti  r31a r31v
+
+# ---- 正準点 PT ----
+#   O    (0, 0)
+p00a      ke  160 0
+p00v      ke  0 0
+.         ti  p00a p00v
+p01a      ke  161 0
+p01v      ke  0 0
+.         ti  p01a p01v
+#   w    (1, 0)
+p02a      ke  162 0
+p02v      ke  1 0
+.         ti  p02a p02v
+p03a      ke  163 0
+p03v      ke  0 0
+.         ti  p03a p03v
+#   w-   (-1, 0)
+p04a      ke  164 0
+p04v      ke  -1 0
+.         ti  p04a p04v
+p05a      ke  165 0
+p05v      ke  0 0
+.         ti  p05a p05v
+#   i    (0, 1)
+p06a      ke  166 0
+p06v      ke  0 0
+.         ti  p06a p06v
+p07a      ke  167 0
+p07v      ke  1 0
+.         ti  p07a p07v
+#   j    (0, -1)
+p08a      ke  168 0
+p08v      ke  0 0
+.         ti  p08a p08v
+p09a      ke  169 0
+p09v      ke  -1 0
+.         ti  p09a p09v
+#   p++  (1, 1)
+p10a      ke  170 0
+p10v      ke  1 0
+.         ti  p10a p10v
+p11a      ke  171 0
+p11v      ke  1 0
+.         ti  p11a p11v
+#   p-+  (-1, 1)
+p12a      ke  172 0
+p12v      ke  -1 0
+.         ti  p12a p12v
+p13a      ke  173 0
+p13v      ke  1 0
+.         ti  p13a p13v
+#   p+-  (1, -1)
+p14a      ke  174 0
+p14v      ke  1 0
+.         ti  p14a p14v
+p15a      ke  175 0
+p15v      ke  -1 0
+.         ti  p15a p15v
+#   p--  (-1, -1)
+p16a      ke  176 0
+p16v      ke  -1 0
+.         ti  p16a p16v
+p17a      ke  177 0
+p17v      ke  -1 0
+.         ti  p17a p17v
+
+# ---- 検査の本数を数える ----
+i0w       ke  3 0
+i0v       ke  0 0
+.         ti  i0w i0v
+
+# ======== (1) 定理 8.1  R∘beta_a = beta_{R(a)}∘R ========
+t0w       ke  0 0
+t0v       ke  0 0
+.         ti  t0w t0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW3     ke  0 0
+LTaW3     ke  0 0
+TavW3     ta  LTaW3
+Tc9W3     ke  9 0
+.         se  TavW3 Tc9W3 LTa
+.         so  LC0
+LTa       ke  0 0
+Tav       ta  LTa
+Tc9       ke  9 0
+t1w       ke  1 0
+t1v       ke  0 0
+.         ti  t1w t1v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW2     ke  0 0
+LTrW2     ke  1 0
+TrvW2     ta  LTrW2
+Tc8W2     ke  8 0
+.         se  TrvW2 Tc8W2 LTr
+.         so  LTanx
+LTr       ke  1 0
+Trv       ta  LTr
+Tc8       ke  8 0
+#   左辺: slot0 <- beta_a、slot1 <- R、合成して slot2 へ
+taaw      ke  0 0
+taav      ta  taaw
+tapb      ke  160 0
+tac2      ke  2 0
+taix      sa  taav tac2
+taad      ko  tapb taix
+tapr      ta  taad
+tau1      ke  1 0
+taa2      ko  taad tau1
+tapw      ta  taa2
+tab       ke  64 0
+ta1       ke  1 0
+taz       ke  0 0
+.         ti  tab ta1
+tas1      ko  tab ta1
+.         ti  tas1 taz
+tas2      ko  tas1 ta1
+.         ti  tas2 taz
+tas3      ko  tas2 ta1
+.         ti  tas3 ta1
+tas4      ko  tas3 ta1
+.         ti  tas4 tapr
+tas5      ko  tas4 ta1
+.         ti  tas5 tapw
+tas6      ko  tas5 ta1
+.         ti  tas6 ta1
+tbrw      ke  1 0
+tbrv      ta  tbrw
+tbrb      ke  128 0
+tbc4      ke  4 0
+tbix      sa  tbrv tbc4
+tbad      ko  tbrb tbix
+tbm0      ta  tbad
+tbu1      ke  1 0
+tba1      ko  tbad tbu1
+tbm1      ta  tba1
+tba2      ko  tba1 tbu1
+tbm2      ta  tba2
+tba3      ko  tba2 tbu1
+tbm3      ta  tba3
+tbb       ke  71 0
+tb1       ke  1 0
+tbz       ke  0 0
+.         ti  tbb tbm0
+tbs1      ko  tbb tb1
+.         ti  tbs1 tbm1
+tbs2      ko  tbs1 tb1
+.         ti  tbs2 tbm2
+tbs3      ko  tbs2 tb1
+.         ti  tbs3 tbm3
+tbs4      ko  tbs3 tb1
+.         ti  tbs4 tbz
+tbs5      ko  tbs4 tb1
+.         ti  tbs5 tbz
+tbs6      ko  tbs5 tb1
+.         ti  tbs6 tbz
+tcq0a     ke  71 0
+tcq0      ta  tcq0a
+tcq1a     ke  64 0
+tcq1      ta  tcq1a
+tcq2      sa  tcq0 tcq1
+tcq3a     ke  72 0
+tcq3      ta  tcq3a
+tcq4a     ke  66 0
+tcq4      ta  tcq4a
+tcq5      sa  tcq3 tcq4
+tcq6      ko  tcq2 tcq5
+tcq7      ke  92 0
+.         ti  tcq7 tcq6
+tcq8a     ke  71 0
+tcq8      ta  tcq8a
+tcq9a     ke  65 0
+tcq9      ta  tcq9a
+tcq10     sa  tcq8 tcq9
+tcq11a    ke  72 0
+tcq11     ta  tcq11a
+tcq12a    ke  67 0
+tcq12     ta  tcq12a
+tcq13     sa  tcq11 tcq12
+tcq14     ko  tcq10 tcq13
+tcq15     ke  93 0
+.         ti  tcq15 tcq14
+tcq16a    ke  73 0
+tcq16     ta  tcq16a
+tcq17a    ke  64 0
+tcq17     ta  tcq17a
+tcq18     sa  tcq16 tcq17
+tcq19a    ke  74 0
+tcq19     ta  tcq19a
+tcq20a    ke  66 0
+tcq20     ta  tcq20a
+tcq21     sa  tcq19 tcq20
+tcq22     ko  tcq18 tcq21
+tcq23     ke  94 0
+.         ti  tcq23 tcq22
+tcq24a    ke  73 0
+tcq24     ta  tcq24a
+tcq25a    ke  65 0
+tcq25     ta  tcq25a
+tcq26     sa  tcq24 tcq25
+tcq27a    ke  74 0
+tcq27     ta  tcq27a
+tcq28a    ke  67 0
+tcq28     ta  tcq28a
+tcq29     sa  tcq27 tcq28
+tcq30     ko  tcq26 tcq29
+tcq31     ke  95 0
+.         ti  tcq31 tcq30
+tcq32a    ke  71 0
+tcq32     ta  tcq32a
+tcq33a    ke  68 0
+tcq33     ta  tcq33a
+tcq34     sa  tcq32 tcq33
+tcq35a    ke  72 0
+tcq35     ta  tcq35a
+tcq36a    ke  69 0
+tcq36     ta  tcq36a
+tcq37     sa  tcq35 tcq36
+tcq38     ko  tcq34 tcq37
+tcp0      ke  32 0
+tcq39a    ke  70 0
+tcq39     ta  tcq39a
+tcq40     ko  tcp0 tcq39
+tcp0v     ta  tcq40
+tcq41a    ke  75 0
+tcq41     ta  tcq41a
+tcq42     sa  tcp0v tcq41
+tcq43     ko  tcq38 tcq42
+tcq44     ke  96 0
+.         ti  tcq44 tcq43
+tcq45a    ke  73 0
+tcq45     ta  tcq45a
+tcq46a    ke  68 0
+tcq46     ta  tcq46a
+tcq47     sa  tcq45 tcq46
+tcq48a    ke  74 0
+tcq48     ta  tcq48a
+tcq49a    ke  69 0
+tcq49     ta  tcq49a
+tcq50     sa  tcq48 tcq49
+tcq51     ko  tcq47 tcq50
+tcp1      ke  32 0
+tcq52a    ke  70 0
+tcq52     ta  tcq52a
+tcq53     ko  tcp1 tcq52
+tcp1v     ta  tcq53
+tcq54a    ke  76 0
+tcq54     ta  tcq54a
+tcq55     sa  tcp1v tcq54
+tcq56     ko  tcq51 tcq55
+tcq57     ke  97 0
+.         ti  tcq57 tcq56
+tcq58a    ke  70 0
+tcq58     ta  tcq58a
+tcq59a    ke  77 0
+tcq59     ta  tcq59a
+tcq60     ko  tcq58 tcq59
+tcq61     ke  98 0
+.         ti  tcq61 tcq60
+tcc0a     ke  92 0
+tcc0      ta  tcc0a
+tcc0b     ke  78 0
+.         ti  tcc0b tcc0
+tcc1a     ke  93 0
+tcc1      ta  tcc1a
+tcc1b     ke  79 0
+.         ti  tcc1b tcc1
+tcc2a     ke  94 0
+tcc2      ta  tcc2a
+tcc2b     ke  80 0
+.         ti  tcc2b tcc2
+tcc3a     ke  95 0
+tcc3      ta  tcc3a
+tcc3b     ke  81 0
+.         ti  tcc3b tcc3
+tcc4a     ke  96 0
+tcc4      ta  tcc4a
+tcc4b     ke  82 0
+.         ti  tcc4b tcc4
+tcc5a     ke  97 0
+tcc5      ta  tcc5a
+tcc5b     ke  83 0
+.         ti  tcc5b tcc5
+tcc6a     ke  98 0
+tcc6      ta  tcc6a
+tcc6b     ke  84 0
+.         ti  tcc6b tcc6
+KT1       ke  0 0
+#   R(a) の点番号を求める（作用表と同じ計算）
+tdaw      ke  0 0
+tdav      ta  tdaw
+tdpb      ke  160 0
+tdc2      ke  2 0
+tdix      sa  tdav tdc2
+tdad      ko  tdpb tdix
+tdpr      ta  tdad
+tdu1      ke  1 0
+tda2      ko  tdad tdu1
+tdpw      ta  tda2
+Te1       ke  1 0
+Te2       ta  Te1
+Te3       ke  128 0
+Te4       ke  4 0
+Te5       sa  Te2 Te4
+Te6       ko  Te3 Te5
+Tm0       ta  Te6
+Te7       ke  1 0
+Te8       ko  Te6 Te7
+Tm1       ta  Te8
+Te9       ko  Te8 Te7
+Tm2       ta  Te9
+Tea       ko  Te9 Te7
+Tm3       ta  Tea
+Ty1       sa  Tm0 tdpr
+Ty2       sa  Tm1 tdpw
+Tyr       ko  Ty1 Ty2
+Ty3       sa  Tm2 tdpr
+Ty4       sa  Tm3 tdpw
+Tyw       ko  Ty3 Ty4
+t2w       ke  4 0
+t2v       ke  0 0
+.         ti  t2w t2v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW0     ke  0 0
+LTsW0     ke  4 0
+TsvW0     ta  LTsW0
+Ts9W0     ke  9 0
+.         se  TsvW0 Ts9W0 LTs
+.         so  Lko
+LTs       ke  4 0
+Tsv       ta  LTs
+Ts9       ke  9 0
+Tpb       ke  160 0
+Tc2       ke  2 0
+Tsi       sa  Tsv Tc2
+Tsa       ko  Tpb Tsi
+Tsr       ta  Tsa
+.         su  Tsr Tyr LTs1
+.         so  LTsnx
+LTs1      ke  1 0
+Tsa2      ko  Tsa LTs1
+Tsw       ta  Tsa2
+.         su  Tsw Tyw LTfound
+.         so  LTsnx
+LTsnx     ke  1 0
+Tsv2      ko  Tsv LTsnx
+Tsi2      ke  4 0
+.         ti  Tsi2 Tsv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW0     ke  0 0
+LTsW0z    ke  4 0
+TsvW0z    ta  LTsW0z
+Ts9W0z    ke  9 0
+.         se  TsvW0z Ts9W0z LTs
+.         so  Lko                        # 境界に届いた
+LTfound   ke  11 0
+.         ti  LTfound Tsv
+#   右辺: slot0 <- R、slot1 <- beta_{R(a)}、合成して slot3 へ
+tfrw      ke  1 0
+tfrv      ta  tfrw
+tfrb      ke  128 0
+tfc4      ke  4 0
+tfix      sa  tfrv tfc4
+tfad      ko  tfrb tfix
+tfm0      ta  tfad
+tfu1      ke  1 0
+tfa1      ko  tfad tfu1
+tfm1      ta  tfa1
+tfa2      ko  tfa1 tfu1
+tfm2      ta  tfa2
+tfa3      ko  tfa2 tfu1
+tfm3      ta  tfa3
+tfb       ke  64 0
+tf1       ke  1 0
+tfz       ke  0 0
+.         ti  tfb tfm0
+tfs1      ko  tfb tf1
+.         ti  tfs1 tfm1
+tfs2      ko  tfs1 tf1
+.         ti  tfs2 tfm2
+tfs3      ko  tfs2 tf1
+.         ti  tfs3 tfm3
+tfs4      ko  tfs3 tf1
+.         ti  tfs4 tfz
+tfs5      ko  tfs4 tf1
+.         ti  tfs5 tfz
+tfs6      ko  tfs5 tf1
+.         ti  tfs6 tfz
+tgaw      ke  11 0
+tgav      ta  tgaw
+tgpb      ke  160 0
+tgc2      ke  2 0
+tgix      sa  tgav tgc2
+tgad      ko  tgpb tgix
+tgpr      ta  tgad
+tgu1      ke  1 0
+tga2      ko  tgad tgu1
+tgpw      ta  tga2
+tgb       ke  71 0
+tg1       ke  1 0
+tgz       ke  0 0
+.         ti  tgb tg1
+tgs1      ko  tgb tg1
+.         ti  tgs1 tgz
+tgs2      ko  tgs1 tg1
+.         ti  tgs2 tgz
+tgs3      ko  tgs2 tg1
+.         ti  tgs3 tg1
+tgs4      ko  tgs3 tg1
+.         ti  tgs4 tgpr
+tgs5      ko  tgs4 tg1
+.         ti  tgs5 tgpw
+tgs6      ko  tgs5 tg1
+.         ti  tgs6 tg1
+thq0a     ke  71 0
+thq0      ta  thq0a
+thq1a     ke  64 0
+thq1      ta  thq1a
+thq2      sa  thq0 thq1
+thq3a     ke  72 0
+thq3      ta  thq3a
+thq4a     ke  66 0
+thq4      ta  thq4a
+thq5      sa  thq3 thq4
+thq6      ko  thq2 thq5
+thq7      ke  92 0
+.         ti  thq7 thq6
+thq8a     ke  71 0
+thq8      ta  thq8a
+thq9a     ke  65 0
+thq9      ta  thq9a
+thq10     sa  thq8 thq9
+thq11a    ke  72 0
+thq11     ta  thq11a
+thq12a    ke  67 0
+thq12     ta  thq12a
+thq13     sa  thq11 thq12
+thq14     ko  thq10 thq13
+thq15     ke  93 0
+.         ti  thq15 thq14
+thq16a    ke  73 0
+thq16     ta  thq16a
+thq17a    ke  64 0
+thq17     ta  thq17a
+thq18     sa  thq16 thq17
+thq19a    ke  74 0
+thq19     ta  thq19a
+thq20a    ke  66 0
+thq20     ta  thq20a
+thq21     sa  thq19 thq20
+thq22     ko  thq18 thq21
+thq23     ke  94 0
+.         ti  thq23 thq22
+thq24a    ke  73 0
+thq24     ta  thq24a
+thq25a    ke  65 0
+thq25     ta  thq25a
+thq26     sa  thq24 thq25
+thq27a    ke  74 0
+thq27     ta  thq27a
+thq28a    ke  67 0
+thq28     ta  thq28a
+thq29     sa  thq27 thq28
+thq30     ko  thq26 thq29
+thq31     ke  95 0
+.         ti  thq31 thq30
+thq32a    ke  71 0
+thq32     ta  thq32a
+thq33a    ke  68 0
+thq33     ta  thq33a
+thq34     sa  thq32 thq33
+thq35a    ke  72 0
+thq35     ta  thq35a
+thq36a    ke  69 0
+thq36     ta  thq36a
+thq37     sa  thq35 thq36
+thq38     ko  thq34 thq37
+thp0      ke  32 0
+thq39a    ke  70 0
+thq39     ta  thq39a
+thq40     ko  thp0 thq39
+thp0v     ta  thq40
+thq41a    ke  75 0
+thq41     ta  thq41a
+thq42     sa  thp0v thq41
+thq43     ko  thq38 thq42
+thq44     ke  96 0
+.         ti  thq44 thq43
+thq45a    ke  73 0
+thq45     ta  thq45a
+thq46a    ke  68 0
+thq46     ta  thq46a
+thq47     sa  thq45 thq46
+thq48a    ke  74 0
+thq48     ta  thq48a
+thq49a    ke  69 0
+thq49     ta  thq49a
+thq50     sa  thq48 thq49
+thq51     ko  thq47 thq50
+thp1      ke  32 0
+thq52a    ke  70 0
+thq52     ta  thq52a
+thq53     ko  thp1 thq52
+thp1v     ta  thq53
+thq54a    ke  76 0
+thq54     ta  thq54a
+thq55     sa  thp1v thq54
+thq56     ko  thq51 thq55
+thq57     ke  97 0
+.         ti  thq57 thq56
+thq58a    ke  70 0
+thq58     ta  thq58a
+thq59a    ke  77 0
+thq59     ta  thq59a
+thq60     ko  thq58 thq59
+thq61     ke  98 0
+.         ti  thq61 thq60
+thc0a     ke  92 0
+thc0      ta  thc0a
+thc0b     ke  85 0
+.         ti  thc0b thc0
+thc1a     ke  93 0
+thc1      ta  thc1a
+thc1b     ke  86 0
+.         ti  thc1b thc1
+thc2a     ke  94 0
+thc2      ta  thc2a
+thc2b     ke  87 0
+.         ti  thc2b thc2
+thc3a     ke  95 0
+thc3      ta  thc3a
+thc3b     ke  88 0
+.         ti  thc3b thc3
+thc4a     ke  96 0
+thc4      ta  thc4a
+thc4b     ke  89 0
+.         ti  thc4b thc4
+thc5a     ke  97 0
+thc5      ta  thc5a
+thc5b     ke  90 0
+.         ti  thc5b thc5
+thc6a     ke  98 0
+thc6      ta  thc6a
+thc6b     ke  91 0
+.         ti  thc6b thc6
+KT2       ke  0 0
+tiaa      ke  78 0
+tiba      ke  85 0
+tic6      ke  6 0
+tias      ko  tiaa tic6
+tiasv     ta  tias
+tibs      ko  tiba tic6
+tibsv     ta  tibs
+tipb      ke  32 0
+tip1      ko  tipb tiasv
+tipA      ta  tip1
+tip2      ko  tipb tibsv
+tipB      ta  tip2
+tii0w     ke  4 0
+tii0v     ke  0 0
+.         ti  tii0w tii0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW1     ke  0 0
+LtiW1     ke  4 0
+tiivW1    ta  LtiW1
+tin6W1    ke  6 0
+.         se  tiivW1 tin6W1 Lti
+.         so  Ltiok
+Lti       ke  4 0
+tiiv      ta  Lti
+tin6      ke  6 0
+tixa      ko  tiaa tiiv
+tixav     ta  tixa
+tixb      ko  tiba tiiv
+tixbv     ta  tixb
+til1      sa  tixav tipB
+til2      sa  tixbv tipA
+.         su  til1 til2 Ltinx
+.         so  Lko
+Ltinx     ke  1 0
+tiiv2     ko  tiiv Ltinx
+tiwi      ke  4 0
+.         ti  tiwi tiiv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW1     ke  0 0
+LtiW1z    ke  4 0
+tiivW1z   ta  LtiW1z
+tin6W1z   ke  6 0
+.         se  tiivW1z tin6W1z Lti
+.         so  Ltiok                      # 境界に届いた
+Ltiok     ke  3 0
+ticv      ta  Ltiok
+tic1      ke  1 0
+ticv2     ko  ticv tic1
+.         ti  Ltiok ticv2
+KT3       ke  1 0
+Tnb       ta  KT3
+Tn1       ke  1 0
+Tnb2      ko  Tnb Tn1
+.         ti  KT3 Tnb2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW2     ke  0 0
+LTrW2z    ke  1 0
+TrvW2z    ta  LTrW2z
+Tc8W2z    ke  8 0
+.         se  TrvW2z Tc8W2z LTr
+.         so  LTanx                      # 境界に届いた
+LTanx     ke  0 0
+Tna       ta  LTanx
+Tna1      ke  1 0
+Tna2      ko  Tna Tna1
+.         ti  LTanx Tna2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW3     ke  0 0
+LTaW3z    ke  0 0
+TavW3z    ta  LTaW3z
+Tc9W3z    ke  9 0
+.         se  TavW3z Tc9W3z LTa
+.         so  LC0                        # 境界に届いた
+
+# ======== (2) §8.1  n 回の反復は閉形 a + 2^{-n}(x - a) に等しい ========
+LC0       ke  0 0
+Cz        ke  0 0
+.         ti  LC0 Cz
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW7     ke  0 0
+LCaW7     ke  0 0
+CavW7     ta  LCaW7
+Cc9W7     ke  9 0
+.         se  CavW7 Cc9W7 LCa
+.         so  LI0
+LCa       ke  0 0
+Cav       ta  LCa
+Cc9       ke  9 0
+c0w       ke  2 0
+c0v       ke  0 0
+.         ti  c0w c0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW6     ke  0 0
+LCnW6     ke  2 0
+CnvW6     ta  LCnW6
+Cc5W6     ke  6 0
+.         se  CnvW6 Cc5W6 LCn
+.         so  LCanx
+LCn       ke  2 0
+Cnv       ta  LCn
+Cc5       ke  6 0
+#   slot2 <- id、slot1 <- beta_a、n 回だけ合成する
+cab       ke  78 0
+ca1       ke  1 0
+caz       ke  0 0
+.         ti  cab ca1
+cas1      ko  cab ca1
+.         ti  cas1 caz
+cas2      ko  cas1 ca1
+.         ti  cas2 caz
+cas3      ko  cas2 ca1
+.         ti  cas3 ca1
+cas4      ko  cas3 ca1
+.         ti  cas4 caz
+cas5      ko  cas4 ca1
+.         ti  cas5 caz
+cas6      ko  cas5 ca1
+.         ti  cas6 caz
+cbaw      ke  0 0
+cbav      ta  cbaw
+cbpb      ke  160 0
+cbc2      ke  2 0
+cbix      sa  cbav cbc2
+cbad      ko  cbpb cbix
+cbpr      ta  cbad
+cbu1      ke  1 0
+cba2      ko  cbad cbu1
+cbpw      ta  cba2
+cbb       ke  71 0
+cb1       ke  1 0
+cbz       ke  0 0
+.         ti  cbb cb1
+cbs1      ko  cbb cb1
+.         ti  cbs1 cbz
+cbs2      ko  cbs1 cb1
+.         ti  cbs2 cbz
+cbs3      ko  cbs2 cb1
+.         ti  cbs3 cb1
+cbs4      ko  cbs3 cb1
+.         ti  cbs4 cbpr
+cbs5      ko  cbs4 cb1
+.         ti  cbs5 cbpw
+cbs6      ko  cbs5 cb1
+.         ti  cbs6 cb1
+ccw       ke  4 0
+ccv       ke  0 0
+.         ti  ccw ccv
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW4     ke  0 0
+LCitW4    ke  4 0
+CivW4     ta  LCitW4
+CnwW4     ke  2 0
+Cnv2W4    ta  CnwW4
+.         se  CivW4 Cnv2W4 LCit
+.         so  LCdone
+LCit      ke  4 0
+Civ       ta  LCit
+Cnw       ke  2 0
+Cnv2      ta  Cnw
+cdq0a     ke  71 0
+cdq0      ta  cdq0a
+cdq1a     ke  78 0
+cdq1      ta  cdq1a
+cdq2      sa  cdq0 cdq1
+cdq3a     ke  72 0
+cdq3      ta  cdq3a
+cdq4a     ke  80 0
+cdq4      ta  cdq4a
+cdq5      sa  cdq3 cdq4
+cdq6      ko  cdq2 cdq5
+cdq7      ke  92 0
+.         ti  cdq7 cdq6
+cdq8a     ke  71 0
+cdq8      ta  cdq8a
+cdq9a     ke  79 0
+cdq9      ta  cdq9a
+cdq10     sa  cdq8 cdq9
+cdq11a    ke  72 0
+cdq11     ta  cdq11a
+cdq12a    ke  81 0
+cdq12     ta  cdq12a
+cdq13     sa  cdq11 cdq12
+cdq14     ko  cdq10 cdq13
+cdq15     ke  93 0
+.         ti  cdq15 cdq14
+cdq16a    ke  73 0
+cdq16     ta  cdq16a
+cdq17a    ke  78 0
+cdq17     ta  cdq17a
+cdq18     sa  cdq16 cdq17
+cdq19a    ke  74 0
+cdq19     ta  cdq19a
+cdq20a    ke  80 0
+cdq20     ta  cdq20a
+cdq21     sa  cdq19 cdq20
+cdq22     ko  cdq18 cdq21
+cdq23     ke  94 0
+.         ti  cdq23 cdq22
+cdq24a    ke  73 0
+cdq24     ta  cdq24a
+cdq25a    ke  79 0
+cdq25     ta  cdq25a
+cdq26     sa  cdq24 cdq25
+cdq27a    ke  74 0
+cdq27     ta  cdq27a
+cdq28a    ke  81 0
+cdq28     ta  cdq28a
+cdq29     sa  cdq27 cdq28
+cdq30     ko  cdq26 cdq29
+cdq31     ke  95 0
+.         ti  cdq31 cdq30
+cdq32a    ke  71 0
+cdq32     ta  cdq32a
+cdq33a    ke  82 0
+cdq33     ta  cdq33a
+cdq34     sa  cdq32 cdq33
+cdq35a    ke  72 0
+cdq35     ta  cdq35a
+cdq36a    ke  83 0
+cdq36     ta  cdq36a
+cdq37     sa  cdq35 cdq36
+cdq38     ko  cdq34 cdq37
+cdp0      ke  32 0
+cdq39a    ke  84 0
+cdq39     ta  cdq39a
+cdq40     ko  cdp0 cdq39
+cdp0v     ta  cdq40
+cdq41a    ke  75 0
+cdq41     ta  cdq41a
+cdq42     sa  cdp0v cdq41
+cdq43     ko  cdq38 cdq42
+cdq44     ke  96 0
+.         ti  cdq44 cdq43
+cdq45a    ke  73 0
+cdq45     ta  cdq45a
+cdq46a    ke  82 0
+cdq46     ta  cdq46a
+cdq47     sa  cdq45 cdq46
+cdq48a    ke  74 0
+cdq48     ta  cdq48a
+cdq49a    ke  83 0
+cdq49     ta  cdq49a
+cdq50     sa  cdq48 cdq49
+cdq51     ko  cdq47 cdq50
+cdp1      ke  32 0
+cdq52a    ke  84 0
+cdq52     ta  cdq52a
+cdq53     ko  cdp1 cdq52
+cdp1v     ta  cdq53
+cdq54a    ke  76 0
+cdq54     ta  cdq54a
+cdq55     sa  cdp1v cdq54
+cdq56     ko  cdq51 cdq55
+cdq57     ke  97 0
+.         ti  cdq57 cdq56
+cdq58a    ke  84 0
+cdq58     ta  cdq58a
+cdq59a    ke  77 0
+cdq59     ta  cdq59a
+cdq60     ko  cdq58 cdq59
+cdq61     ke  98 0
+.         ti  cdq61 cdq60
+cdc0a     ke  92 0
+cdc0      ta  cdc0a
+cdc0b     ke  78 0
+.         ti  cdc0b cdc0
+cdc1a     ke  93 0
+cdc1      ta  cdc1a
+cdc1b     ke  79 0
+.         ti  cdc1b cdc1
+cdc2a     ke  94 0
+cdc2      ta  cdc2a
+cdc2b     ke  80 0
+.         ti  cdc2b cdc2
+cdc3a     ke  95 0
+cdc3      ta  cdc3a
+cdc3b     ke  81 0
+.         ti  cdc3b cdc3
+cdc4a     ke  96 0
+cdc4      ta  cdc4a
+cdc4b     ke  82 0
+.         ti  cdc4b cdc4
+cdc5a     ke  97 0
+cdc5      ta  cdc5a
+cdc5b     ke  83 0
+.         ti  cdc5b cdc5
+cdc6a     ke  98 0
+cdc6      ta  cdc6a
+cdc6b     ke  84 0
+.         ti  cdc6b cdc6
+KC1       ke  4 0
+Civ2      ta  KC1
+Ci1       ke  1 0
+Civ3      ko  Civ2 Ci1
+.         ti  KC1 Civ3
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW4     ke  0 0
+LCitW4z   ke  4 0
+CivW4z    ta  LCitW4z
+CnwW4z    ke  2 0
+Cnv2W4z   ta  CnwW4z
+.         se  CivW4z Cnv2W4z LCit
+.         so  LCdone                     # 境界に届いた
+LCdone    ke  0 0
+ceaw      ke  0 0
+ceav      ta  ceaw
+cepb      ke  160 0
+cec2      ke  2 0
+ceix      sa  ceav cec2
+cead      ko  cepb ceix
+cepr      ta  cead
+ceu1      ke  1 0
+cea2      ko  cead ceu1
+cepw      ta  cea2
+cenw      ke  2 0
+cenv      ta  cenw
+cepb2     ke  32 0
+cepa      ko  cepb2 cenv
+cepv      ta  cepa
+cem1c     ke  -1 0
+cecf      ko  cepv cem1c
+cetr      sa  cecf cepr
+cetw      sa  cecf cepw
+ceb       ke  85 0
+ce1       ke  1 0
+cez       ke  0 0
+.         ti  ceb ce1
+ces1      ko  ceb ce1
+.         ti  ces1 cez
+ces2      ko  ces1 ce1
+.         ti  ces2 cez
+ces3      ko  ces2 ce1
+.         ti  ces3 ce1
+ces4      ko  ces3 ce1
+.         ti  ces4 cetr
+ces5      ko  ces4 ce1
+.         ti  ces5 cetw
+ces6      ko  ces5 ce1
+.         ti  ces6 cenv
+cfaa      ke  78 0
+cfba      ke  85 0
+cfc6      ke  6 0
+cfas      ko  cfaa cfc6
+cfasv     ta  cfas
+cfbs      ko  cfba cfc6
+cfbsv     ta  cfbs
+cfpb      ke  32 0
+cfp1      ko  cfpb cfasv
+cfpA      ta  cfp1
+cfp2      ko  cfpb cfbsv
+cfpB      ta  cfp2
+cfi0w     ke  4 0
+cfi0v     ke  0 0
+.         ti  cfi0w cfi0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW5     ke  0 0
+LcfW5     ke  4 0
+cfivW5    ta  LcfW5
+cfn6W5    ke  6 0
+.         se  cfivW5 cfn6W5 Lcf
+.         so  Lcfok
+Lcf       ke  4 0
+cfiv      ta  Lcf
+cfn6      ke  6 0
+cfxa      ko  cfaa cfiv
+cfxav     ta  cfxa
+cfxb      ko  cfba cfiv
+cfxbv     ta  cfxb
+cfl1      sa  cfxav cfpB
+cfl2      sa  cfxbv cfpA
+.         su  cfl1 cfl2 Lcfnx
+.         so  Lko
+Lcfnx     ke  1 0
+cfiv2     ko  cfiv Lcfnx
+cfwi      ke  4 0
+.         ti  cfwi cfiv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW5     ke  0 0
+LcfW5z    ke  4 0
+cfivW5z   ta  LcfW5z
+cfn6W5z   ke  6 0
+.         se  cfivW5z cfn6W5z Lcf
+.         so  Lcfok                      # 境界に届いた
+Lcfok     ke  3 0
+cfcv      ta  Lcfok
+cfc1      ke  1 0
+cfcv2     ko  cfcv cfc1
+.         ti  Lcfok cfcv2
+KC2       ke  2 0
+Cnn       ta  KC2
+Cn1       ke  1 0
+Cnn2      ko  Cnn Cn1
+.         ti  KC2 Cnn2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW6     ke  0 0
+LCnW6z    ke  2 0
+CnvW6z    ta  LCnW6z
+Cc5W6z    ke  6 0
+.         se  CnvW6z Cc5W6z LCn
+.         so  LCanx                      # 境界に届いた
+LCanx     ke  0 0
+Cna       ta  LCanx
+Ca1       ke  1 0
+Cna2      ko  Cna Ca1
+.         ti  LCanx Cna2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW7     ke  0 0
+LCaW7z    ke  0 0
+CavW7z    ta  LCaW7z
+Cc9W7z    ke  9 0
+.         se  CavW7z Cc9W7z LCa
+.         so  LI0                        # 境界に届いた
+
+# ======== (3) §8.1  beta_a^{-1} ∘ beta_a = id ========
+LI0       ke  0 0
+Iz        ke  0 0
+.         ti  LI0 Iz
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW9     ke  0 0
+LIaW9     ke  0 0
+IavW9     ta  LIaW9
+Ic9W9     ke  9 0
+.         se  IavW9 Ic9W9 LIa
+.         so  LP0
+LIa       ke  0 0
+Iav       ta  LIa
+Ic9       ke  9 0
+iaaw      ke  0 0
+iaav      ta  iaaw
+iapb      ke  160 0
+iac2      ke  2 0
+iaix      sa  iaav iac2
+iaad      ko  iapb iaix
+iapr      ta  iaad
+iau1      ke  1 0
+iaa2      ko  iaad iau1
+iapw      ta  iaa2
+iab       ke  64 0
+ia1       ke  1 0
+iaz       ke  0 0
+.         ti  iab ia1
+ias1      ko  iab ia1
+.         ti  ias1 iaz
+ias2      ko  ias1 ia1
+.         ti  ias2 iaz
+ias3      ko  ias2 ia1
+.         ti  ias3 ia1
+ias4      ko  ias3 ia1
+.         ti  ias4 iapr
+ias5      ko  ias4 ia1
+.         ti  ias5 iapw
+ias6      ko  ias5 ia1
+.         ti  ias6 ia1
+ibaw      ke  0 0
+ibav      ta  ibaw
+ibpb      ke  160 0
+ibc2      ke  2 0
+ibix      sa  ibav ibc2
+ibad      ko  ibpb ibix
+ibpr      ta  ibad
+ibu1      ke  1 0
+iba2      ko  ibad ibu1
+ibpw      ta  iba2
+ibb       ke  71 0
+ib1       ke  1 0
+ibz       ke  0 0
+ibc2b     ke  2 0
+ibnr      si  ibpr
+ibnw      si  ibpw
+.         ti  ibb ibc2b
+ibs1      ko  ibb ib1
+.         ti  ibs1 ibz
+ibs2      ko  ibs1 ib1
+.         ti  ibs2 ibz
+ibs3      ko  ibs2 ib1
+.         ti  ibs3 ibc2b
+ibs4      ko  ibs3 ib1
+.         ti  ibs4 ibnr
+ibs5      ko  ibs4 ib1
+.         ti  ibs5 ibnw
+ibs6      ko  ibs5 ib1
+.         ti  ibs6 ibz
+icq0a     ke  71 0
+icq0      ta  icq0a
+icq1a     ke  64 0
+icq1      ta  icq1a
+icq2      sa  icq0 icq1
+icq3a     ke  72 0
+icq3      ta  icq3a
+icq4a     ke  66 0
+icq4      ta  icq4a
+icq5      sa  icq3 icq4
+icq6      ko  icq2 icq5
+icq7      ke  92 0
+.         ti  icq7 icq6
+icq8a     ke  71 0
+icq8      ta  icq8a
+icq9a     ke  65 0
+icq9      ta  icq9a
+icq10     sa  icq8 icq9
+icq11a    ke  72 0
+icq11     ta  icq11a
+icq12a    ke  67 0
+icq12     ta  icq12a
+icq13     sa  icq11 icq12
+icq14     ko  icq10 icq13
+icq15     ke  93 0
+.         ti  icq15 icq14
+icq16a    ke  73 0
+icq16     ta  icq16a
+icq17a    ke  64 0
+icq17     ta  icq17a
+icq18     sa  icq16 icq17
+icq19a    ke  74 0
+icq19     ta  icq19a
+icq20a    ke  66 0
+icq20     ta  icq20a
+icq21     sa  icq19 icq20
+icq22     ko  icq18 icq21
+icq23     ke  94 0
+.         ti  icq23 icq22
+icq24a    ke  73 0
+icq24     ta  icq24a
+icq25a    ke  65 0
+icq25     ta  icq25a
+icq26     sa  icq24 icq25
+icq27a    ke  74 0
+icq27     ta  icq27a
+icq28a    ke  67 0
+icq28     ta  icq28a
+icq29     sa  icq27 icq28
+icq30     ko  icq26 icq29
+icq31     ke  95 0
+.         ti  icq31 icq30
+icq32a    ke  71 0
+icq32     ta  icq32a
+icq33a    ke  68 0
+icq33     ta  icq33a
+icq34     sa  icq32 icq33
+icq35a    ke  72 0
+icq35     ta  icq35a
+icq36a    ke  69 0
+icq36     ta  icq36a
+icq37     sa  icq35 icq36
+icq38     ko  icq34 icq37
+icp0      ke  32 0
+icq39a    ke  70 0
+icq39     ta  icq39a
+icq40     ko  icp0 icq39
+icp0v     ta  icq40
+icq41a    ke  75 0
+icq41     ta  icq41a
+icq42     sa  icp0v icq41
+icq43     ko  icq38 icq42
+icq44     ke  96 0
+.         ti  icq44 icq43
+icq45a    ke  73 0
+icq45     ta  icq45a
+icq46a    ke  68 0
+icq46     ta  icq46a
+icq47     sa  icq45 icq46
+icq48a    ke  74 0
+icq48     ta  icq48a
+icq49a    ke  69 0
+icq49     ta  icq49a
+icq50     sa  icq48 icq49
+icq51     ko  icq47 icq50
+icp1      ke  32 0
+icq52a    ke  70 0
+icq52     ta  icq52a
+icq53     ko  icp1 icq52
+icp1v     ta  icq53
+icq54a    ke  76 0
+icq54     ta  icq54a
+icq55     sa  icp1v icq54
+icq56     ko  icq51 icq55
+icq57     ke  97 0
+.         ti  icq57 icq56
+icq58a    ke  70 0
+icq58     ta  icq58a
+icq59a    ke  77 0
+icq59     ta  icq59a
+icq60     ko  icq58 icq59
+icq61     ke  98 0
+.         ti  icq61 icq60
+icc0a     ke  92 0
+icc0      ta  icc0a
+icc0b     ke  78 0
+.         ti  icc0b icc0
+icc1a     ke  93 0
+icc1      ta  icc1a
+icc1b     ke  79 0
+.         ti  icc1b icc1
+icc2a     ke  94 0
+icc2      ta  icc2a
+icc2b     ke  80 0
+.         ti  icc2b icc2
+icc3a     ke  95 0
+icc3      ta  icc3a
+icc3b     ke  81 0
+.         ti  icc3b icc3
+icc4a     ke  96 0
+icc4      ta  icc4a
+icc4b     ke  82 0
+.         ti  icc4b icc4
+icc5a     ke  97 0
+icc5      ta  icc5a
+icc5b     ke  83 0
+.         ti  icc5b icc5
+icc6a     ke  98 0
+icc6      ta  icc6a
+icc6b     ke  84 0
+.         ti  icc6b icc6
+KI1       ke  0 0
+idb       ke  85 0
+id1       ke  1 0
+idz       ke  0 0
+.         ti  idb id1
+ids1      ko  idb id1
+.         ti  ids1 idz
+ids2      ko  ids1 id1
+.         ti  ids2 idz
+ids3      ko  ids2 id1
+.         ti  ids3 id1
+ids4      ko  ids3 id1
+.         ti  ids4 idz
+ids5      ko  ids4 id1
+.         ti  ids5 idz
+ids6      ko  ids5 id1
+.         ti  ids6 idz
+ieaa      ke  78 0
+ieba      ke  85 0
+iec6      ke  6 0
+ieas      ko  ieaa iec6
+ieasv     ta  ieas
+iebs      ko  ieba iec6
+iebsv     ta  iebs
+iepb      ke  32 0
+iep1      ko  iepb ieasv
+iepA      ta  iep1
+iep2      ko  iepb iebsv
+iepB      ta  iep2
+iei0w     ke  4 0
+iei0v     ke  0 0
+.         ti  iei0w iei0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW8     ke  0 0
+LieW8     ke  4 0
+ieivW8    ta  LieW8
+ien6W8    ke  6 0
+.         se  ieivW8 ien6W8 Lie
+.         so  Lieok
+Lie       ke  4 0
+ieiv      ta  Lie
+ien6      ke  6 0
+iexa      ko  ieaa ieiv
+iexav     ta  iexa
+iexb      ko  ieba ieiv
+iexbv     ta  iexb
+iel1      sa  iexav iepB
+iel2      sa  iexbv iepA
+.         su  iel1 iel2 Lienx
+.         so  Lko
+Lienx     ke  1 0
+ieiv2     ko  ieiv Lienx
+iewi      ke  4 0
+.         ti  iewi ieiv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW8     ke  0 0
+LieW8z    ke  4 0
+ieivW8z   ta  LieW8z
+ien6W8z   ke  6 0
+.         se  ieivW8z ien6W8z Lie
+.         so  Lieok                      # 境界に届いた
+Lieok     ke  3 0
+iecv      ta  Lieok
+iec1      ke  1 0
+iecv2     ko  iecv iec1
+.         ti  Lieok iecv2
+KI2       ke  0 0
+Ina       ta  KI2
+Ia1       ke  1 0
+Ina2      ko  Ina Ia1
+.         ti  KI2 Ina2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW9     ke  0 0
+LIaW9z    ke  0 0
+IavW9z    ta  LIaW9z
+Ic9W9z    ke  9 0
+.         se  IavW9z Ic9W9z LIa
+.         so  LP0                        # 境界に届いた
+
+# ======== (4) §9.2  phi_d ∘ beta_a = beta_{phi_d(a)} ∘ phi_d ========
+LP0       ke  0 0
+Pz        ke  0 0
+.         ti  LP0 Pz
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW12    ke  0 0
+LPaW12    ke  0 0
+PavW12    ta  LPaW12
+Pc9W12    ke  9 0
+.         se  PavW12 Pc9W12 LPa
+.         so  LB0
+LPa       ke  0 0
+Pav       ta  LPa
+Pc9       ke  9 0
+#   左辺: beta_a の後に phi_d
+paaw      ke  0 0
+paav      ta  paaw
+papb      ke  160 0
+pac2      ke  2 0
+paix      sa  paav pac2
+paad      ko  papb paix
+papr      ta  paad
+pau1      ke  1 0
+paa2      ko  paad pau1
+papw      ta  paa2
+pab       ke  64 0
+pa1       ke  1 0
+paz       ke  0 0
+.         ti  pab pa1
+pas1      ko  pab pa1
+.         ti  pas1 paz
+pas2      ko  pas1 pa1
+.         ti  pas2 paz
+pas3      ko  pas2 pa1
+.         ti  pas3 pa1
+pas4      ko  pas3 pa1
+.         ti  pas4 papr
+pas5      ko  pas4 pa1
+.         ti  pas5 papw
+pas6      ko  pas5 pa1
+.         ti  pas6 pa1
+pbb       ke  71 0
+pb1       ke  1 0
+pbz       ke  0 0
+.         ti  pbb pb1
+pbs1      ko  pbb pb1
+.         ti  pbs1 pbz
+pbs2      ko  pbs1 pb1
+.         ti  pbs2 pbz
+pbs3      ko  pbs2 pb1
+.         ti  pbs3 pbz
+pbs4      ko  pbs3 pb1
+.         ti  pbs4 pbz
+pbs5      ko  pbs4 pb1
+.         ti  pbs5 pbz
+pbs6      ko  pbs5 pb1
+.         ti  pbs6 pbz
+pcq0a     ke  71 0
+pcq0      ta  pcq0a
+pcq1a     ke  64 0
+pcq1      ta  pcq1a
+pcq2      sa  pcq0 pcq1
+pcq3a     ke  72 0
+pcq3      ta  pcq3a
+pcq4a     ke  66 0
+pcq4      ta  pcq4a
+pcq5      sa  pcq3 pcq4
+pcq6      ko  pcq2 pcq5
+pcq7      ke  92 0
+.         ti  pcq7 pcq6
+pcq8a     ke  71 0
+pcq8      ta  pcq8a
+pcq9a     ke  65 0
+pcq9      ta  pcq9a
+pcq10     sa  pcq8 pcq9
+pcq11a    ke  72 0
+pcq11     ta  pcq11a
+pcq12a    ke  67 0
+pcq12     ta  pcq12a
+pcq13     sa  pcq11 pcq12
+pcq14     ko  pcq10 pcq13
+pcq15     ke  93 0
+.         ti  pcq15 pcq14
+pcq16a    ke  73 0
+pcq16     ta  pcq16a
+pcq17a    ke  64 0
+pcq17     ta  pcq17a
+pcq18     sa  pcq16 pcq17
+pcq19a    ke  74 0
+pcq19     ta  pcq19a
+pcq20a    ke  66 0
+pcq20     ta  pcq20a
+pcq21     sa  pcq19 pcq20
+pcq22     ko  pcq18 pcq21
+pcq23     ke  94 0
+.         ti  pcq23 pcq22
+pcq24a    ke  73 0
+pcq24     ta  pcq24a
+pcq25a    ke  65 0
+pcq25     ta  pcq25a
+pcq26     sa  pcq24 pcq25
+pcq27a    ke  74 0
+pcq27     ta  pcq27a
+pcq28a    ke  67 0
+pcq28     ta  pcq28a
+pcq29     sa  pcq27 pcq28
+pcq30     ko  pcq26 pcq29
+pcq31     ke  95 0
+.         ti  pcq31 pcq30
+pcq32a    ke  71 0
+pcq32     ta  pcq32a
+pcq33a    ke  68 0
+pcq33     ta  pcq33a
+pcq34     sa  pcq32 pcq33
+pcq35a    ke  72 0
+pcq35     ta  pcq35a
+pcq36a    ke  69 0
+pcq36     ta  pcq36a
+pcq37     sa  pcq35 pcq36
+pcq38     ko  pcq34 pcq37
+pcp0      ke  32 0
+pcq39a    ke  70 0
+pcq39     ta  pcq39a
+pcq40     ko  pcp0 pcq39
+pcp0v     ta  pcq40
+pcq41a    ke  75 0
+pcq41     ta  pcq41a
+pcq42     sa  pcp0v pcq41
+pcq43     ko  pcq38 pcq42
+pcq44     ke  96 0
+.         ti  pcq44 pcq43
+pcq45a    ke  73 0
+pcq45     ta  pcq45a
+pcq46a    ke  68 0
+pcq46     ta  pcq46a
+pcq47     sa  pcq45 pcq46
+pcq48a    ke  74 0
+pcq48     ta  pcq48a
+pcq49a    ke  69 0
+pcq49     ta  pcq49a
+pcq50     sa  pcq48 pcq49
+pcq51     ko  pcq47 pcq50
+pcp1      ke  32 0
+pcq52a    ke  70 0
+pcq52     ta  pcq52a
+pcq53     ko  pcp1 pcq52
+pcp1v     ta  pcq53
+pcq54a    ke  76 0
+pcq54     ta  pcq54a
+pcq55     sa  pcp1v pcq54
+pcq56     ko  pcq51 pcq55
+pcq57     ke  97 0
+.         ti  pcq57 pcq56
+pcq58a    ke  70 0
+pcq58     ta  pcq58a
+pcq59a    ke  77 0
+pcq59     ta  pcq59a
+pcq60     ko  pcq58 pcq59
+pcq61     ke  98 0
+.         ti  pcq61 pcq60
+pcc0a     ke  92 0
+pcc0      ta  pcc0a
+pcc0b     ke  78 0
+.         ti  pcc0b pcc0
+pcc1a     ke  93 0
+pcc1      ta  pcc1a
+pcc1b     ke  79 0
+.         ti  pcc1b pcc1
+pcc2a     ke  94 0
+pcc2      ta  pcc2a
+pcc2b     ke  80 0
+.         ti  pcc2b pcc2
+pcc3a     ke  95 0
+pcc3      ta  pcc3a
+pcc3b     ke  81 0
+.         ti  pcc3b pcc3
+pcc4a     ke  96 0
+pcc4      ta  pcc4a
+pcc4b     ke  82 0
+.         ti  pcc4b pcc4
+pcc5a     ke  97 0
+pcc5      ta  pcc5a
+pcc5b     ke  83 0
+.         ti  pcc5b pcc5
+pcc6a     ke  98 0
+pcc6      ta  pcc6a
+pcc6b     ke  84 0
+.         ti  pcc6b pcc6
+KP1       ke  0 0
+#   phi_d(a) の点番号。omega 成分を落とした点を PT から探す
+pdaw      ke  0 0
+pdav      ta  pdaw
+pdpb      ke  160 0
+pdc2      ke  2 0
+pdix      sa  pdav pdc2
+pdad      ko  pdpb pdix
+pdpr      ta  pdad
+pdu1      ke  1 0
+pda2      ko  pdad pdu1
+pdpw      ta  pda2
+pew       ke  4 0
+pev       ke  0 0
+.         ti  pew pev
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW10    ke  0 0
+LPsW10    ke  4 0
+PsvW10    ta  LPsW10
+Ps9W10    ke  9 0
+.         se  PsvW10 Ps9W10 LPs
+.         so  Lko
+LPs       ke  4 0
+Psv       ta  LPs
+Ps9       ke  9 0
+Ppb       ke  160 0
+Pc2       ke  2 0
+Psi       sa  Psv Pc2
+Psa       ko  Ppb Psi
+Psr       ta  Psa
+.         su  Psr pdpr LPs1
+.         so  LPsnx
+LPs1      ke  1 0
+Psa2      ko  Psa LPs1
+Psw       ta  Psa2
+Pzz       ke  0 0
+.         su  Psw Pzz LPfound
+.         so  LPsnx
+LPsnx     ke  1 0
+Psv2      ko  Psv LPsnx
+Psi2      ke  4 0
+.         ti  Psi2 Psv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW10    ke  0 0
+LPsW10z   ke  4 0
+PsvW10z   ta  LPsW10z
+Ps9W10z   ke  9 0
+.         se  PsvW10z Ps9W10z LPs
+.         so  Lko                        # 境界に届いた
+LPfound   ke  11 0
+.         ti  LPfound Psv
+#   右辺: phi_d の後に beta_{phi_d(a)}
+pfb       ke  64 0
+pf1       ke  1 0
+pfz       ke  0 0
+.         ti  pfb pf1
+pfs1      ko  pfb pf1
+.         ti  pfs1 pfz
+pfs2      ko  pfs1 pf1
+.         ti  pfs2 pfz
+pfs3      ko  pfs2 pf1
+.         ti  pfs3 pfz
+pfs4      ko  pfs3 pf1
+.         ti  pfs4 pfz
+pfs5      ko  pfs4 pf1
+.         ti  pfs5 pfz
+pfs6      ko  pfs5 pf1
+.         ti  pfs6 pfz
+pgaw      ke  11 0
+pgav      ta  pgaw
+pgpb      ke  160 0
+pgc2      ke  2 0
+pgix      sa  pgav pgc2
+pgad      ko  pgpb pgix
+pgpr      ta  pgad
+pgu1      ke  1 0
+pga2      ko  pgad pgu1
+pgpw      ta  pga2
+pgb       ke  71 0
+pg1       ke  1 0
+pgz       ke  0 0
+.         ti  pgb pg1
+pgs1      ko  pgb pg1
+.         ti  pgs1 pgz
+pgs2      ko  pgs1 pg1
+.         ti  pgs2 pgz
+pgs3      ko  pgs2 pg1
+.         ti  pgs3 pg1
+pgs4      ko  pgs3 pg1
+.         ti  pgs4 pgpr
+pgs5      ko  pgs4 pg1
+.         ti  pgs5 pgpw
+pgs6      ko  pgs5 pg1
+.         ti  pgs6 pg1
+phq0a     ke  71 0
+phq0      ta  phq0a
+phq1a     ke  64 0
+phq1      ta  phq1a
+phq2      sa  phq0 phq1
+phq3a     ke  72 0
+phq3      ta  phq3a
+phq4a     ke  66 0
+phq4      ta  phq4a
+phq5      sa  phq3 phq4
+phq6      ko  phq2 phq5
+phq7      ke  92 0
+.         ti  phq7 phq6
+phq8a     ke  71 0
+phq8      ta  phq8a
+phq9a     ke  65 0
+phq9      ta  phq9a
+phq10     sa  phq8 phq9
+phq11a    ke  72 0
+phq11     ta  phq11a
+phq12a    ke  67 0
+phq12     ta  phq12a
+phq13     sa  phq11 phq12
+phq14     ko  phq10 phq13
+phq15     ke  93 0
+.         ti  phq15 phq14
+phq16a    ke  73 0
+phq16     ta  phq16a
+phq17a    ke  64 0
+phq17     ta  phq17a
+phq18     sa  phq16 phq17
+phq19a    ke  74 0
+phq19     ta  phq19a
+phq20a    ke  66 0
+phq20     ta  phq20a
+phq21     sa  phq19 phq20
+phq22     ko  phq18 phq21
+phq23     ke  94 0
+.         ti  phq23 phq22
+phq24a    ke  73 0
+phq24     ta  phq24a
+phq25a    ke  65 0
+phq25     ta  phq25a
+phq26     sa  phq24 phq25
+phq27a    ke  74 0
+phq27     ta  phq27a
+phq28a    ke  67 0
+phq28     ta  phq28a
+phq29     sa  phq27 phq28
+phq30     ko  phq26 phq29
+phq31     ke  95 0
+.         ti  phq31 phq30
+phq32a    ke  71 0
+phq32     ta  phq32a
+phq33a    ke  68 0
+phq33     ta  phq33a
+phq34     sa  phq32 phq33
+phq35a    ke  72 0
+phq35     ta  phq35a
+phq36a    ke  69 0
+phq36     ta  phq36a
+phq37     sa  phq35 phq36
+phq38     ko  phq34 phq37
+php0      ke  32 0
+phq39a    ke  70 0
+phq39     ta  phq39a
+phq40     ko  php0 phq39
+php0v     ta  phq40
+phq41a    ke  75 0
+phq41     ta  phq41a
+phq42     sa  php0v phq41
+phq43     ko  phq38 phq42
+phq44     ke  96 0
+.         ti  phq44 phq43
+phq45a    ke  73 0
+phq45     ta  phq45a
+phq46a    ke  68 0
+phq46     ta  phq46a
+phq47     sa  phq45 phq46
+phq48a    ke  74 0
+phq48     ta  phq48a
+phq49a    ke  69 0
+phq49     ta  phq49a
+phq50     sa  phq48 phq49
+phq51     ko  phq47 phq50
+php1      ke  32 0
+phq52a    ke  70 0
+phq52     ta  phq52a
+phq53     ko  php1 phq52
+php1v     ta  phq53
+phq54a    ke  76 0
+phq54     ta  phq54a
+phq55     sa  php1v phq54
+phq56     ko  phq51 phq55
+phq57     ke  97 0
+.         ti  phq57 phq56
+phq58a    ke  70 0
+phq58     ta  phq58a
+phq59a    ke  77 0
+phq59     ta  phq59a
+phq60     ko  phq58 phq59
+phq61     ke  98 0
+.         ti  phq61 phq60
+phc0a     ke  92 0
+phc0      ta  phc0a
+phc0b     ke  85 0
+.         ti  phc0b phc0
+phc1a     ke  93 0
+phc1      ta  phc1a
+phc1b     ke  86 0
+.         ti  phc1b phc1
+phc2a     ke  94 0
+phc2      ta  phc2a
+phc2b     ke  87 0
+.         ti  phc2b phc2
+phc3a     ke  95 0
+phc3      ta  phc3a
+phc3b     ke  88 0
+.         ti  phc3b phc3
+phc4a     ke  96 0
+phc4      ta  phc4a
+phc4b     ke  89 0
+.         ti  phc4b phc4
+phc5a     ke  97 0
+phc5      ta  phc5a
+phc5b     ke  90 0
+.         ti  phc5b phc5
+phc6a     ke  98 0
+phc6      ta  phc6a
+phc6b     ke  91 0
+.         ti  phc6b phc6
+KP2       ke  0 0
+piaa      ke  78 0
+piba      ke  85 0
+pic6      ke  6 0
+pias      ko  piaa pic6
+piasv     ta  pias
+pibs      ko  piba pic6
+pibsv     ta  pibs
+pipb      ke  32 0
+pip1      ko  pipb piasv
+pipA      ta  pip1
+pip2      ko  pipb pibsv
+pipB      ta  pip2
+pii0w     ke  4 0
+pii0v     ke  0 0
+.         ti  pii0w pii0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW11    ke  0 0
+LpiW11    ke  4 0
+piivW11   ta  LpiW11
+pin6W11   ke  6 0
+.         se  piivW11 pin6W11 Lpi
+.         so  Lpiok
+Lpi       ke  4 0
+piiv      ta  Lpi
+pin6      ke  6 0
+pixa      ko  piaa piiv
+pixav     ta  pixa
+pixb      ko  piba piiv
+pixbv     ta  pixb
+pil1      sa  pixav pipB
+pil2      sa  pixbv pipA
+.         su  pil1 pil2 Lpinx
+.         so  Lko
+Lpinx     ke  1 0
+piiv2     ko  piiv Lpinx
+piwi      ke  4 0
+.         ti  piwi piiv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW11    ke  0 0
+LpiW11z   ke  4 0
+piivW11z  ta  LpiW11z
+pin6W11z  ke  6 0
+.         se  piivW11z pin6W11z Lpi
+.         so  Lpiok                      # 境界に届いた
+Lpiok     ke  3 0
+picv      ta  Lpiok
+pic1      ke  1 0
+picv2     ko  picv pic1
+.         ti  Lpiok picv2
+KP3       ke  0 0
+Pna       ta  KP3
+Pa1       ke  1 0
+Pna2      ko  Pna Pa1
+.         ti  KP3 Pna2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW12    ke  0 0
+LPaW12z   ke  0 0
+PavW12z   ta  LPaW12z
+Pc9W12z   ke  9 0
+.         se  PavW12z Pc9W12z LPa
+.         so  LB0                        # 境界に届いた
+
+# ======== (5) §8.6  beta_b ∘ beta_a = (I, a + 2b, 2) ========
+#   固定点は 3c = a + 2b を解いた c になる。順序を入れ替えると
+#   3c' = 2a + b になるので、a ≠ b では二つが一致しない。
+LB0       ke  0 0
+Bz        ke  0 0
+.         ti  LB0 Bz
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW15    ke  0 0
+LBaW15    ke  0 0
+BavW15    ta  LBaW15
+Bc9W15    ke  9 0
+.         se  BavW15 Bc9W15 LBa
+.         so  LL0
+LBa       ke  0 0
+Bav       ta  LBa
+Bc9       ke  9 0
+b0w       ke  1 0
+b0v       ke  0 0
+.         ti  b0w b0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW14    ke  0 0
+LBbW14    ke  1 0
+BbvW14    ta  LBbW14
+Bc9bW14   ke  9 0
+.         se  BbvW14 Bc9bW14 LBb
+.         so  LBanx
+LBb       ke  1 0
+Bbv       ta  LBb
+Bc9b      ke  9 0
+baaw      ke  0 0
+baav      ta  baaw
+bapb      ke  160 0
+bac2      ke  2 0
+baix      sa  baav bac2
+baad      ko  bapb baix
+bapr      ta  baad
+bau1      ke  1 0
+baa2      ko  baad bau1
+bapw      ta  baa2
+bab       ke  64 0
+ba1       ke  1 0
+baz       ke  0 0
+.         ti  bab ba1
+bas1      ko  bab ba1
+.         ti  bas1 baz
+bas2      ko  bas1 ba1
+.         ti  bas2 baz
+bas3      ko  bas2 ba1
+.         ti  bas3 ba1
+bas4      ko  bas3 ba1
+.         ti  bas4 bapr
+bas5      ko  bas4 ba1
+.         ti  bas5 bapw
+bas6      ko  bas5 ba1
+.         ti  bas6 ba1
+bbaw      ke  1 0
+bbav      ta  bbaw
+bbpb      ke  160 0
+bbc2      ke  2 0
+bbix      sa  bbav bbc2
+bbad      ko  bbpb bbix
+bbpr      ta  bbad
+bbu1      ke  1 0
+bba2      ko  bbad bbu1
+bbpw      ta  bba2
+bbb       ke  71 0
+bb1       ke  1 0
+bbz       ke  0 0
+.         ti  bbb bb1
+bbs1      ko  bbb bb1
+.         ti  bbs1 bbz
+bbs2      ko  bbs1 bb1
+.         ti  bbs2 bbz
+bbs3      ko  bbs2 bb1
+.         ti  bbs3 bb1
+bbs4      ko  bbs3 bb1
+.         ti  bbs4 bbpr
+bbs5      ko  bbs4 bb1
+.         ti  bbs5 bbpw
+bbs6      ko  bbs5 bb1
+.         ti  bbs6 bb1
+bcq0a     ke  71 0
+bcq0      ta  bcq0a
+bcq1a     ke  64 0
+bcq1      ta  bcq1a
+bcq2      sa  bcq0 bcq1
+bcq3a     ke  72 0
+bcq3      ta  bcq3a
+bcq4a     ke  66 0
+bcq4      ta  bcq4a
+bcq5      sa  bcq3 bcq4
+bcq6      ko  bcq2 bcq5
+bcq7      ke  92 0
+.         ti  bcq7 bcq6
+bcq8a     ke  71 0
+bcq8      ta  bcq8a
+bcq9a     ke  65 0
+bcq9      ta  bcq9a
+bcq10     sa  bcq8 bcq9
+bcq11a    ke  72 0
+bcq11     ta  bcq11a
+bcq12a    ke  67 0
+bcq12     ta  bcq12a
+bcq13     sa  bcq11 bcq12
+bcq14     ko  bcq10 bcq13
+bcq15     ke  93 0
+.         ti  bcq15 bcq14
+bcq16a    ke  73 0
+bcq16     ta  bcq16a
+bcq17a    ke  64 0
+bcq17     ta  bcq17a
+bcq18     sa  bcq16 bcq17
+bcq19a    ke  74 0
+bcq19     ta  bcq19a
+bcq20a    ke  66 0
+bcq20     ta  bcq20a
+bcq21     sa  bcq19 bcq20
+bcq22     ko  bcq18 bcq21
+bcq23     ke  94 0
+.         ti  bcq23 bcq22
+bcq24a    ke  73 0
+bcq24     ta  bcq24a
+bcq25a    ke  65 0
+bcq25     ta  bcq25a
+bcq26     sa  bcq24 bcq25
+bcq27a    ke  74 0
+bcq27     ta  bcq27a
+bcq28a    ke  67 0
+bcq28     ta  bcq28a
+bcq29     sa  bcq27 bcq28
+bcq30     ko  bcq26 bcq29
+bcq31     ke  95 0
+.         ti  bcq31 bcq30
+bcq32a    ke  71 0
+bcq32     ta  bcq32a
+bcq33a    ke  68 0
+bcq33     ta  bcq33a
+bcq34     sa  bcq32 bcq33
+bcq35a    ke  72 0
+bcq35     ta  bcq35a
+bcq36a    ke  69 0
+bcq36     ta  bcq36a
+bcq37     sa  bcq35 bcq36
+bcq38     ko  bcq34 bcq37
+bcp0      ke  32 0
+bcq39a    ke  70 0
+bcq39     ta  bcq39a
+bcq40     ko  bcp0 bcq39
+bcp0v     ta  bcq40
+bcq41a    ke  75 0
+bcq41     ta  bcq41a
+bcq42     sa  bcp0v bcq41
+bcq43     ko  bcq38 bcq42
+bcq44     ke  96 0
+.         ti  bcq44 bcq43
+bcq45a    ke  73 0
+bcq45     ta  bcq45a
+bcq46a    ke  68 0
+bcq46     ta  bcq46a
+bcq47     sa  bcq45 bcq46
+bcq48a    ke  74 0
+bcq48     ta  bcq48a
+bcq49a    ke  69 0
+bcq49     ta  bcq49a
+bcq50     sa  bcq48 bcq49
+bcq51     ko  bcq47 bcq50
+bcp1      ke  32 0
+bcq52a    ke  70 0
+bcq52     ta  bcq52a
+bcq53     ko  bcp1 bcq52
+bcp1v     ta  bcq53
+bcq54a    ke  76 0
+bcq54     ta  bcq54a
+bcq55     sa  bcp1v bcq54
+bcq56     ko  bcq51 bcq55
+bcq57     ke  97 0
+.         ti  bcq57 bcq56
+bcq58a    ke  70 0
+bcq58     ta  bcq58a
+bcq59a    ke  77 0
+bcq59     ta  bcq59a
+bcq60     ko  bcq58 bcq59
+bcq61     ke  98 0
+.         ti  bcq61 bcq60
+bcc0a     ke  92 0
+bcc0      ta  bcc0a
+bcc0b     ke  78 0
+.         ti  bcc0b bcc0
+bcc1a     ke  93 0
+bcc1      ta  bcc1a
+bcc1b     ke  79 0
+.         ti  bcc1b bcc1
+bcc2a     ke  94 0
+bcc2      ta  bcc2a
+bcc2b     ke  80 0
+.         ti  bcc2b bcc2
+bcc3a     ke  95 0
+bcc3      ta  bcc3a
+bcc3b     ke  81 0
+.         ti  bcc3b bcc3
+bcc4a     ke  96 0
+bcc4      ta  bcc4a
+bcc4b     ke  82 0
+.         ti  bcc4b bcc4
+bcc5a     ke  97 0
+bcc5      ta  bcc5a
+bcc5b     ke  83 0
+.         ti  bcc5b bcc5
+bcc6a     ke  98 0
+bcc6      ta  bcc6a
+bcc6b     ke  84 0
+.         ti  bcc6b bcc6
+KB1       ke  0 0
+#   期待する平行移動 a + 2b
+bdaw      ke  0 0
+bdav      ta  bdaw
+bdpb      ke  160 0
+bdc2      ke  2 0
+bdix      sa  bdav bdc2
+bdad      ko  bdpb bdix
+bdpr      ta  bdad
+bdu1      ke  1 0
+bda2      ko  bdad bdu1
+bdpw      ta  bda2
+beaw      ke  1 0
+beav      ta  beaw
+bepb      ke  160 0
+bec2      ke  2 0
+beix      sa  beav bec2
+bead      ko  bepb beix
+bepr      ta  bead
+beu1      ke  1 0
+bea2      ko  bead beu1
+bepw      ta  bea2
+Bt2       ke  2 0
+Bxr       sa  bepr Bt2
+Bxw       sa  bepw Bt2
+Btr       ko  bdpr Bxr
+Btw       ko  bdpw Bxw
+bfb       ke  85 0
+bf1       ke  1 0
+bfz       ke  0 0
+bfsc      ke  2 0
+.         ti  bfb bf1
+bfs1      ko  bfb bf1
+.         ti  bfs1 bfz
+bfs2      ko  bfs1 bf1
+.         ti  bfs2 bfz
+bfs3      ko  bfs2 bf1
+.         ti  bfs3 bf1
+bfs4      ko  bfs3 bf1
+.         ti  bfs4 Btr
+bfs5      ko  bfs4 bf1
+.         ti  bfs5 Btw
+bfs6      ko  bfs5 bf1
+.         ti  bfs6 bfsc
+bgaa      ke  78 0
+bgba      ke  85 0
+bgc6      ke  6 0
+bgas      ko  bgaa bgc6
+bgasv     ta  bgas
+bgbs      ko  bgba bgc6
+bgbsv     ta  bgbs
+bgpb      ke  32 0
+bgp1      ko  bgpb bgasv
+bgpA      ta  bgp1
+bgp2      ko  bgpb bgbsv
+bgpB      ta  bgp2
+bgi0w     ke  4 0
+bgi0v     ke  0 0
+.         ti  bgi0w bgi0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW13    ke  0 0
+LbgW13    ke  4 0
+bgivW13   ta  LbgW13
+bgn6W13   ke  6 0
+.         se  bgivW13 bgn6W13 Lbg
+.         so  Lbgok
+Lbg       ke  4 0
+bgiv      ta  Lbg
+bgn6      ke  6 0
+bgxa      ko  bgaa bgiv
+bgxav     ta  bgxa
+bgxb      ko  bgba bgiv
+bgxbv     ta  bgxb
+bgl1      sa  bgxav bgpB
+bgl2      sa  bgxbv bgpA
+.         su  bgl1 bgl2 Lbgnx
+.         so  Lko
+Lbgnx     ke  1 0
+bgiv2     ko  bgiv Lbgnx
+bgwi      ke  4 0
+.         ti  bgwi bgiv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW13    ke  0 0
+LbgW13z   ke  4 0
+bgivW13z  ta  LbgW13z
+bgn6W13z  ke  6 0
+.         se  bgivW13z bgn6W13z Lbg
+.         so  Lbgok                      # 境界に届いた
+Lbgok     ke  3 0
+bgcv      ta  Lbgok
+bgc1      ke  1 0
+bgcv2     ko  bgcv bgc1
+.         ti  Lbgok bgcv2
+#   非可換: a ≠ b なら a + 2b ≠ 2a + b
+#   四つの成分は作業語 12..15 へ退避する。wire に載せたままだと
+#   同時生存が landmark の本数を超える
+bmaw      ke  0 0
+bmav      ta  bmaw
+bmpb      ke  160 0
+bmc2      ke  2 0
+bmix      sa  bmav bmc2
+bmad      ko  bmpb bmix
+bmpr      ta  bmad
+bmu1      ke  1 0
+bma2      ko  bmad bmu1
+bmpw      ta  bma2
+bnaw      ke  1 0
+bnav      ta  bnaw
+bnpb      ke  160 0
+bnc2      ke  2 0
+bnix      sa  bnav bnc2
+bnad      ko  bnpb bnix
+bnpr      ta  bnad
+bnu1      ke  1 0
+bna2      ko  bnad bnu1
+bnpw      ta  bna2
+Bn2       ke  2 0
+Bu1       sa  bnpr Bn2
+Bu1s      ko  bmpr Bu1
+Bw12      ke  12 0
+.         ti  Bw12 Bu1s
+Bu2       sa  bnpw Bn2
+Bu2s      ko  bmpw Bu2
+Bw13      ke  13 0
+.         ti  Bw13 Bu2s
+Bv1       sa  bmpr Bn2
+Bv1s      ko  bnpr Bv1
+Bw14      ke  14 0
+.         ti  Bw14 Bv1s
+Bv2       sa  bmpw Bn2
+Bv2s      ko  bnpw Bv2
+Bw15      ke  15 0
+.         ti  Bw15 Bv2s
+Bqa       ke  0 0
+Bqav      ta  Bqa
+Bqb       ke  1 0
+Bqbv      ta  Bqb
+.         su  Bqav Bqbv LBsame
+Br12      ke  12 0
+Br12v     ta  Br12
+Br14      ke  14 0
+Br14v     ta  Br14
+.         su  Br12v Br14v LBw1
+.         so  LBok
+LBw1      ke  13 0
+Br13v     ta  LBw1
+Br15      ke  15 0
+Br15v     ta  Br15
+.         su  Br13v Br15v Lko
+.         so  LBok
+LBsame    ke  12 0
+Bs12v     ta  LBsame
+Bs14      ke  14 0
+Bs14v     ta  Bs14
+.         su  Bs12v Bs14v LBs1
+.         so  Lko
+LBs1      ke  13 0
+Bs13v     ta  LBs1
+Bs15      ke  15 0
+Bs15v     ta  Bs15
+.         su  Bs13v Bs15v LBok
+.         so  Lko
+LBok      ke  3 0
+Bcv       ta  LBok
+Bc1       ke  1 0
+Bcv2      ko  Bcv Bc1
+.         ti  LBok Bcv2
+Bnb       ke  1 0
+Bnbv      ta  Bnb
+Bnb1      ke  1 0
+Bnb2      ko  Bnbv Bnb1
+.         ti  Bnb Bnb2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW14    ke  0 0
+LBbW14z   ke  1 0
+BbvW14z   ta  LBbW14z
+Bc9bW14z  ke  9 0
+.         se  BbvW14z Bc9bW14z LBb
+.         so  LBanx                      # 境界に届いた
+LBanx     ke  0 0
+Bna       ta  LBanx
+Bna1      ke  1 0
+Bna2      ko  Bna Bna1
+.         ti  LBanx Bna2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW15    ke  0 0
+LBaW15z   ke  0 0
+BavW15z   ta  LBaW15z
+Bc9W15z   ke  9 0
+.         se  BavW15z Bc9W15z LBa
+.         so  LL0                        # 境界に届いた
+
+# ======== (6) §9.1  境界作用素と細分は交換する ========
+#   アフィン写像 F(x) = (M x + t)/2^s の差は F(v) - F(u) = M(v - u)/2^s になり、
+#   平行移動 t に依らない。beta_a の線形部 (M, s) が基準点 a に依らないことが
+#   その内容そのものになる。beta_a と beta_b の (M, s) を比べる。
+LL0       ke  0 0
+Lz        ke  0 0
+.         ti  LL0 Lz
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW18    ke  0 0
+LLaW18    ke  0 0
+LavW18    ta  LLaW18
+Lc9W18    ke  9 0
+.         se  LavW18 Lc9W18 LLa
+.         so  Lcmp0
+LLa       ke  0 0
+Lav       ta  LLa
+Lc9       ke  9 0
+l0w       ke  1 0
+l0v       ke  0 0
+.         ti  l0w l0v
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW17    ke  0 0
+LLbW17    ke  1 0
+LbvW17    ta  LLbW17
+Lc9bW17   ke  9 0
+.         se  LbvW17 Lc9bW17 LLb
+.         so  LLanx
+LLb       ke  1 0
+Lbv       ta  LLb
+Lc9b      ke  9 0
+laaw      ke  0 0
+laav      ta  laaw
+lapb      ke  160 0
+lac2      ke  2 0
+laix      sa  laav lac2
+laad      ko  lapb laix
+lapr      ta  laad
+lau1      ke  1 0
+laa2      ko  laad lau1
+lapw      ta  laa2
+lab       ke  64 0
+la1       ke  1 0
+laz       ke  0 0
+.         ti  lab la1
+las1      ko  lab la1
+.         ti  las1 laz
+las2      ko  las1 la1
+.         ti  las2 laz
+las3      ko  las2 la1
+.         ti  las3 la1
+las4      ko  las3 la1
+.         ti  las4 lapr
+las5      ko  las4 la1
+.         ti  las5 lapw
+las6      ko  las5 la1
+.         ti  las6 la1
+lbaw      ke  1 0
+lbav      ta  lbaw
+lbpb      ke  160 0
+lbc2      ke  2 0
+lbix      sa  lbav lbc2
+lbad      ko  lbpb lbix
+lbpr      ta  lbad
+lbu1      ke  1 0
+lba2      ko  lbad lbu1
+lbpw      ta  lba2
+lbb       ke  71 0
+lb1       ke  1 0
+lbz       ke  0 0
+.         ti  lbb lb1
+lbs1      ko  lbb lb1
+.         ti  lbs1 lbz
+lbs2      ko  lbs1 lb1
+.         ti  lbs2 lbz
+lbs3      ko  lbs2 lb1
+.         ti  lbs3 lb1
+lbs4      ko  lbs3 lb1
+.         ti  lbs4 lbpr
+lbs5      ko  lbs4 lb1
+.         ti  lbs5 lbpw
+lbs6      ko  lbs5 lb1
+.         ti  lbs6 lb1
+Lsa       ke  64 0
+Lsb       ke  71 0
+Lu1       ke  1 0
+lcw       ke  4 0
+lcv       ke  0 0
+.         ti  lcw lcv
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW16    ke  0 0
+LLcW16    ke  4 0
+LivW16    ta  LLcW16
+Lc4W16    ke  4 0
+.         se  LivW16 Lc4W16 LLc
+.         so  LLs
+LLc       ke  4 0
+Liv       ta  LLc
+Lc4       ke  4 0
+Lxa       ko  Lsa Liv
+Lxav      ta  Lxa
+Lxb       ko  Lsb Liv
+Lxbv      ta  Lxb
+.         su  Lxav Lxbv LLcnx
+.         so  Lko
+LLcnx     ke  1 0
+Liv2      ko  Liv LLcnx
+Lci       ke  4 0
+.         ti  Lci Liv2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW16    ke  0 0
+LLcW16z   ke  4 0
+LivW16z   ta  LLcW16z
+Lc4W16z   ke  4 0
+.         se  LivW16z Lc4W16z LLc
+.         so  LLs                        # 境界に届いた
+LLs       ke  6 0
+Lsa6      ko  Lsa LLs
+Lsav      ta  Lsa6
+Lsb6      ko  Lsb LLs
+Lsbv      ta  Lsb6
+.         su  Lsav Lsbv LLok
+.         so  Lko
+LLok      ke  3 0
+Lcv       ta  LLok
+Lc1       ke  1 0
+Lcv2      ko  Lcv Lc1
+.         ti  LLok Lcv2
+Lnb       ke  1 0
+Lnbv      ta  Lnb
+Lnb1      ke  1 0
+Lnb2      ko  Lnbv Lnb1
+.         ti  Lnb Lnb2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW17    ke  0 0
+LLbW17z   ke  1 0
+LbvW17z   ta  LLbW17z
+Lc9bW17z  ke  9 0
+.         se  LbvW17z Lc9bW17z LLb
+.         so  LLanx                      # 境界に届いた
+LLanx     ke  0 0
+Lna       ta  LLanx
+Lna1      ke  1 0
+Lna2      ko  Lna Lna1
+.         ti  LLanx Lna2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW18    ke  0 0
+LLaW18z   ke  0 0
+LavW18z   ta  LLaW18z
+Lc9W18z   ke  9 0
+.         se  LavW18z Lc9W18z LLa
+.         so  Lcmp0                      # 境界に届いた
+
+# ======== 確かめた恒等式の本数 ========
+#   輸送 9x8、閉形 9x6、逆 9、観測 9、合成 9x9、線形部 9x9。
+#   合成の段は写像の一致と非可換性の二本を数えるので 9x9x2 になる。
+Lcmp0     ke  3 0
+Xcv       ta  Lcmp0
+Xn        ke  387 0
+.         su  Xcv Xn Lok
+.         so  Lko
+
+Lok       tu
+Lko       te

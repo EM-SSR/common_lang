@@ -1,0 +1,13 @@
+{
+ "id": "A_g/transport/echo_xx",
+ "function": "A_g",
+ "family": "transport",
+ "section": "式 6.12、16.6、19.5",
+ "role": "W の前後の二進桁の相関。W が u を領域へ移すなら、後ろの桁が偏る",
+ "phi": null,
+ "meta": {
+  "m": 3,
+  "word": "echo_xx"
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

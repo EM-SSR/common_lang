@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "common-qbit"
+version = "0.2.0"
+description = "Qiskit バックエンド。lane-qbit（Common の量子回路 target）の実行台を呼ぶ"
+requires-python = ">=3.10"
+dependencies = ["qiskit>=2.0", "numpy", "common-vcpu"]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-xdist", "qiskit-aer"]
+
+[tool.setuptools]
+packages = ["common_qbit", "common_qbit.circuit", "common_qbit.cmn", "common_qbit.qpu"]
+
+[tool.setuptools.package-data]
+common_qbit = ["data/*.bin", "cmn/*.cmn"]

@@ -1,0 +1,1473 @@
+# commonc 領域層 — 幾何連合論理集合 Index の Level 0 を compile 時に畳む
+#
+# Level 0 の操作は四つで尽きる。
+#
+#   共通部  A ∩ B      合わせ  A ∪ B      外側  U ∖ A      境界  ∂A
+#
+# 関係はこの四つの上の述語になる。
+#
+#   重なり   A ∩ B ≠ ∅
+#   含まれる B ∖ A = ∅
+#   隣接     A ∩ B = ∅ かつ (2A ∩ B) ∪ (A ∩ 2B) ≠ ∅
+#   道       A ≠ ∅ かつ立っている cell が一続き
+#
+# ---- 表し方 ----
+#
+# 領域は cell の集合であり、cell は 31 個までなので一語の mask に収まる。
+# 名詞ノードの構成語 D∞ = ⟨i, j | i² = j² = e⟩ が cell 番号を決める。
+#
+#   (m, ε) から  cell = 2·zz(m) + ε、  zz(m) = 2m (m ≥ 0)、−2m−1 (m < 0)
+#
+# zz は単射なので、別のノードが同じ単位領域を指すことは無い。
+#
+# 鎖は cell 上の係数で持つ。影響の係数は {−1, 0, 1} に限られる（影響関数
+# 証明3.2）ので、負側と正側の二つの mask で尽きる。
+#
+#   ∂A の係数(v) = [v−1 ∈ A] − [v ∈ A]
+#   正側 = 2A ∖ A     負側 = A ∖ 2A
+#
+# 2A は mask の倍。左シフトが乗算そのものなので箱を作らずに済む。
+# だから mask は bit 31 まで使う。
+#
+# ---- 値の種類 ----
+#
+#   34  領域   欄 0 = mask
+#   35  鎖     欄 0 = 負側の mask、欄 1 = 正側の mask
+#
+# ---- 語の割付 ----
+#
+#   640..671  IA[k]   指示ベクトル。mask を分解した置き場
+#   680..711  SUM[k]  cell ごとの係数の和
+#   712  RGA    第一の mask       713  RGB    第二の mask
+#   714  RGR    結果の mask       715  RGK    走査の添字
+#   716  RGT    分解の余り
+#   717  RGC2   ab の係数    結果 = c2·ab + c1·a + c0·b
+#   718  RGC1   a の係数     719  RGC0   b の係数
+#   720  RGRET  部分手続きの戻り先
+#   721  RGN1   鎖 A の負側       722  RGP1   鎖 A の正側
+#   723  RGN2   鎖 B の負側       724  RGP2   鎖 B の正側
+#   725  RGOP   どの語を処理しているか
+#   726  RGP    2 冪              727  RGE    その指数
+#   728  RGZZ   ジグザグの値      729  RGBT   b の bit
+#   731  RGCN   数え上げ／走りの数
+#   732  RGRA   分解の余り A      733  RGRB   分解の余り B
+#   736  RGSA   第一引数の控え    737  RGSB   第二引数の控え
+#   738  RGSG   鎖の加算で足す符号
+#   740  EMV    出す語の値        741  EMR    出した後の戻り先
+#   742  RGBV   関係が出した二値
+#
+# 11 原子には除算も bit 演算も無い。だから分解は「引ける最大の 2 冪を引く」で
+# 書く。倍加の内側ループが指数を数え、外側ループが余りを削る。
+
+# ================= 三音節の名前を読む（10 §4）=================
+#
+# 頭の ku は零標示音であり、どの一音節名とも一致しない。だから ku を見たら
+# 続く二音節が桁になる。
+#
+#   g = 63 + 60·(a − 3) + (b − 3)
+#
+# 音節が二つ足りないときは零標示のまま落とす。本文全体が ku 一つのときが
+# 空本体になる（06 §16.3）。
+
+GKU       ke  8 0
+iKU       ta  GKU
+o2KU      ke  2 0
+iKU2      ko  iKU o2KU
+w5KU      ke  5 0
+nKU       ta  w5KU
+.         se  nKU iKU2 ENTW1
+KU1       sa  KV01 BW
+aKU1      ko  KU1 iKU
+sKU1      ta  aKU1
+o1KU1     ke  1 0
+iKU1b     ko  iKU o1KU1
+aKU2      ko  KU1 iKU1b
+sKU2      ta  aKU2
+w8KU      ke  8 0
+.         ti  w8KU iKU2
+
+t3KU      ke  3 0
+nt3KU     si  t3KU
+qKU       ko  sKU1 nt3KU
+n60KU     ke  60 0
+qKU2      sa  qKU n60KU
+rKU       ko  sKU2 nt3KU
+gKU0      ko  qKU2 rKU
+n63KU     ke  63 0
+gKU       ko  gKU0 n63KU
+
+g63       ke  63 0
+.         su  gKU g63 GRGAT              # 領域
+g64       ke  64 0
+.         su  gKU g64 GRGCAP             # 共通部
+g65       ke  65 0
+.         su  gKU g65 GRGCUP             # 合わせ
+g66       ke  66 0
+.         su  gKU g66 GRGOUT             # 外側
+g67       ke  67 0
+.         su  gKU g67 GRGBD              # 境界
+g68       ke  68 0
+.         su  gKU g68 GRGIN              # 含まれる
+g69       ke  69 0
+.         su  gKU g69 GRGOV              # 重なり
+g70       ke  70 0
+.         su  gKU g70 GRGAJ              # 隣接
+g71       ke  71 0
+.         su  gKU g71 GRGPA              # 道
+.         so  GKUQ                       # 量子の語（qbit.cam）。無ければ noqbit.cam が BAD へ送る
+
+# ================= 部分手続き：mask を分解する =================
+#
+# RGA の立っている cell を IA[0..31] へ広げる。
+# 外側のループが余りを削り、内側のループが「引ける最大の 2 冪」を作る。
+
+RDEC      ke  715 0
+zDC0      ke  0 0
+.         ti  RDEC zDC0
+ENTDC0    ke  0 0
+LDC0E     ke  715 0
+kDC0      ta  LDC0E
+n32DC     ke  32 0
+.         se  kDC0 n32DC LDC0
+.         so  RDE1
+LDC0      ke  640 0
+w715DC    ke  715 0
+kDC0b     ta  w715DC
+aDC0      ko  LDC0 kDC0b
+zDC0b     ke  0 0
+.         ti  aDC0 zDC0b
+o1DC0     ke  1 0
+kDC0c     ko  kDC0b o1DC0
+.         ti  w715DC kDC0c
+CNTDC0    ke  0 0
+LDC0Ez    ke  715 0
+kDC0z     ta  LDC0Ez
+n32DCz    ke  32 0
+.         se  kDC0z n32DCz LDC0
+.         so  RDE1
+
+RDE1      ke  716 0
+w712D1    ke  712 0
+vDR1       ta  w712D1
+.         ti  RDE1 vDR1
+
+ENTDC1    ke  0 0
+LDC1E     ke  716 0
+tDC1      ta  LDC1E
+zDC1      ke  0 0
+.         se  zDC1 tDC1 LDC1
+.         so  RDEND
+LDC1      ke  726 0
+o1DC1     ke  1 0
+.         ti  LDC1 o1DC1
+w727D     ke  727 0
+zDC1b     ke  0 0
+.         ti  w727D zDC1b
+
+ENTDC2    ke  0 0
+LDC2E     ke  726 0
+pDC2      ta  LDC2E
+t2DC2     ke  2 0
+p2DC2     sa  t2DC2 pDC2
+w716D2    ke  716 0
+rDC2      ta  w716D2
+o1DC2     ke  1 0
+r1DC2     ko  rDC2 o1DC2
+.         se  p2DC2 r1DC2 LDC2
+.         so  LDC3
+LDC2      ke  726 0
+pDC2b     ta  LDC2
+t2DC2b    ke  2 0
+pDC2c     sa  t2DC2b pDC2b
+.         ti  LDC2 pDC2c
+w727D2    ke  727 0
+eDC2      ta  w727D2
+o1DC2b    ke  1 0
+eDC2b     ko  eDC2 o1DC2b
+.         ti  w727D2 eDC2b
+CNTDC2    ke  0 0
+LDC2Ez    ke  726 0
+pDC2z     ta  LDC2Ez
+t2DC2z    ke  2 0
+p2DC2z    sa  t2DC2z pDC2z
+w716D2z   ke  716 0
+rDC2z     ta  w716D2z
+o1DC2z    ke  1 0
+r1DC2z    ko  rDC2z o1DC2z
+.         se  p2DC2z r1DC2z LDC2
+.         so  LDC3
+
+LDC3      ke  640 0
+w727D3    ke  727 0
+eDC3      ta  w727D3
+aDC3      ko  LDC3 eDC3
+o1DC3     ke  1 0
+.         ti  aDC3 o1DC3
+w716D3    ke  716 0
+rDC3      ta  w716D3
+w726D3    ke  726 0
+pDC3      ta  w726D3
+npDC3     si  pDC3
+rDC3b     ko  rDC3 npDC3
+.         ti  w716D3 rDC3b
+CNTDC1    ke  0 0
+LDC1Ez    ke  716 0
+tDC1z     ta  LDC1Ez
+zDC1z     ke  0 0
+.         se  zDC1z tDC1z LDC1
+.         so  RDEND
+
+RDEND     ke  720 0
+gDC       ta  RDEND
+d1DC      ke  1 0
+.         su  gDC d1DC GMAT1
+d2DC      ke  2 0
+.         su  gDC d2DC CMAT1
+d3DC      ke  3 0
+.         su  gDC d3DC CACC
+d4DC      ke  4 0
+.         su  gDC d4DC CACC
+d5DC      ke  5 0
+.         su  gDC d5DC CACC
+d6DC      ke  6 0
+.         su  gDC d6DC CACC
+d7DC      ke  7 0
+.         su  gDC d7DC RPAT1
+d8DC      ke  8 0
+.         su  gDC d8DC CMAT3
+.         so  BAD
+
+# ================= 部分手続き：二つの mask を合わせる =================
+#
+#   RGR = Σ_k ( c2·a_k·b_k + c1·a_k + c0·b_k ) · 2^k
+#
+# 三つの係数で共通部・合わせ・外側のどれにもなる。
+#
+#   共通部  ( 1, 0, 0)     合わせ  (−1, 1, 1)     外側 A ∖ B  (−1, 1, 0)
+#
+# 2 冪の表を持たないので、p は 2^31 から始めて毎回作り直す。
+
+ROP       ke  714 0
+zOP0      ke  0 0
+.         ti  ROP zOP0
+w732OP0   ke  732 0
+w712OP0   ke  712 0
+aOP0      ta  w712OP0
+.         ti  w732OP0 aOP0
+w733OP0   ke  733 0
+w713OP0   ke  713 0
+bOP0      ta  w713OP0
+.         ti  w733OP0 bOP0
+w726OP    ke  726 0
+o1OP0     ke  1 0
+.         ti  w726OP o1OP0
+w715OP    ke  715 0
+zOP0b     ke  0 0
+.         ti  w715OP zOP0b
+
+ENTOP0    ke  0 0
+LOP0E     ke  715 0
+kOP0      ta  LOP0E
+n31OP     ke  31 0
+.         se  kOP0 n31OP LOP0
+.         so  ENTOP1
+LOP0      ke  726 0
+pOP0      ta  LOP0
+t2OP0     ke  2 0
+pOP0b     sa  t2OP0 pOP0
+.         ti  LOP0 pOP0b
+w715OPb   ke  715 0
+kOP0b     ta  w715OPb
+o1OP0b    ke  1 0
+kOP0c     ko  kOP0b o1OP0b
+.         ti  w715OPb kOP0c
+CNTOP0    ke  0 0
+LOP0Ez    ke  715 0
+kOP0z     ta  LOP0Ez
+n31OPz    ke  31 0
+.         se  kOP0z n31OPz LOP0
+.         so  ENTOP1
+
+ENTOP1    ke  0 0
+LOP1E     ke  726 0
+pOP1E     ta  LOP1E
+zOP1E     ke  0 0
+.         se  zOP1E pOP1E LOP1
+.         so  ROPND
+
+LOP1      ke  731 0
+zOP1b     ke  0 0
+.         ti  LOP1 zOP1b
+w732OP    ke  732 0
+raOP      ta  w732OP
+w726OP1   ke  726 0
+pOP1b     ta  w726OP1
+.         se  raOP pOP1b LOPA0
+o1OPA     ke  1 0
+.         ti  LOP1 o1OPA
+npOPA     si  pOP1b
+raOPb     ko  raOP npOPA
+.         ti  w732OP raOPb
+
+LOPA0     ke  729 0
+zOPB0     ke  0 0
+.         ti  LOPA0 zOPB0
+w733OP1   ke  733 0
+rbOP      ta  w733OP1
+w726OP2   ke  726 0
+pOP1c     ta  w726OP2
+.         se  rbOP pOP1c LOPB0
+o1OPB     ke  1 0
+.         ti  LOPA0 o1OPB
+npOPB     si  pOP1c
+rbOPb     ko  rbOP npOPB
+.         ti  w733OP1 rbOPb
+
+LOPB0     ke  731 0
+aBIT      ta  LOPB0
+w729OP    ke  729 0
+bBIT      ta  w729OP
+abOP      sa  aBIT bBIT
+w717OP    ke  717 0
+c2OP      ta  w717OP
+w718OP    ke  718 0
+c1OP      ta  w718OP
+w719OP    ke  719 0
+c0OP      ta  w719OP
+t2OPv     sa  c2OP abOP
+t1OPv     sa  c1OP aBIT
+t0OPv     sa  c0OP bBIT
+sOPv0     ko  t2OPv t1OPv
+sOPv      ko  sOPv0 t0OPv
+o1OPv     ke  1 0
+.         se  sOPv o1OPv LOPNX
+w714OP    ke  714 0
+rOPv      ta  w714OP
+w726OP3   ke  726 0
+pOPv      ta  w726OP3
+rOPv2     ko  rOPv pOPv
+.         ti  w714OP rOPv2
+
+# p を半分にする。半分は「2q が p に届かない最大の q」として倍加で作る
+LOPNX     ke  726 0
+pOPN      ta  LOPNX
+o1OPN     ke  1 0
+.         su  pOPN o1OPN ROPND
+w738OPN   ke  738 0
+.         ti  w738OPN pOPN                # 元の p を控える
+.         ti  LOPNX o1OPN                 # q = 1
+
+ENTOP2    ke  0 0
+LOP2E     ke  726 0
+pOP2      ta  LOP2E
+t2OP2     ke  2 0
+p2OP2     sa  t2OP2 pOP2
+w738OP2   ke  738 0
+oldOP2    ta  w738OP2
+.         se  p2OP2 oldOP2 LOP2
+.         so  ENTOP1
+LOP2      ke  726 0
+pOP2b     ta  LOP2
+t2OP2b    ke  2 0
+pOP2c     sa  t2OP2b pOP2b
+.         ti  LOP2 pOP2c
+CNTOP2    ke  0 0
+LOP2Ez    ke  726 0
+pOP2z     ta  LOP2Ez
+t2OP2z    ke  2 0
+p2OP2z    sa  t2OP2z pOP2z
+w738OP2z  ke  738 0
+oldOP2z   ta  w738OP2z
+.         se  p2OP2z oldOP2z LOP2
+.         so  ENTOP1
+
+ROPND     ke  720 0
+gOP       ta  ROPND
+e1OP      ke  1 0
+.         su  gOP e1OP GCAP1
+e2OP      ke  2 0
+.         su  gOP e2OP GCUP1
+e3OP      ke  3 0
+.         su  gOP e3OP GOUT1
+e4OP      ke  4 0
+.         su  gOP e4OP GIN1
+e5OP      ke  5 0
+.         su  gOP e5OP GOV1
+e6OP      ke  6 0
+.         su  gOP e6OP GBD1
+e7OP      ke  7 0
+.         su  gOP e7OP GBD2
+e8OP      ke  8 0
+.         su  gOP e8OP GAJ1
+e9OP      ke  9 0
+.         su  gOP e9OP GAJ2
+e10OP     ke  10 0
+.         su  gOP e10OP GAJ3
+.         so  BAD
+
+# ---- 係数を置いて ROP を呼ぶ短縮形 ----
+SETCAP    ke  717 0
+o1SC      ke  1 0
+.         ti  SETCAP o1SC
+w718SC    ke  718 0
+zSC       ke  0 0
+.         ti  w718SC zSC
+w719SC    ke  719 0
+.         ti  w719SC zSC
+.         so  ROP
+
+SETCUP    ke  717 0
+o1SU      ke  1 0
+nSU       si  o1SU
+.         ti  SETCUP nSU
+w718SU    ke  718 0
+.         ti  w718SU o1SU
+w719SU    ke  719 0
+.         ti  w719SU o1SU
+.         so  ROP
+
+SETOUT    ke  717 0
+o1SO      ke  1 0
+nSO       si  o1SO
+.         ti  SETOUT nSO
+w718SO    ke  718 0
+.         ti  w718SO o1SO
+w719SO    ke  719 0
+zSO       ke  0 0
+.         ti  w719SO zSO
+.         so  ROP
+
+# ================= 領域：Noun → Region =================
+
+GRGAT     ke  69 0
+t40RG     ke  40 0
+.         ti  GRGAT t40RG
+.         so  RD1
+
+R1RGA     ke  62 0
+kRGA      ta  R1RGA
+t5RGA     ke  5 0
+.         su  kRGA t5RGA RGAT1
+.         so  BAD
+
+RGAT1     ke  63 0
+mRGA      ta  RGAT1
+zRGA      ke  0 0
+.         se  mRGA zRGA RGATN
+t2RGA     ke  2 0
+zzRGA     sa  t2RGA mRGA
+w728RG    ke  728 0
+.         ti  w728RG zzRGA
+.         so  RGAT2
+
+RGATN     ke  728 0
+w63RGn    ke  63 0
+mRGAn     ta  w63RGn
+t2RGAn    ke  2 0
+p2RGAn    sa  t2RGAn mRGAn
+np2RGAn   si  p2RGAn
+o1RGAn    ke  1 0
+no1RGAn   si  o1RGAn
+zzRGAn    ko  np2RGAn no1RGAn
+.         ti  RGATN zzRGAn
+.         so  RGAT2
+
+RGAT2     ke  728 0
+zzRGA2    ta  RGAT2
+t2RGA2    ke  2 0
+c0RGA     sa  t2RGA2 zzRGA2
+w64RGA    ke  64 0
+eRGA      ta  w64RGA
+cRGA      ko  c0RGA eRGA
+w729RGA   ke  729 0
+.         ti  w729RGA cRGA
+n31RGA    ke  31 0
+.         se  cRGA n31RGA RGAT3
+.         so  BAD                         # cell が網の外へ出た
+
+RGAT3     ke  712 0
+o1RGA3    ke  1 0
+.         ti  RGAT3 o1RGA3
+w715RGA   ke  715 0
+zRGA3     ke  0 0
+.         ti  w715RGA zRGA3
+ENTRG3    ke  0 0
+LRG3E     ke  715 0
+kRGA3     ta  LRG3E
+w729RGAz  ke  729 0
+cRGA3     ta  w729RGAz
+.         se  kRGA3 cRGA3 LRG3
+.         so  RGPSH
+LRG3      ke  712 0
+aRGA3     ta  LRG3
+t2RGA3    ke  2 0
+aRGA3b    sa  t2RGA3 aRGA3
+.         ti  LRG3 aRGA3b
+w715RGAb  ke  715 0
+kRGA3b    ta  w715RGAb
+o1RGA3b   ke  1 0
+kRGA3c    ko  kRGA3b o1RGA3b
+.         ti  w715RGAb kRGA3c
+CNTRG3    ke  0 0
+LRG3Ez    ke  715 0
+kRGA3z    ta  LRG3Ez
+w729RGAy  ke  729 0
+cRGA3z    ta  w729RGAy
+.         se  kRGA3z cRGA3z LRG3
+.         so  RGPSH
+
+# ---- 領域の値を積む。欄 0 が mask になる ----
+RGPSH     ke  62 0
+k34RG     ke  34 0
+.         ti  RGPSH k34RG
+w63RGp    ke  63 0
+w712RGp   ke  712 0
+mkRG      ta  w712RGp
+.         ti  w63RGp mkRG
+w64RGp    ke  64 0
+zRGp      ke  0 0
+.         ti  w64RGp zRGp
+w65RGp    ke  65 0
+.         ti  w65RGp zRGp
+w66RGp    ke  66 0
+.         ti  w66RGp zRGp
+w67RGp    ke  67 0
+.         ti  w67RGp zRGp
+w68RGp    ke  68 0
+.         ti  w68RGp zRGp
+.         so  PSC
+
+# ================= 二引数の入口 =================
+
+GRGCAP    ke  725 0
+o1CAP     ke  1 0
+.         ti  GRGCAP o1CAP
+.         so  RG2IN
+GRGCUP    ke  725 0
+t2CUP     ke  2 0
+.         ti  GRGCUP t2CUP
+.         so  RG2IN
+GRGOUT    ke  725 0
+t3OUT     ke  3 0
+.         ti  GRGOUT t3OUT
+.         so  RG2IN
+GRGIN     ke  725 0
+t4IN      ke  4 0
+.         ti  GRGIN t4IN
+.         so  RG2IN
+GRGOV     ke  725 0
+t5OV      ke  5 0
+.         ti  GRGOV t5OV
+.         so  RG2IN
+GRGAJ     ke  725 0
+t6AJ      ke  6 0
+.         ti  GRGAJ t6AJ
+.         so  RG2IN
+
+RG2IN     ke  69 0
+t45RG2    ke  45 0
+.         ti  RG2IN t45RG2
+.         so  RD1
+
+R1RG1     ke  62 0
+kRG1      ta  R1RG1
+t34RG1    ke  34 0
+.         su  kRG1 t34RG1 RG2A
+.         so  BAD
+
+RG2A      ke  712 0
+w63RG2    ke  63 0
+m1RG2     ta  w63RG2
+.         ti  RG2A m1RG2
+w736RG2   ke  736 0
+.         ti  w736RG2 m1RG2
+w69RG2    ke  69 0
+t41RG2    ke  41 0
+.         ti  w69RG2 t41RG2
+.         so  RD1
+
+R1RGB     ke  62 0
+kRGB      ta  R1RGB
+t34RGB    ke  34 0
+.         su  kRGB t34RGB RG2B
+.         so  BAD
+
+RG2B      ke  713 0
+w63RGB    ke  63 0
+m2RGB     ta  w63RGB
+.         ti  RG2B m2RGB
+w737RGB   ke  737 0
+.         ti  w737RGB m2RGB
+w725RG2   ke  725 0
+gRG2      ta  w725RG2
+c1RG2     ke  1 0
+.         su  gRG2 c1RG2 DOCAP
+c2RG2     ke  2 0
+.         su  gRG2 c2RG2 DOCUP
+c3RG2     ke  3 0
+.         su  gRG2 c3RG2 DOOUT
+c4RG2     ke  4 0
+.         su  gRG2 c4RG2 DOIN
+c5RG2     ke  5 0
+.         su  gRG2 c5RG2 DOOV
+c6RG2     ke  6 0
+.         su  gRG2 c6RG2 DOAJ
+.         so  BAD
+
+# ---- 共通部 ----
+DOCAP     ke  720 0
+o1DCA      ke  1 0
+.         ti  DOCAP o1DCA
+.         so  SETCAP
+GCAP1     ke  0 0
+.         so  RGPSHR
+
+# ---- 合わせ ----
+DOCUP     ke  720 0
+t2DU      ke  2 0
+.         ti  DOCUP t2DU
+.         so  SETCUP
+GCUP1     ke  0 0
+.         so  RGPSHR
+
+# ---- 外側。第一引数を宇宙、第二引数を抜く側に取る ----
+DOOUT     ke  720 0
+t3DO      ke  3 0
+.         ti  DOOUT t3DO
+.         so  SETOUT
+GOUT1     ke  0 0
+.         so  RGPSHR
+
+# ---- 結果の mask を領域として積む ----
+RGPSHR    ke  712 0
+w714PR    ke  714 0
+rPR       ta  w714PR
+.         ti  RGPSHR rPR
+.         so  RGPSH
+
+# ================= 関係 =================
+#
+# 含まれる A ⊇ B は B ∖ A が空であること。外側の式へ引数を入れ替えて渡す。
+
+DOIN      ke  712 0
+w713DI    ke  713 0
+bDI       ta  w713DI
+w736DI    ke  736 0
+aDI       ta  w736DI
+.         ti  DOIN bDI
+.         ti  w713DI aDI
+w720DI    ke  720 0
+t4DI      ke  4 0
+.         ti  w720DI t4DI
+.         so  SETOUT
+GIN1      ke  714 0
+rIN       ta  GIN1
+zIN       ke  0 0
+.         su  rIN zIN BITON
+.         so  BITOFF
+
+# 重なり A ∩ B ≠ ∅
+DOOV      ke  720 0
+t5DO      ke  5 0
+.         ti  DOOV t5DO
+.         so  SETCAP
+GOV1      ke  714 0
+rOV       ta  GOV1
+zOV       ke  0 0
+.         su  rOV zOV BITOFF
+.         so  BITON
+
+# 隣接。境界を共有し、内部を共有しない
+DOAJ      ke  720 0
+t8DA      ke  8 0
+.         ti  DOAJ t8DA
+.         so  SETCAP
+GAJ1      ke  714 0
+rAJ1      ta  GAJ1
+zAJ1      ke  0 0
+.         su  rAJ1 zAJ1 AJ2
+.         so  BITOFF
+
+AJ2       ke  712 0
+w736AJ2   ke  736 0
+sAJ2      ta  w736AJ2
+t2AJ2     ke  2 0
+sAJ2b     sa  t2AJ2 sAJ2
+.         ti  AJ2 sAJ2b                   # RGA = 2A
+w713AJ2   ke  713 0
+w737AJ2   ke  737 0
+bAJ2      ta  w737AJ2
+.         ti  w713AJ2 bAJ2                # RGB = B
+w720AJ2   ke  720 0
+t9AJ2     ke  9 0
+.         ti  w720AJ2 t9AJ2
+.         so  SETCAP
+GAJ2      ke  714 0
+rAJ2      ta  GAJ2
+zAJ2      ke  0 0
+.         su  rAJ2 zAJ2 AJ3
+.         so  BITON
+
+AJ3       ke  712 0
+w736AJ3   ke  736 0
+sAJ3      ta  w736AJ3
+.         ti  AJ3 sAJ3                    # RGA = A
+w713AJ3   ke  713 0
+w737AJ3   ke  737 0
+bAJ3      ta  w737AJ3
+t2AJ3     ke  2 0
+bAJ3b     sa  t2AJ3 bAJ3
+.         ti  w713AJ3 bAJ3b               # RGB = 2B
+w720AJ3   ke  720 0
+t10AJ3    ke  10 0
+.         ti  w720AJ3 t10AJ3
+.         so  SETCAP
+GAJ3      ke  714 0
+rAJ3      ta  GAJ3
+zAJ3      ke  0 0
+.         su  rAJ3 zAJ3 BITOFF
+.         so  BITON
+
+# 道。分解した指示ベクトルを下から見て、0 から 1 へ変わる回数を数える。
+# 一続きならその回数はちょうど一つになる
+GRGPA     ke  69 0
+t46PA     ke  46 0
+.         ti  GRGPA t46PA
+.         so  RD1
+
+R1RGP     ke  62 0
+kRGP      ta  R1RGP
+t34RGP    ke  34 0
+.         su  kRGP t34RGP RGPA0
+.         so  BAD
+
+RGPA0     ke  712 0
+w63PA     ke  63 0
+mPA       ta  w63PA
+.         ti  RGPA0 mPA
+w720PA    ke  720 0
+t7PA      ke  7 0
+.         ti  w720PA t7PA
+.         so  RDEC
+
+RPAT1     ke  731 0
+zPA1      ke  0 0
+.         ti  RPAT1 zPA1
+w732PA    ke  732 0
+.         ti  w732PA zPA1
+w715PA    ke  715 0
+.         ti  w715PA zPA1
+ENTPA1    ke  0 0
+LPA1E     ke  715 0
+kPA1      ta  LPA1E
+n32PA     ke  32 0
+.         se  kPA1 n32PA LPA1
+.         so  PAEND
+LPA1      ke  640 0
+w715PAb   ke  715 0
+kPA1b     ta  w715PAb
+aPA1      ko  LPA1 kPA1b
+vPA1      ta  aPA1
+w732PAb   ke  732 0
+pvPA1     ta  w732PAb
+zPA1b     ke  0 0
+.         su  vPA1 zPA1b PANX
+.         su  pvPA1 zPA1b PARUN
+.         so  PANX
+PARUN     ke  731 0
+cPA1      ta  PARUN
+o1PA1     ke  1 0
+cPA1b     ko  cPA1 o1PA1
+.         ti  PARUN cPA1b
+PANX      ke  732 0
+w640PAn   ke  640 0
+w715PAn   ke  715 0
+kPA1n     ta  w715PAn
+aPA1n     ko  w640PAn kPA1n
+vPA1n     ta  aPA1n
+.         ti  PANX vPA1n
+o1PA1n    ke  1 0
+kPA1c     ko  kPA1n o1PA1n
+.         ti  w715PAn kPA1c
+CNTPA1    ke  0 0
+LPA1Ez    ke  715 0
+kPA1z     ta  LPA1Ez
+n32PAz    ke  32 0
+.         se  kPA1z n32PAz LPA1
+.         so  PAEND
+
+PAEND     ke  731 0
+cPAE      ta  PAEND
+o1PAE     ke  1 0
+.         su  cPAE o1PAE BITON
+.         so  BITOFF
+
+# ---- 二値を積む ----
+#
+# 関係の値は compile 時に決まるが、そのまま Cst 一箱で開いて実行時のワイヤにする。
+# 開く位置を箱の位置へそろえると、Haskell の descend と箱の並びが一致する
+# （19 式 5.1）。compile 時の席のまま持ち回ると、後で開いた位置がずれる。
+
+BITON     ke  742 0
+o1BTq      ke  1 0
+.         ti  BITON o1BTq
+.         so  BITZ
+
+BITOFF    ke  742 0
+zBFq       ke  0 0
+.         ti  BITOFF zBFq
+.         so  BITZ
+
+BITZ      ke  6 0
+nBZq       ta  BITZ
+oBZKq      sa  KV04 BW
+aBZKq      ko  oBZKq nBZq
+o1BZq      ke  1 0
+.         ti  aBZKq o1BZq                   # 種類 1 = Cst
+bBZAq      sa  KV06 BW
+aBZAq      ko  bBZAq nBZq
+w742BZq    ke  742 0
+vBZq       ta  w742BZq
+.         ti  aBZAq vBZq                    # 分子 = 二値
+dBZDq      sa  KV10 BW
+aBZDq      ko  dBZDq nBZq
+zBZq       ke  0 0
+.         ti  aBZDq zBZq                    # 深度 0
+.         so  PSBIT
+
+# ================= 境界 ∂ =================
+
+GRGBD     ke  69 0
+t47BD     ke  47 0
+.         ti  GRGBD t47BD
+.         so  RD1
+
+R1RGD     ke  62 0
+kRGD      ta  R1RGD
+t34RGD    ke  34 0
+.         su  kRGD t34RGD RGBD0
+.         so  BAD
+
+RGBD0     ke  712 0
+w63BD     ke  63 0
+mBD       ta  w63BD
+.         ti  RGBD0 mBD
+w736BD    ke  736 0
+.         ti  w736BD mBD
+w713BD    ke  713 0
+t2BD      ke  2 0
+mBD2      sa  t2BD mBD
+.         ti  w713BD mBD2
+w720BD    ke  720 0
+t6BD      ke  6 0
+.         ti  w720BD t6BD
+.         so  SETOUT                      # A ∖ 2A = 負側
+
+GBD1      ke  721 0
+w714BD1   ke  714 0
+rBD1      ta  w714BD1
+.         ti  GBD1 rBD1
+w712BD2   ke  712 0
+w736BD2   ke  736 0
+aBD2      ta  w736BD2
+t2BD2     ke  2 0
+aBD2b     sa  t2BD2 aBD2
+.         ti  w712BD2 aBD2b               # RGA = 2A
+w713BD2   ke  713 0
+.         ti  w713BD2 aBD2                # RGB = A
+w720BD2   ke  720 0
+t7BD2     ke  7 0
+.         ti  w720BD2 t7BD2
+.         so  SETOUT                      # 2A ∖ A = 正側
+
+GBD2      ke  722 0
+w714BD3   ke  714 0
+rBD2      ta  w714BD3
+.         ti  GBD2 rBD2
+.         so  CHPSH
+
+# ---- 鎖を積む。欄 0 が負側、欄 1 が正側 ----
+CHPSH     ke  62 0
+k35CH     ke  35 0
+.         ti  CHPSH k35CH
+w63CH     ke  63 0
+w721CH    ke  721 0
+nCH       ta  w721CH
+.         ti  w63CH nCH
+w64CH     ke  64 0
+w722CH    ke  722 0
+pCH       ta  w722CH
+.         ti  w64CH pCH
+w65CH     ke  65 0
+zCH       ke  0 0
+.         ti  w65CH zCH
+w66CH     ke  66 0
+.         ti  w66CH zCH
+w67CH     ke  67 0
+.         ti  w67CH zCH
+w68CH     ke  68 0
+.         ti  w68CH zCH
+.         so  PSC
+
+# ================= bi：鎖の境界。∂∂ = 0 =================
+#
+# 平文から作れる鎖は領域の境界であり、頂点の鎖になる。
+# 頂点の境界は空なので、∂∂ = 0 が一箱も置かずに出る（影響関数 証明3.2）。
+
+GBI       ke  69 0
+t42BI     ke  42 0
+.         ti  GBI t42BI
+.         so  RD1
+
+R1CHB     ke  62 0
+kCHB      ta  R1CHB
+t35CHB    ke  35 0
+.         su  kCHB t35CHB CHB1
+.         so  BAD
+CHB1      ke  721 0
+zCHB      ke  0 0
+.         ti  CHB1 zCHB
+w722CHB   ke  722 0
+.         ti  w722CHB zCHB
+.         so  CHPSH
+
+# ================= bu：鎖の加算 =================
+#
+# 係数は {−1, 0, 1} に限られる（影響関数 証明3.2）。四つの mask を
+# 指示ベクトルへ広げ、cell ごとに和を取る。|和| が 2 になった平文は
+# 鎖を出さないので、失敗を報告する。
+
+GBU       ke  69 0
+t43BU     ke  43 0
+.         ti  GBU t43BU
+.         so  RD1
+
+R1CHA     ke  62 0
+kCHA      ta  R1CHA
+t35CHA    ke  35 0
+.         su  kCHA t35CHA CHA1
+.         so  BAD
+CHA1      ke  721 0
+w63CHA    ke  63 0
+n1CHA     ta  w63CHA
+.         ti  CHA1 n1CHA
+w722CHA   ke  722 0
+w64CHA    ke  64 0
+p1CHA     ta  w64CHA
+.         ti  w722CHA p1CHA
+w69CHA    ke  69 0
+t44CHA    ke  44 0
+.         ti  w69CHA t44CHA
+.         so  RD1
+
+R1CHC     ke  62 0
+kCHC      ta  R1CHC
+t35CHC    ke  35 0
+.         su  kCHC t35CHC CHC1
+.         so  BAD
+CHC1      ke  723 0
+w63CHC    ke  63 0
+n2CHC     ta  w63CHC
+.         ti  CHC1 n2CHC
+w724CHC   ke  724 0
+w64CHC    ke  64 0
+p2CHC     ta  w64CHC
+.         ti  w724CHC p2CHC
+
+CHZ       ke  715 0
+zCHZ      ke  0 0
+.         ti  CHZ zCHZ
+ENTCHZ    ke  0 0
+LCHZE     ke  715 0
+kCHZ      ta  LCHZE
+n32CHZ    ke  32 0
+.         se  kCHZ n32CHZ LCHZ
+.         so  CADD0
+LCHZ      ke  680 0
+w715CHZ   ke  715 0
+kCHZb     ta  w715CHZ
+aCHZ      ko  LCHZ kCHZb
+zCHZb     ke  0 0
+.         ti  aCHZ zCHZb
+o1CHZ     ke  1 0
+kCHZc     ko  kCHZb o1CHZ
+.         ti  w715CHZ kCHZc
+CNTCHZ    ke  0 0
+LCHZEz    ke  715 0
+kCHZz     ta  LCHZEz
+n32CHZz   ke  32 0
+.         se  kCHZz n32CHZz LCHZ
+.         so  CADD0
+
+# 四つの mask を順に足し込む。負側は −1、正側は +1
+CADD0     ke  712 0
+w721CA    ke  721 0
+n1CA      ta  w721CA
+.         ti  CADD0 n1CA
+w738CA    ke  738 0
+o1CA      ke  1 0
+nCA       si  o1CA
+.         ti  w738CA nCA
+w720CA    ke  720 0
+t3CA      ke  3 0
+.         ti  w720CA t3CA
+.         so  RDEC
+
+CACCA     ke  712 0
+w722CB    ke  722 0
+p1CB      ta  w722CB
+.         ti  CACCA p1CB
+w738CB    ke  738 0
+o1CB      ke  1 0
+.         ti  w738CB o1CB
+w720CB    ke  720 0
+t4CB      ke  4 0
+.         ti  w720CB t4CB
+.         so  RDEC
+
+CACCB     ke  712 0
+w723CC    ke  723 0
+n2CC      ta  w723CC
+.         ti  CACCB n2CC
+w738CC    ke  738 0
+o1CC2     ke  1 0
+nCC3      si  o1CC2
+.         ti  w738CC nCC3
+w720CC    ke  720 0
+t5CC      ke  5 0
+.         ti  w720CC t5CC
+.         so  RDEC
+
+CACCC     ke  712 0
+w724CD    ke  724 0
+p2CD      ta  w724CD
+.         ti  CACCC p2CD
+w738CD    ke  738 0
+o1CD      ke  1 0
+.         ti  w738CD o1CD
+w720CD    ke  720 0
+t6CD      ke  6 0
+.         ti  w720CD t6CD
+.         so  RDEC
+
+# 指示ベクトルを符号つきで SUM へ足す
+CACC      ke  715 0
+zCC0      ke  0 0
+.         ti  CACC zCC0
+ENTCC0    ke  0 0
+LCC0E     ke  715 0
+kCC0      ta  LCC0E
+n32CC     ke  32 0
+.         se  kCC0 n32CC LCC0
+.         so  CACCX
+LCC0      ke  640 0
+w715CC0   ke  715 0
+kCC0b     ta  w715CC0
+aCC0      ko  LCC0 kCC0b
+vCC0      ta  aCC0
+w738CC0   ke  738 0
+sCC0      ta  w738CC0
+dCC0      sa  vCC0 sCC0
+w680CC0   ke  680 0
+bCC0      ko  w680CC0 kCC0b
+oCC0      ta  bCC0
+oCC0b     ko  oCC0 dCC0
+.         ti  bCC0 oCC0b
+o1CC0     ke  1 0
+kCC0c     ko  kCC0b o1CC0
+.         ti  w715CC0 kCC0c
+CNTCC0    ke  0 0
+LCC0Ez    ke  715 0
+kCC0z     ta  LCC0Ez
+n32CCz    ke  32 0
+.         se  kCC0z n32CCz LCC0
+.         so  CACCX
+
+CACCX     ke  720 0
+gCX       ta  CACCX
+t3CX      ke  3 0
+.         su  gCX t3CX CACCA
+t4CX      ke  4 0
+.         su  gCX t4CX CACCB
+t5CX      ke  5 0
+.         su  gCX t5CX CACCC
+t6CX      ke  6 0
+.         su  gCX t6CX CSUM
+.         so  BAD
+
+# SUM から負側と正側の mask を作る。|和| = 2 は鎖にならない
+CSUM      ke  721 0
+zCS       ke  0 0
+.         ti  CSUM zCS
+w722CS    ke  722 0
+.         ti  w722CS zCS
+w726CS    ke  726 0
+o1CS      ke  1 0
+.         ti  w726CS o1CS
+w715CS    ke  715 0
+.         ti  w715CS zCS
+ENTCS0    ke  0 0
+LCS0E     ke  715 0
+kCS0      ta  LCS0E
+n32CS     ke  32 0
+.         se  kCS0 n32CS LCS0
+.         so  CHPSH
+LCS0      ke  680 0
+w715CS0   ke  715 0
+kCS0b     ta  w715CS0
+aCS0      ko  LCS0 kCS0b
+vCS0      ta  aCS0
+o1CS0     ke  1 0
+nCS0      si  o1CS0
+t2CS0     ke  2 0
+nt2CS0    si  t2CS0
+.         su  vCS0 t2CS0 BAD
+.         su  vCS0 nt2CS0 BAD
+.         su  vCS0 o1CS0 CSPS
+.         su  vCS0 nCS0 CSNG
+.         so  CSNX
+CSPS     ke  722 0
+pCS       ta  CSPS
+w726CS1   ke  726 0
+qCS       ta  w726CS1
+pCS2      ko  pCS qCS
+.         ti  CSPS pCS2
+.         so  CSNX
+CSNG     ke  721 0
+nCS       ta  CSNG
+w726CS2   ke  726 0
+qCS2      ta  w726CS2
+nCS2      ko  nCS qCS2
+.         ti  CSNG nCS2
+.         so  CSNX
+CSNX      ke  726 0
+qCS3      ta  CSNX
+t2CS3     ke  2 0
+qCS4      sa  t2CS3 qCS3
+.         ti  CSNX qCS4
+w715CSn   ke  715 0
+kCS0n     ta  w715CSn
+o1CS0n    ke  1 0
+kCS0c     ko  kCS0n o1CS0n
+.         ti  w715CSn kCS0c
+CNTCS0    ke  0 0
+LCS0Ez    ke  715 0
+kCS0z     ta  LCS0Ez
+n32CSz    ke  32 0
+.         se  kCS0z n32CSz LCS0
+.         so  CHPSH
+
+# ================= 出口境界での実体化 =================
+#
+# 領域は 1 + |A| 語、鎖は 1 + 3·|∂| 語へ開く。Haskell の matValue と
+# 同じ並びにする。cell は昇順で出る。
+
+GMAT      ke  712 0
+bGM       sa  KV28 BW
+aGM       ko  bGM idCV
+mGM       ta  aGM
+.         ti  GMAT mGM
+w720GM    ke  720 0
+o1GM      ke  1 0
+.         ti  w720GM o1GM
+.         so  RDEC
+
+GMAT1     ke  731 0
+zGM1      ke  0 0
+.         ti  GMAT1 zGM1
+w715GM1   ke  715 0
+.         ti  w715GM1 zGM1
+ENTGM1    ke  0 0
+LGM1E     ke  715 0
+kGM1      ta  LGM1E
+n32GM     ke  32 0
+.         se  kGM1 n32GM LGM1
+.         so  GMAT2
+LGM1      ke  640 0
+w715GM1b  ke  715 0
+kGM1b     ta  w715GM1b
+aGM1      ko  LGM1 kGM1b
+vGM1      ta  aGM1
+w731GM1   ke  731 0
+cGM1      ta  w731GM1
+cGM1b     ko  cGM1 vGM1
+.         ti  w731GM1 cGM1b
+o1GM1     ke  1 0
+kGM1c     ko  kGM1b o1GM1
+.         ti  w715GM1b kGM1c
+CNTGM1    ke  0 0
+LGM1Ez    ke  715 0
+kGM1z     ta  LGM1Ez
+n32GMz    ke  32 0
+.         se  kGM1z n32GMz LGM1
+.         so  GMAT2
+
+GMAT2     ke  740 0
+w731GM2   ke  731 0
+cGM2      ta  w731GM2
+.         ti  GMAT2 cGM2
+w741GM2   ke  741 0
+o1GM2     ke  1 0
+.         ti  w741GM2 o1GM2
+.         so  EMITW
+
+GMAT3     ke  715 0
+zGM3      ke  0 0
+.         ti  GMAT3 zGM3
+ENTGM3    ke  0 0
+LGM3E     ke  715 0
+kGM3      ta  LGM3E
+n32GM3    ke  32 0
+.         se  kGM3 n32GM3 LGM3
+.         so  L3NX
+LGM3      ke  640 0
+w715GM3   ke  715 0
+kGM3b     ta  w715GM3
+aGM3      ko  LGM3 kGM3b
+vGM3      ta  aGM3
+zGM3b     ke  0 0
+.         su  vGM3 zGM3b GM3NX
+w740GM3   ke  740 0
+.         ti  w740GM3 kGM3b
+w741GM3   ke  741 0
+t2GM3     ke  2 0
+.         ti  w741GM3 t2GM3
+.         so  EMITW
+GM3NX     ke  715 0
+kGM3n     ta  GM3NX
+o1GM3     ke  1 0
+kGM3c     ko  kGM3n o1GM3
+.         ti  GM3NX kGM3c
+CNTGM3    ke  0 0
+LGM3Ez    ke  715 0
+kGM3z     ta  LGM3Ez
+n32GM3z   ke  32 0
+.         se  kGM3z n32GM3z LGM3
+.         so  L3NX
+
+# ---- 鎖の実体化。頂点ごとに 係数・頂点の数・頂点番号 の三語を出す ----
+CMAT      ke  712 0
+bCMz       sa  KV28 BW
+aCMz       ko  bCMz idCV
+nCM       ta  aCMz
+.         ti  CMAT nCM
+w721CM    ke  721 0
+.         ti  w721CM nCM
+w722CM    ke  722 0
+bCM2      sa  KV30 BW
+aCM2      ko  bCM2 idCV
+pCM       ta  aCM2
+.         ti  w722CM pCM
+w720CM    ke  720 0
+t2CM      ke  2 0
+.         ti  w720CM t2CM
+.         so  RDEC
+
+# 負側の指示ベクトルを符号を反して SUM へ写す
+CMAT1     ke  715 0
+zCM1      ke  0 0
+.         ti  CMAT1 zCM1
+ENTCM1    ke  0 0
+LCM1E     ke  715 0
+kCM1      ta  LCM1E
+n32CM     ke  32 0
+.         se  kCM1 n32CM LCM1
+.         so  CMAT2
+LCM1      ke  640 0
+w715CM1   ke  715 0
+kCM1b     ta  w715CM1
+aCM1      ko  LCM1 kCM1b
+vCM1      ta  aCM1
+nvCM1     si  vCM1
+w680CM1   ke  680 0
+bCM1      ko  w680CM1 kCM1b
+.         ti  bCM1 nvCM1
+o1CM1     ke  1 0
+kCM1c     ko  kCM1b o1CM1
+.         ti  w715CM1 kCM1c
+CNTCM1    ke  0 0
+LCM1Ez    ke  715 0
+kCM1z     ta  LCM1Ez
+n32CMz    ke  32 0
+.         se  kCM1z n32CMz LCM1
+.         so  CMAT2
+
+CMAT2     ke  712 0
+w722CM2   ke  722 0
+pCM2      ta  w722CM2
+.         ti  CMAT2 pCM2
+w720CM2   ke  720 0
+o8CM      ke  8 0
+.         ti  w720CM2 o8CM
+.         so  RDEC
+
+CMAT3     ke  715 0
+zCM3      ke  0 0
+.         ti  CMAT3 zCM3
+ENTCM3    ke  0 0
+LCM3E     ke  715 0
+kCM3      ta  LCM3E
+n32CM3    ke  32 0
+.         se  kCM3 n32CM3 LCM3
+.         so  CMAT4
+LCM3      ke  640 0
+w715CM3   ke  715 0
+kCM3b     ta  w715CM3
+aCM3      ko  LCM3 kCM3b
+vCM3      ta  aCM3
+w680CM3   ke  680 0
+bCM3      ko  w680CM3 kCM3b
+oCM3      ta  bCM3
+oCM3b     ko  oCM3 vCM3
+.         ti  bCM3 oCM3b
+o1CM3     ke  1 0
+kCM3c     ko  kCM3b o1CM3
+.         ti  w715CM3 kCM3c
+CNTCM3    ke  0 0
+LCM3Ez    ke  715 0
+kCM3z     ta  LCM3Ez
+n32CM3z   ke  32 0
+.         se  kCM3z n32CM3z LCM3
+.         so  CMAT4
+
+CMAT4     ke  731 0
+zCM4      ke  0 0
+.         ti  CMAT4 zCM4
+w715CM4   ke  715 0
+.         ti  w715CM4 zCM4
+ENTCM4    ke  0 0
+LCM4E     ke  715 0
+kCM4      ta  LCM4E
+n32CM4    ke  32 0
+.         se  kCM4 n32CM4 LCM4
+.         so  CMAT5
+LCM4      ke  680 0
+w715CM4b  ke  715 0
+kCM4b     ta  w715CM4b
+aCM4      ko  LCM4 kCM4b
+vCM4      ta  aCM4
+zCM4b     ke  0 0
+.         su  vCM4 zCM4b CM4NX
+w731CM4   ke  731 0
+cCM4      ta  w731CM4
+o1CM4     ke  1 0
+cCM4b     ko  cCM4 o1CM4
+.         ti  w731CM4 cCM4b
+CM4NX     ke  715 0
+kCM4n     ta  CM4NX
+o1CM4n    ke  1 0
+kCM4c     ko  kCM4n o1CM4n
+.         ti  CM4NX kCM4c
+CNTCM4    ke  0 0
+LCM4Ez    ke  715 0
+kCM4z     ta  LCM4Ez
+n32CM4z   ke  32 0
+.         se  kCM4z n32CM4z LCM4
+.         so  CMAT5
+
+CMAT5     ke  740 0
+w731CM5   ke  731 0
+cCM5      ta  w731CM5
+.         ti  CMAT5 cCM5
+w741CM5   ke  741 0
+t3CM5     ke  3 0
+.         ti  w741CM5 t3CM5
+.         so  EMITW
+
+CMAT6     ke  715 0
+zCM6      ke  0 0
+.         ti  CMAT6 zCM6
+ENTCM6    ke  0 0
+LCM6E     ke  715 0
+kCM6      ta  LCM6E
+n32CM6    ke  32 0
+.         se  kCM6 n32CM6 LCM6
+.         so  L3NX
+LCM6      ke  680 0
+w715CM6   ke  715 0
+kCM6b     ta  w715CM6
+aCM6      ko  LCM6 kCM6b
+vCM6      ta  aCM6
+zCM6b     ke  0 0
+.         su  vCM6 zCM6b CM6NX
+w740CM6   ke  740 0
+.         ti  w740CM6 vCM6
+w741CM6   ke  741 0
+t4CM6     ke  4 0
+.         ti  w741CM6 t4CM6
+.         so  EMITW
+CM6NX     ke  715 0
+kCM6n     ta  CM6NX
+o1CM6     ke  1 0
+kCM6c     ko  kCM6n o1CM6
+.         ti  CM6NX kCM6c
+CNTCM6    ke  0 0
+LCM6Ez    ke  715 0
+kCM6z     ta  LCM6Ez
+n32CM6z   ke  32 0
+.         se  kCM6z n32CM6z LCM6
+.         so  L3NX
+
+# 係数の次は「頂点の数」= 1、その次が頂点番号になる
+CMAT7     ke  740 0
+o1CM7     ke  1 0
+.         ti  CMAT7 o1CM7
+w741CM7   ke  741 0
+t5CM7     ke  5 0
+.         ti  w741CM7 t5CM7
+.         so  EMITW
+
+CMAT8     ke  740 0
+w715CM8   ke  715 0
+kCM8      ta  w715CM8
+.         ti  CMAT8 kCM8
+w741CM8   ke  741 0
+t6CM8     ke  6 0
+.         ti  w741CM8 t6CM8
+.         so  EMITW
+
+# ================= 部分手続き：出力語を一つ出す =================
+#
+# 箱 n : Cst(EMV, 0) を置き、FR2 の出力語へ控える。
+# front.cam の欄の展開と同じ順で並べる（Descend.storeAll に合わせる）。
+
+EMITW     ke  6 0
+nEM       ta  EMITW
+oEMK      sa  KV04 BW
+aEMK      ko  oEMK nEM
+o1EM      ke  1 0
+.         ti  aEMK o1EM
+bEMA      sa  KV06 BW
+aEMA      ko  bEMA nEM
+w740EM    ke  740 0
+vEM       ta  w740EM
+.         ti  aEMA vEM
+dEMD      sa  KV10 BW
+aEMD      ko  dEMD nEM
+zEM       ke  0 0
+.         ti  aEMD zEM
+w61EM     ke  61 0
+wnEM      ta  w61EM
+bEMO      sa  KV03 BW
+aEMO      ko  bEMO wnEM
+.         ti  aEMO nEM
+nEM2      ko  nEM o1EM
+.         ti  EMITW nEM2
+wnEM2     ko  wnEM o1EM
+.         ti  w61EM wnEM2
+
+w741EM    ke  741 0
+gEM       ta  w741EM
+r1EM      ke  1 0
+.         su  gEM r1EM GMAT3
+r2EM      ke  2 0
+.         su  gEM r2EM GM3NX
+r3EM      ke  3 0
+.         su  gEM r3EM CMAT6
+r4EM      ke  4 0
+.         su  gEM r4EM CMAT7
+r5EM      ke  5 0
+.         su  gEM r5EM CMAT8
+r6EM      ke  6 0
+.         su  gEM r6EM CM6NX
+.         so  BAD

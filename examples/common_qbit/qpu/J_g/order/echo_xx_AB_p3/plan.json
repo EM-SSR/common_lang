@@ -1,0 +1,15 @@
+{
+ "id": "J_g/order/echo_xx_AB_p3",
+ "function": "J_g",
+ "family": "order",
+ "section": "式 10.1〜10.4",
+ "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+ "phi": 4.71238898038469,
+ "meta": {
+  "tag": "echo_xx_AB",
+  "word": "echo_xx",
+  "form": "AB",
+  "offset": 1.5707963267948966
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

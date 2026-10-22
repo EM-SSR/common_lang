@@ -1,0 +1,4275 @@
+# commonc 前段 — .cmn を疑似命令列まで落とす
+#
+# 仕様は docs/common-compiler/program/19 の第 1 段から第 3 段。
+#
+#   .cmn  --D_text-->  層  --Desc-->  MBox  --Lower-->  疑似命令
+#
+# target を知らない。ここから先は後段が受け取る。
+#
+# ---- 後段へ渡すもの ----
+#   BW      刻み B。配列の基底は KVk ⋆ B で引く
+#   KV*     配列の倍数。分岐より前に一度だけ立てた定数の箱
+#   語 3    nNeed   出来た program が要る語数
+#   語 6    nBox    箱の数
+#   OPK 4B  種類  1=Cst 2=Add 3=Mul 4=Neg 5=Store 6=Ok
+#   OPA 6B  第一引数（Cst では分子）
+#   OPB 8B  第二引数
+#   OPD 10B 深度
+#   OPL 12B 分岐先の箱番号
+#
+# ---- 後段から借りるもの ----
+#   BAD     失敗報告の箱。誤りはすべてここへ分離する
+#
+# ---- 語の割付（19 §3.1）----
+#   0  N        入力の byte 数        host が書く
+#   1  IB       本文の基底語番号      host が書く（compile 後は image の基底）
+#   1  IMGB     image の基底語番号    commonc が書く
+#   2  nImg     image の byte 数      commonc が書く
+#   3  nNeed    出来た program が要る語数
+#   5  nSyl     音節の数
+#   6  nBox     箱の数
+#   7  p        入力の走査位置
+#   8  i        汎用の走査位置
+#   9  fN       入口 frontier の長さ
+#  10  cur      層の中の位置
+#  11  outN     出口 frontier の長さ
+#  12  u        第一引数のワイヤ
+#  13  v        第二引数のワイヤ
+#  15  emit     IMG への書き出し位置
+#  18  ch       読んだ byte
+#  19  ci       子音の番号
+#  20  j        汎用
+#  21  vi       母音の番号
+#  23  sy       読んだ音節番号
+#  28  ret      層を閉じた後の戻り先。0 = 走査へ、1 = 出力へ
+#  36  kind     二項演算の種類
+#  40  n0       β が開く四箱の先頭
+#  41  n1
+#  42  n2
+#  43  n3
+#  44  du       第一引数の深度
+#  45  dv       第二引数の深度
+#  46  omd      閉包の深さ
+#  47  bx       作った箱の番号
+#  48  aW       八箱の A
+#  49  bW       八箱の B
+#  50  dW       八箱の既定値
+#  51  n0W      八箱の先頭
+#  52  nIn      共通処理が消費するワイヤ数
+#  53  kW       箱の種類
+#  54  psh      出口へ積むか
+#  55  dpW      箱の深度
+#  56  ofs      byte 位置の走り
+#  57  su       左シフト a
+#  58  sv       左シフト b
+#  64〜         入力の byte（一語一 byte）
+#
+# ---- 採用語彙（16 §1.3〜1.5）。host が本文の前に表を置く ----
+# doc: commonc.lexicon plain.lexicon plain.splice
+#  130 LEXB     表の byte 数。host が書く。0 なら表は無い
+#  131 nLex     見出しの数
+#  132 BODY     本文の最初の音節番号
+#  133 depth    差し込みの深さ
+#  134 tail     語の後ろ。無声ワイヤと層境界だけを許す（16 §1.4）
+#  135 names    いま読んでいる見出しの最初の音節番号
+#  136 key      引いている鍵
+#  137 klen     鍵の長さ（2〜6）
+#  138 k        表の走査位置
+#  139 rest     語の中の層の先頭で写す本数
+#
+#  刻み B は host が語 4 へ置けばそれを使う。表を展開すると音節が
+#  入力の byte 数より増えるので、host は展開後の大きさで B を決める
+#
+# ---- 配列（19 §3.2）。刻みは入力から出る ----
+#
+#   B = N + 80                                                     19 (3.1)
+#
+# 上限は無い。作業領域が足りなければ host 側で止まる。
+#
+#   SYL   1B   音節番号。n_syl ≤ N/2
+#   FRN   2B   入口 frontier（位置 → 箱番号）
+#   FR2   3B   出口 frontier
+#   OPK   4B   種類  1=Cst 2=Add 3=Mul 4=Neg 5=Store 6=Ok。容量 2B
+#   OPA   6B   第一引数（Cst では分子）
+#   OPB   8B   第二引数
+#   OPD  10B   深度
+#   OPL  12B   分岐先の箱番号
+#   DA   14B   変位の byte 0
+#   DB   16B   同 byte 1
+#   DC   18B   同 byte 2
+#   BA   20B   箱の byte 位置の byte 0
+#   BB   22B   同 byte 1
+#   BC   24B   同 byte 2
+#   OMS  25B   閉包の開きスタック
+#   IMG  26B   image の byte。箱あたり最大 33 byte、箱は 2B 以下なので 66B 語
+#   LEXK 266B  見出しの鍵。Σ k_i·71^(6−i)（i = 1..6）、k = 音節番号 + 1、無い字は 0
+#   LEXS 267B  文の最初の音節番号
+#   LEXE 268B  文の終わりの音節番号（その次）
+#   SPI  269B  差し込みの戻り位置
+#   SPQ  270B  差し込んだ位置 q
+#   SPE  271B  差し込んだ語の終わり
+#   本文  96B   host が置く。IMG の上になる
+#
+# 箱数は β が最大で四箱を開くので n_box ≤ 4 n_syl ≤ 2N ≤ 2B になる。
+#
+# 定数はその場で作り直す。長く生かすと landmark が足りなくなる。
+
+# ================= 第 0 段：刻みの算出とスカラの初期化 =================
+#
+# B = N + 80 を語 4 へ置く（19 式 3.1）。配列の基底はこの倍数になるので、
+# 入力の大きさに合わせて自分で伸びる
+
+# host が語 4 に B を置いていればそれを採る
+q4H       ke  4 0
+B4H       ta  q4H
+z4H       ke  0 0
+.         su  B4H z4H BCALC
+.         so  BOK
+BCALC     ke  0 0
+N0        ta  BCALC
+c80       ke  80 0
+Bn        ko  N0 c80
+w4B       ke  4 0
+.         ti  w4B Bn
+flo       ke  4096 0
+.         se  flo Bn BOK
+.         ti  w4B flo
+BOK       ke  4 0
+BW        ta  BOK
+w1I       ke  1 0
+IBW       ta  w1I
+
+# 配列の倍数。分岐より前に一度だけ立てる。以後どの基底も KVk ⋆ B で引く
+KV01      ke  1 0
+KV02      ke  2 0
+KV03      ke  3 0
+KV04      ke  4 0
+KV06      ke  6 0
+KV08      ke  8 0
+KV10      ke  10 0
+KV12      ke  12 0
+KV14      ke  14 0
+KV16      ke  16 0
+KV18      ke  18 0
+KV20      ke  20 0
+KV22      ke  22 0
+KV24      ke  24 0
+KV25      ke  25 0
+KV26      ke  26 0
+KV27      ke  27 0
+KV28      ke  28 0
+KV30      ke  30 0
+KV32      ke  32 0
+KV34      ke  34 0
+KV36      ke  36 0
+KV38      ke  38 0
+KV40      ke  40 0
+KV42      ke  42 0
+KV44      ke  44 0
+KV46      ke  46 0
+KV48      ke  48 0
+KV50      ke  50 0
+KV52      ke  52 0
+KV54      ke  54 0
+KV266     ke  266 0
+KV267     ke  267 0
+KV268     ke  268 0
+KV269     ke  269 0
+KV270     ke  270 0
+KV271     ke  271 0
+.         so  S0
+
+S0        ke  5 0
+z0        ke  0 0
+.         ti  S0 z0
+c6        ke  6 0
+.         ti  c6 z0
+c7        ke  7 0
+.         ti  c7 z0
+c9        ke  9 0
+.         ti  c9 z0
+c10       ke  10 0
+.         ti  c10 z0
+c11       ke  11 0
+.         ti  c11 z0
+c15       ke  15 0
+.         ti  c15 z0
+c28       ke  28 0
+.         ti  c28 z0
+c46       ke  46 0
+.         ti  c46 z0
+c60       ke  60 0
+.         ti  c60 z0
+c94       ke  94 0
+.         ti  c94 z0
+c97       ke  97 0
+.         ti  c97 z0
+c131      ke  131 0
+.         ti  c131 z0
+c133      ke  133 0
+.         ti  c133 z0
+c134      ke  134 0
+.         ti  c134 z0
+c135      ke  135 0
+.         ti  c135 z0
+
+# ---- 折返しの符号つき置換（構成語 §7.1）----
+#
+# D_4 の八元はどれも (r, w) の符号つき置換になる。
+#
+#   (r, w)  ->  (p·x,  q·y),      (x, y) = (r, w)      s = 0
+#                                 (x, y) = (w, r)      s = 1
+#
+# 符号を 0/1 の三つ組へ詰める。
+#
+#   code = 4s + 2[p<0] + [q<0]
+#
+# 表は二つだけになる。8×8 の合成表を持たなくても §7.2 が出る
+#
+#   語 400+k  番号 k から code へ
+#   語 408+c  code から番号 k へ
+
+KTC0      ke  400 0
+kt0       ke  0 0
+.         ti  KTC0 kt0
+KTC1      ke  401 0
+kt1       ke  1 0
+.         ti  KTC1 kt1
+KTC2      ke  402 0
+kt2       ke  2 0
+.         ti  KTC2 kt2
+KTC3      ke  403 0
+kt3       ke  4 0
+.         ti  KTC3 kt3
+KTC4      ke  404 0
+kt4       ke  7 0
+.         ti  KTC4 kt4
+KTC5      ke  405 0
+kt5       ke  6 0
+.         ti  KTC5 kt5
+KTC6      ke  406 0
+kt6       ke  5 0
+.         ti  KTC6 kt6
+KTC7      ke  407 0
+kt7       ke  3 0
+.         ti  KTC7 kt7
+
+CTK0      ke  408 0
+ck0       ke  0 0
+.         ti  CTK0 ck0
+CTK1      ke  409 0
+ck1       ke  1 0
+.         ti  CTK1 ck1
+CTK2      ke  410 0
+ck2       ke  2 0
+.         ti  CTK2 ck2
+CTK3      ke  411 0
+ck3       ke  7 0
+.         ti  CTK3 ck3
+CTK4      ke  412 0
+ck4       ke  3 0
+.         ti  CTK4 ck4
+CTK5      ke  413 0
+ck5       ke  6 0
+.         ti  CTK5 ck5
+CTK6      ke  414 0
+ck6       ke  5 0
+.         ti  CTK6 ck6
+CTK7      ke  415 0
+ck7       ke  4 0
+.         ti  CTK7 ck7
+
+# ================= 第 1 段：filter_Σ（16 §1.1）=================
+#
+# ＡＳＣＩＩ 小文字は必ず音節へ切れる。切れなければ誤りとして上げる。
+# 小文字でない字は落とす。空白も改行も注記の全角もここで消える
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW0     ke  0 0
+L1W0      ke  7 0
+p1W0      ta  L1W0
+q1W0      ke  0 0
+N1W0      ta  q1W0
+.         se  p1W0 N1W0 L1
+.         so  E1
+L1        ke  7 0
+p1        ta  L1
+q1        ke  0 0
+N1        ta  q1
+
+# ---- 表の終わり。本文はここから（BODY = いまの音節数）----
+wLXB      ke  130 0
+lbv       ta  wLXB
+.         su  p1 lbv LXBODY
+.         so  LXCONT
+LXBODY    ke  132 0
+w5LXB     ke  5 0
+nSyLXB    ta  w5LXB
+.         ti  LXBODY nSyLXB
+LXCONT    ke  0 0
+
+L1B       ko  IBW p1
+ch        ta  L1B
+w18       ke  18 0
+.         ti  w18 ch
+
+# ---- 表の中では tab が見出しの終わり、改行が文の終わりになる ----
+.         se  p1 lbv LXIN
+.         so  LXCH
+LXIN      ke  9 0
+.         su  ch LXIN LXTAB
+LXnl      ke  10 0
+.         su  ch LXnl LXNL
+LXCH      ke  0 0
+
+a97       ke  97 0
+.         se  ch a97 SKIP
+a123      ke  123 0
+.         se  ch a123 ISL
+.         so  SKIP
+
+# ---- tab：見出しの鍵を作り、文の始まりを控える ----
+#
+# 鍵 = ((k1·71 + k2)·71 + k3)·71 + k4。四音節に満たない分は 0 で埋める
+LXTAB     ke  135 0
+nmS       ta  LXTAB
+w5T       ke  5 0
+nSyT      ta  w5T
+nnmS      si  nmS
+lenT      ko  nSyT nnmS
+lxTwo     ke  2 0
+.         se  lenT lxTwo BAD
+lxSix     ke  7 0
+.         se  lenT lxSix LXKEY
+.         so  BAD
+
+LXKEY     ke  136 0
+zKY       ke  0 0
+.         ti  LXKEY zKY
+w137T     ke  137 0
+.         ti  w137T lenT
+w138T     ke  138 0
+.         ti  w138T zKY
+LXKL      ke  138 0
+jKL       ta  LXKL
+lxFour    ke  6 0
+.         se  jKL lxFour LXKB
+.         so  LXSTORE
+LXKB      ke  136 0
+kyB       ta  LXKB
+k71T      ke  71 0
+kyB2      sa  kyB k71T
+w137B     ke  137 0
+lnB       ta  w137B
+.         se  jKL lnB LXKC
+.         ti  LXKB kyB2
+.         so  LXKN
+LXKC      ke  135 0
+nmC       ta  LXKC
+w138C     ke  138 0
+lxjC        ta  w138C
+ixC       ko  nmC lxjC
+bSC       sa  KV01 BW
+aC        ko  bSC ixC
+sC        ta  aC
+lxo1C       ke  1 0
+kC        ko  sC lxo1C
+w136C     ke  136 0
+kyC       ta  w136C
+k71C      ke  71 0
+kyC2      sa  kyC k71C
+kyC3      ko  kyC2 kC
+.         ti  w136C kyC3
+LXKN      ke  138 0
+lxjN        ta  LXKN
+o1KN      ke  1 0
+jN2       ko  lxjN o1KN
+.         ti  LXKN jN2
+.         so  LXKL
+
+LXSTORE   ke  131 0
+nLx       ta  LXSTORE
+bLK       sa  KV266 BW
+aLK       ko  bLK nLx
+w136c     ke  136 0
+keyv      ta  w136c
+.         ti  aLK keyv
+bLS       sa  KV267 BW
+aLS       ko  bLS nLx
+w5S2      ke  5 0
+nSyS2     ta  w5S2
+.         ti  aLS nSyS2
+.         so  SKIP
+
+# ---- 改行：文の終わりを控え、次の見出しへ ----
+LXNL      ke  131 0
+nLxN      ta  LXNL
+bLE       sa  KV268 BW
+aLE       ko  bLE nLxN
+w5N       ke  5 0
+nSyN      ta  w5N
+.         ti  aLE nSyN
+lxo1N       ke  1 0
+nLxN2     ko  nLxN lxo1N
+.         ti  LXNL nLxN2
+w135N     ke  135 0
+.         ti  w135N nSyN
+.         so  SKIP
+
+SKIP      ke  7 0
+ps        ta  SKIP
+o1s       ke  1 0
+pn        ko  ps o1s
+.         ti  SKIP pn
+.         so  CNTW0                      # 閉じへ寄せる前方分離
+
+# ---- 子音の番号（19 式 2.1 の ord(c)）----
+ISL       ke  18 0
+chI       ta  ISL
+Lk        ke  107 0
+.         su  chI Lk CK
+Ls        ke  115 0
+.         su  chI Ls CS
+Lt        ke  116 0
+.         su  chI Lt CT
+Ln        ke  110 0
+.         su  chI Ln CN
+Lh        ke  104 0
+.         su  chI Lh CH
+Lm        ke  109 0
+.         su  chI Lm CM
+Ly        ke  121 0
+.         su  chI Ly CY
+Lr        ke  114 0
+.         su  chI Lr CR
+Lw        ke  119 0
+.         su  chI Lw CW
+# 後半の五つは前半と同じ調音位置の有声音になる（10 §1）。
+# k–g、s–z、t–d、h–b、h–p の対で、生成規則 σ(c,v) = cv は変わらない
+Lg        ke  103 0
+.         su  chI Lg CG
+Lz        ke  122 0
+.         su  chI Lz CZ
+Ld        ke  100 0
+.         su  chI Ld CD
+Lb        ke  98 0
+.         su  chI Lb CB
+Lp        ke  112 0
+.         su  chI Lp CP
+.         so  BAD
+
+CK        ke  19 0
+vK        ke  0 0
+.         ti  CK vK
+.         so  CID
+CS        ke  19 0
+vS        ke  1 0
+.         ti  CS vS
+.         so  CID
+CT        ke  19 0
+vT        ke  2 0
+.         ti  CT vT
+.         so  CID
+CN        ke  19 0
+vN        ke  3 0
+.         ti  CN vN
+.         so  CID
+CH        ke  19 0
+vH        ke  4 0
+.         ti  CH vH
+.         so  CID
+CM        ke  19 0
+vM        ke  5 0
+.         ti  CM vM
+.         so  CID
+CY        ke  19 0
+vY        ke  6 0
+.         ti  CY vY
+.         so  CID
+CR        ke  19 0
+vR        ke  7 0
+.         ti  CR vR
+.         so  CID
+CW        ke  19 0
+vW        ke  8 0
+.         ti  CW vW
+.         so  CID
+CG        ke  19 0
+cvG       ke  9 0
+.         ti  CG cvG
+.         so  CID
+CZ        ke  19 0
+cvZ       ke  10 0
+.         ti  CZ cvZ
+.         so  CID
+CD        ke  19 0
+cvD       ke  11 0
+.         ti  CD cvD
+.         so  CID
+CB        ke  19 0
+cvB       ke  12 0
+.         ti  CB cvB
+.         so  CID
+CP        ke  19 0
+cvP       ke  13 0
+.         ti  CP cvP
+.         so  CID
+
+# ---- 次の byte は母音になる ----
+CID       ke  7 0
+pC        ta  CID
+o1c       ke  1 0
+p2        ko  pC o1c
+q2        ke  0 0
+N2        ta  q2
+.         se  p2 N2 VOW
+.         so  BAD
+
+VOW       ko  IBW p2
+ch2       ta  VOW
+w20       ke  20 0
+.         ti  w20 ch2
+
+Vw        ke  20 0
+c2        ta  Vw
+Va        ke  97 0
+.         su  c2 Va VA
+Vi        ke  105 0
+.         su  c2 Vi VI
+Vu        ke  117 0
+.         su  c2 Vu VU
+Ve        ke  101 0
+.         su  c2 Ve VE
+Vo        ke  111 0
+.         su  c2 Vo VO
+.         so  BAD
+
+VA        ke  21 0
+uA        ke  0 0
+.         ti  VA uA
+.         so  SYE
+VI        ke  21 0
+uI        ke  1 0
+.         ti  VI uI
+.         so  SYE
+VU        ke  21 0
+uU        ke  2 0
+.         ti  VU uU
+.         so  SYE
+VE        ke  21 0
+uE        ke  3 0
+.         ti  VE uE
+.         so  SYE
+VO        ke  21 0
+uO        ke  4 0
+.         ti  VO uO
+.         so  SYE
+
+# ---- 音節番号 = 5·ci + vi ----
+SYE       ke  19 0
+ciV       ta  SYE
+w21       ke  21 0
+viV       ta  w21
+f5        ke  5 0
+m5        sa  ciV f5
+sV        ko  m5 viV
+
+w5S       ke  5 0
+nS        ta  w5S
+bSY       sa  KV01 BW
+adS       ko  bSY nS
+.         ti  adS sV
+o1S       ke  1 0
+nS2       ko  nS o1S
+.         ti  w5S nS2
+
+w7S       ke  7 0
+pS        ta  w7S
+t2S       ke  2 0
+pS2       ko  pS t2S
+.         ti  w7S pS2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW0     ke  0 0
+L1W0z     ke  7 0
+p1W0z     ta  L1W0z
+q1W0z     ke  0 0
+N1W0z     ta  q1W0z
+.         se  p1W0z N1W0z L1
+.         so  E1                         # 境界に届いた
+
+# ================= 第 2 段：層の走査と降下（16 §1.2、§5）=================
+#
+# 層境界音が層を切り、無声ワイヤ音が恒等箱ひとつを表す。
+# 平文では恒等箱が明示されるので、箱は必ず現在位置から入力を取る。
+# したがって descLayer の skipped は常に空になる
+
+E1        ke  8 0
+w132E1    ke  132 0
+bodyE1    ta  w132E1
+.         ti  E1 bodyE1
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW1     ke  0 0
+L2W1      ke  8 0
+i2W1      ta  L2W1
+w5LW1     ke  5 0
+nSyW1     ta  w5LW1
+.         se  i2W1 nSyW1 L2
+.         so  E2
+# ---- 差し込んだ語の終わりに着いたら戻り位置へ戻る。入れ子の終わりが重なれば繰り返す ----
+L2        ke  133 0
+dP        ta  L2
+zP        ke  0 0
+.         su  dP zP L2S
+lxo1P       ke  1 0
+lxnP        si  lxo1P
+dP1       ko  dP lxnP
+bXP       sa  KV271 BW
+aXP       ko  bXP dP1
+endP      ta  aXP
+w8P       ke  8 0
+iP        ta  w8P
+.         su  iP endP LXPOP
+.         so  L2S
+LXPOP     sa  KV269 BW
+aIP       ko  LXPOP dP1
+retP      ta  aIP
+w8P2      ke  8 0
+.         ti  w8P2 retP
+w133P     ke  133 0
+.         ti  w133P dP1
+w134P     ke  134 0
+lxo1P2      ke  1 0
+.         ti  w134P lxo1P2
+.         so  L2
+
+L2S       ke  8 0
+i2        ta  L2S
+w5L       ke  5 0
+nSy       ta  w5L
+
+L2B       sa  KV01 BW
+adL       ko  L2B i2
+sy        ta  adL
+w23       ke  23 0
+.         ti  w23 sy
+o12       ke  1 0
+i2n       ko  i2 o12
+.         ti  L2S i2n
+
+w23b      ke  23 0
+sy2       ta  w23b
+# ---- 語の後ろに置けるのは無声ワイヤと層境界だけ（16 §1.4）----
+wTL       ke  134 0
+tlv       ta  wTL
+zTL       ke  0 0
+.         su  tlv zTL DISP0
+kTKA      ke  0 0
+.         su  sy2 kTKA DISP0
+kTKI      ke  1 0
+.         su  sy2 kTKI DISP0
+.         so  BAD
+# ---- be bo pa pi pu pe po は採用語彙の字母（06 §17）----
+DISP0     ke  63 0
+.         se  sy2 DISP0 DISP1
+.         so  GLEX
+DISP1     ke  0 0
+kKA       ke  0 0
+.         su  sy2 kKA GKA
+kKI       ke  1 0
+.         su  sy2 kKI GKI
+kKE       ke  3 0
+.         su  sy2 kKE GKE
+kKU       ke  2 0
+.         su  sy2 kKU GKU                # 三音節の名前の頭（10 §4、region.cam）
+kSE       ke  8 0
+.         su  sy2 kSE GSE
+kTI       ke  11 0
+.         su  sy2 kTI GTI
+kNO       ke  19 0
+.         su  sy2 kNO GNO
+kHA       ke  20 0
+.         su  sy2 kHA GHA
+kHU       ke  22 0
+.         su  sy2 kHU GHU
+kHE       ke  23 0
+.         su  sy2 kHE GHE
+kHO       ke  24 0
+.         su  sy2 kHO GHO
+kHI       ke  21 0
+.         su  sy2 kHI GHI
+kSO       ke  9 0
+.         su  sy2 kSO GSO
+kMI       ke  26 0
+.         su  sy2 kMI GMI
+kMU       ke  27 0
+.         su  sy2 kMU GMU
+kME       ke  28 0
+.         su  sy2 kME GME
+kPI       ke  29 0
+.         su  sy2 kPI GMOPI
+kMO       ke  30 0
+.         su  sy2 kMO GMO
+kYA       ke  31 0
+.         su  sy2 kYA GYA
+kZA       ke  50 0
+.         su  sy2 kZA GZA
+kZI       ke  51 0
+.         su  sy2 kZI GZI
+# 圏論層（構成語 §6、§7）。どれも compile 時に畳む
+kSA       ke  5 0
+.         su  sy2 kSA GSA
+kSI       ke  6 0
+.         su  sy2 kSI GSI
+kRE       ke  38 0
+.         su  sy2 kRE GRE
+kRO       ke  39 0
+.         su  sy2 kRO GRO
+kWA       ke  40 0
+.         su  sy2 kWA GWA
+kWI       ke  41 0
+.         su  sy2 kWI GWI
+kWU       ke  42 0
+.         su  sy2 kWU GWU
+kWE       ke  43 0
+.         su  sy2 kWE GWE
+kWO       ke  44 0
+.         su  sy2 kWO GWO
+kGA       ke  45 0
+.         su  sy2 kGA GGA
+kGI       ke  46 0
+.         su  sy2 kGI GGI
+# 判定層 𝒬（qlayer.cam）
+kTO       ke  14 0
+.         su  sy2 kTO GTO
+kNA       ke  15 0
+.         su  sy2 kNA GNA
+kNI       ke  16 0
+.         su  sy2 kNI GNI
+kNU       ke  17 0
+.         su  sy2 kNU GNU
+kNE       ke  18 0
+.         su  sy2 kNE GNE
+kYU       ke  32 0
+.         su  sy2 kYU GYU
+kYE       ke  33 0
+.         su  sy2 kYE GYE
+kYO       ke  34 0
+.         su  sy2 kYO GYO
+kRA       ke  35 0
+.         su  sy2 kRA GRA
+kRU       ke  37 0
+.         su  sy2 kRU GRU
+kGO       ke  49 0
+.         su  sy2 kGO GGO
+# 座標と履歴の残り
+kKO       ke  4 0
+.         su  sy2 kKO GKO
+kSU       ke  7 0
+.         su  sy2 kSU GRO                  # Trace の負化は rho- と同じ式になる
+kTA       ke  10 0
+.         su  sy2 kTA GTA
+kDE       ke  58 0
+.         su  sy2 kDE GDE
+kDO       ke  59 0
+.         su  sy2 kDO GDO
+kGE       ke  48 0
+.         su  sy2 kGE GGE
+kGU       ke  47 0
+.         su  sy2 kGU GGU
+# 外部環境への報告と出力（16 §5.0）
+kDI       ke  56 0
+.         su  sy2 kDI GDI
+kDU       ke  57 0
+.         su  sy2 kDU GDU
+# 名詞層（07 §5、§7、17 §4）
+kMA       ke  25 0
+.         su  sy2 kMA GMA
+kZU       ke  52 0
+.         su  sy2 kZU GZU
+kZE       ke  53 0
+.         su  sy2 kZE GZE
+kZO       ke  54 0
+.         su  sy2 kZO GZO
+kDA       ke  55 0
+.         su  sy2 kDA GDA
+# 名詞の複製は平文に置けない。平文は mu = inf であり、Noun は複製できない
+# （13 §1.2 の Copyable 欄、07 §8.4）。読んだ時点で失敗を報告する
+kTU       ke  12 0
+.         su  sy2 kTU BAD
+kTE       ke  13 0
+.         su  sy2 kTE GTE
+kBA       ke  60 0
+.         su  sy2 kBA GBA
+kRI       ke  36 0
+.         su  sy2 kRI GRI
+# 鎖（region.cam）。∂ の入力は領域の境界から来る
+kBI       ke  61 0
+.         su  sy2 kBI GBI
+kBU       ke  62 0
+.         su  sy2 kBU GBU
+.         so  BAD
+
+# ---- ka：層を閉じる。戻り先は語 28（0 = 走査へ）----
+GKA       ke  28 0
+z28       ke  0 0
+.         ti  GKA z28
+wTLK      ke  134 0
+.         ti  wTLK z28
+.         so  ENTW2                      # 入口へ向け直す
+
+# ---- 見出し：表を引いて、その文へ差し込む（16 式 1.6）----
+#
+# 見出しは二〜六音節。短い見出しを頭に持つ長い見出しは無い
+# （接頭自由、06 §17.4）ので、二音節から順に長くして引く。
+# 差し込みは戻り位置・位置 q・語の終わりの三本のスタックで持つ
+
+GLEX      ke  8 0
+iLX       ta  GLEX
+w23L      ke  23 0
+s1L       ta  w23L
+lxo1L       ke  1 0
+b1L       ko  s1L lxo1L
+k71L      ke  71 0
+t1L       sa  b1L k71L
+bSL       sa  KV01 BW
+a2L       ko  bSL iLX
+s2L       ta  a2L
+b2L       ko  s2L lxo1L
+t2L       ko  t1L b2L
+k5041L    ke  25411681 0
+key2L     sa  t2L k5041L
+w136L     ke  136 0
+.         ti  w136L key2L
+w137L     ke  137 0
+two2L     ke  2 0
+.         ti  w137L two2L
+.         so  LXFIND
+
+LXFIND    ke  138 0
+z138      ke  0 0
+.         ti  LXFIND z138
+LXF1      ke  138 0
+kF        ta  LXF1
+w131F     ke  131 0
+nLF       ta  w131F
+.         se  kF nLF LXF2
+.         so  LXMISS
+LXF2      sa  KV266 BW
+aF        ko  LXF2 kF
+kyF       ta  aF
+w136F     ke  136 0
+keyF      ta  w136F
+.         su  kyF keyF LXHIT
+lxo1F     ke  1 0
+kF2       ko  kF lxo1F
+w138F     ke  138 0
+.         ti  w138F kF2
+.         so  LXF1
+
+# 引けなければ一字伸ばす。三音節は 71 倍、四音節は 1 倍で足す
+LXMISS    ke  137 0
+lnM       ta  LXMISS
+two3      ke  2 0
+.         su  lnM two3 LXTRY3
+thr3      ke  3 0
+.         su  lnM thr3 LXTRY4
+four3     ke  4 0
+.         su  lnM four3 LXTRY5
+five3     ke  5 0
+.         su  lnM five3 LXTRY6
+.         so  BAD
+LXTRY3    ke  8 0
+iM        ta  LXTRY3
+lxo1M       ke  1 0
+iM2       ko  iM lxo1M
+bSM       sa  KV01 BW
+a3M       ko  bSM iM2
+s3M       ta  a3M
+b3M       ko  s3M lxo1M
+k71M      ke  357911 0
+t3M       sa  b3M k71M
+w136M     ke  136 0
+k2M       ta  w136M
+k3M       ko  k2M t3M
+.         ti  w136M k3M
+w137M     ke  137 0
+thrM      ke  3 0
+.         ti  w137M thrM
+.         so  LXFIND
+LXTRY4    ke  8 0
+iM4       ta  LXTRY4
+two4      ke  2 0
+iM42      ko  iM4 two4
+bSM4      sa  KV01 BW
+a4M       ko  bSM4 iM42
+s4M       ta  a4M
+o1M4      ke  1 0
+b4M       ko  s4M o1M4
+k71M4     ke  5041 0
+t4M       sa  b4M k71M4
+w136M4    ke  136 0
+k3M4      ta  w136M4
+k4M       ko  k3M4 t4M
+.         ti  w136M4 k4M
+w137M4    ke  137 0
+fourM     ke  4 0
+.         ti  w137M4 fourM
+.         so  LXFIND
+LXTRY5    ke  8 0
+iM5       ta  LXTRY5
+thr5      ke  3 0
+iM52      ko  iM5 thr5
+bSM5      sa  KV01 BW
+a5M       ko  bSM5 iM52
+s5M       ta  a5M
+o1M5      ke  1 0
+b5M       ko  s5M o1M5
+k71M5     ke  71 0
+t5M       sa  b5M k71M5
+w136M5    ke  136 0
+k4M5      ta  w136M5
+k5M       ko  k4M5 t5M
+.         ti  w136M5 k5M
+w137M5    ke  137 0
+fiveM     ke  5 0
+.         ti  w137M5 fiveM
+.         so  LXFIND
+LXTRY6    ke  8 0
+iM6       ta  LXTRY6
+four6     ke  4 0
+iM62      ko  iM6 four6
+bSM6      sa  KV01 BW
+a6M       ko  bSM6 iM62
+s6M       ta  a6M
+o1M6      ke  1 0
+b6M       ko  s6M o1M6
+w136M6    ke  136 0
+k5M6      ta  w136M6
+lxk6M       ko  k5M6 b6M
+.         ti  w136M6 lxk6M
+w137M6    ke  137 0
+sixM      ke  6 0
+.         ti  w137M6 sixM
+.         so  LXFIND
+
+LXHIT     ke  8 0
+iH        ta  LXHIT
+w137H     ke  137 0
+lnH       ta  w137H
+lxo1H       ke  1 0
+nH        si  lxo1H
+lnH1      ko  lnH nH
+iH2       ko  iH lnH1
+w133H     ke  133 0
+dH        ta  w133H
+bIH       sa  KV269 BW
+aIH       ko  bIH dH
+.         ti  aIH iH2
+bQH       sa  KV270 BW
+aQH       ko  bQH dH
+lxw10H      ke  10 0
+curH      ta  lxw10H
+.         ti  aQH curH
+w138H     ke  138 0
+kH        ta  w138H
+bEH       sa  KV268 BW
+aEH       ko  bEH kH
+endH      ta  aEH
+bXH       sa  KV271 BW
+aXH       ko  bXH dH
+.         ti  aXH endH
+dH2       ko  dH lxo1H
+.         ti  w133H dH2
+bSH       sa  KV267 BW
+aSH       ko  bSH kH
+stH       ta  aSH
+.         ti  LXHIT stH
+.         so  CNTW1
+
+# ---- ki：無声ワイヤ。frontier を一本そのまま通す ----
+GKI       ke  10 0
+cKI       ta  GKI
+w9I       ke  9 0
+fKI       ta  w9I
+.         se  cKI fKI KIB
+.         so  BAD
+
+KIB       sa  KV02 BW
+aKI       ko  KIB cKI
+wKI       ta  aKI
+.         so  PSW
+
+# ---- mo：π。二値の型を忘れる。箱は作らず、印だけを外す（16 §5 の表）----
+GMOPI     ke  10 0
+cMO       ta  GMOPI
+w9MO      ke  9 0
+fMO       ta  w9MO
+.         se  cMO fMO MO1
+.         so  BAD
+
+MO1       sa  KV02 BW
+aMO       ko  MO1 cMO
+vMO       ta  aMO
+kMOB      ke  1048576 0
+.         se  vMO kMOB BAD                # 印が無い。π の入力は二値になる
+nMOB      si  kMOB
+wMO       ko  vMO nMOB
+w11MO     ke  11 0
+oMO       ta  w11MO
+bMO       sa  KV03 BW
+aMO2      ko  bMO oMO
+.         ti  aMO2 wMO
+o1MO      ke  1 0
+oMO2      ko  oMO o1MO
+.         ti  w11MO oMO2
+w10MO     ke  10 0
+cMO2      ta  w10MO
+cMO3      ko  cMO2 o1MO
+.         ti  w10MO cMO3
+.         so  CNTW1
+
+# ---- ke：恒等道。Trace → Trace。値も箱も動かさない（16 §5 の表の id）----
+GKE       ke  69 0
+t48KE     ke  48 0
+.         ti  GKE t48KE
+.         so  RD1
+
+R1KE      ke  62 0
+kKE1      ta  R1KE
+o1KE      ke  1 0
+.         su  kKE1 o1KE PSC               # 読んだ値をそのまま積み直す
+.         so  BAD
+
+# ---- hu：one。0 → 1。Cst(1,0) を一箱 ----
+GHU       ke  6 0
+nHU       ta  GHU
+oHU       sa  KV04 BW
+aHU       ko  oHU nHU
+k1H       ke  1 0
+.         ti  aHU k1H
+bHU       sa  KV06 BW
+aH2       ko  bHU nHU
+.         ti  aH2 k1H
+dHU       sa  KV10 BW
+aH3       ko  dHU nHU
+zH        ke  0 0
+.         ti  aH3 zH
+.         so  PSB
+
+# ---- se：β。1 → 1。四箱へ開く（16 式 5.6）----
+#
+#   n+0 : Cst(1,0)        1
+#   n+1 : Add(u, n+0)     x + 1
+#   n+2 : Cst(1,1)        1/2
+#   n+3 : Mul(n+1, n+2)   (x + 1)/2
+#
+# β の基準点は 1 になる（16 §5.1）。1 は不動点なので、半分は零から立てる
+
+GSE       ke  10 0
+cSE       ta  GSE
+w9S       ke  9 0
+fSE       ta  w9S
+.         se  cSE fSE SE1
+.         so  BAD
+
+SE1       sa  KV02 BW
+aSE       ko  SE1 cSE
+uSE       ta  aSE
+# 実行時の語でなければ落とす。compile 時の値は負の番号で入るので符号で分かれる
+zRGS       ke  0 0
+.         se  uSE       zRGS BAD
+kRGS       ke  1048576 0
+.         se  uSE       kRGS oRGS
+.         so  BAD
+oRGS       ke  0 0
+w12S      ke  12 0
+.         ti  w12S uSE
+o1S3      ke  1 0
+cS2       ko  cSE o1S3
+w10S      ke  10 0
+.         ti  w10S cS2
+
+# 四つの箱番号を語 40〜43 へ置く
+w6S       ke  6 0
+n0S       ta  w6S
+w40       ke  40 0
+.         ti  w40 n0S
+o1S4      ke  1 0
+n1S       ko  n0S o1S4
+w41       ke  41 0
+.         ti  w41 n1S
+n2S       ko  n1S o1S4
+w42       ke  42 0
+.         ti  w42 n2S
+n3S       ko  n2S o1S4
+w43       ke  43 0
+.         ti  w43 n3S
+o4S       ke  4 0
+n4S       ko  n0S o4S
+.         ti  w6S n4S
+
+# 箱 n+0 : Cst(1,0)
+S00       ke  40 0
+b00       ta  S00
+oK0       sa  KV04 BW
+a00       ko  oK0 b00
+k1A       ke  1 0
+.         ti  a00 k1A
+bA0       sa  KV06 BW
+a01       ko  bA0 b00
+.         ti  a01 k1A
+dD0       sa  KV10 BW
+a02       ko  dD0 b00
+z00       ke  0 0
+.         ti  a02 z00
+
+# 箱 n+1 : Add(u, n+0)。深度は max(OPD[u], 0) = OPD[u]
+S10       ke  41 0
+b10       ta  S10
+oK1       sa  KV04 BW
+a10       ko  oK1 b10
+k2A       ke  2 0
+.         ti  a10 k2A
+w12T      ke  12 0
+uS2       ta  w12T
+bA1       sa  KV06 BW
+a11       ko  bA1 b10
+.         ti  a11 uS2
+w40b      ke  40 0
+b0b       ta  w40b
+bB1       sa  KV08 BW
+a12       ko  bB1 b10
+.         ti  a12 b0b
+dD1       sa  KV10 BW
+aDu2      ko  dD1 uS2
+duS       ta  aDu2
+w44S      ke  44 0
+.         ti  w44S duS
+a13       ko  dD1 b10
+.         ti  a13 duS
+
+# 箱 n+2 : Cst(1,1)
+S20       ke  42 0
+b20       ta  S20
+oK2       sa  KV04 BW
+a20       ko  oK2 b20
+k1B       ke  1 0
+.         ti  a20 k1B
+bA2       sa  KV06 BW
+a21       ko  bA2 b20
+.         ti  a21 k1B
+dD2       sa  KV10 BW
+a22       ko  dD2 b20
+.         ti  a22 k1B
+
+# 箱 n+3 : Mul(n+1, n+2)。深度は OPD[n+1] + 1
+S30       ke  43 0
+b30       ta  S30
+oK3       sa  KV04 BW
+a30       ko  oK3 b30
+k3A       ke  3 0
+.         ti  a30 k3A
+w41b      ke  41 0
+b1b       ta  w41b
+bA3       sa  KV06 BW
+a31       ko  bA3 b30
+.         ti  a31 b1b
+w42b      ke  42 0
+b2b       ta  w42b
+bB3       sa  KV08 BW
+a32       ko  bB3 b30
+.         ti  a32 b2b
+w44T      ke  44 0
+duT       ta  w44T
+o1S5      ke  1 0
+d3S       ko  duT o1S5
+dD3       sa  KV10 BW
+a33       ko  dD3 b30
+.         ti  a33 d3S
+
+# 出口 frontier へ n+3 を積む
+w11S      ke  11 0
+oS        ta  w11S
+bFS       sa  KV03 BW
+aFS       ko  bFS oS
+w43b      ke  43 0
+b3b       ta  w43b
+.         ti  aFS b3b
+o1S6      ke  1 0
+oS2       ko  oS o1S6
+.         ti  w11S oS2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- ha：⊖。1 → 1 ----
+GHA       ke  10 0
+cHA       ta  GHA
+w9H       ke  9 0
+fHA       ta  w9H
+.         se  cHA fHA HA1
+.         so  BAD
+
+HA1       sa  KV02 BW
+aHA       ko  HA1 cHA
+uHA       ta  aHA
+zRGH       ke  0 0
+.         se  uHA       zRGH BAD
+kRGH       ke  1048576 0
+.         se  uHA       kRGH oRGH
+.         so  BAD
+oRGH       ke  0 0
+w12H      ke  12 0
+.         ti  w12H uHA
+o1H       ke  1 0
+cH2       ko  cHA o1H
+w10H      ke  10 0
+.         ti  w10H cH2
+
+w6H       ke  6 0
+nHA       ta  w6H
+oHK       sa  KV04 BW
+aHK       ko  oHK nHA
+k4H       ke  4 0
+.         ti  aHK k4H
+w12I      ke  12 0
+uH2       ta  w12I
+bHA       sa  KV06 BW
+aHA2      ko  bHA nHA
+.         ti  aHA2 uH2
+dHA       sa  KV10 BW
+aHD       ko  dHA uH2
+duH       ta  aHD
+aHD2      ko  dHA nHA
+.         ti  aHD2 duH
+.         so  PSB
+
+# ---- he：Δ。1 → 2。箱を作らず、同じワイヤを二度積む ----
+GHE       ke  10 0
+cHE       ta  GHE
+w9E       ke  9 0
+fHE       ta  w9E
+.         se  cHE fHE HE1
+.         so  BAD
+
+HE1       ke  10 0
+cE0       ta  HE1
+bHE0      sa  KV02 BW
+aHE       ko  bHE0 cE0
+uHE       ta  aHE
+zRGE       ke  0 0
+.         se  uHE       zRGE BAD
+kRGE       ke  1048576 0
+.         se  uHE       kRGE oRGE
+.         so  BAD
+oRGE       ke  0 0
+w12E      ke  12 0
+.         ti  w12E uHE
+
+w10E      ke  10 0
+cE1       ta  w10E
+o1E       ke  1 0
+cE2       ko  cE1 o1E
+.         ti  w10E cE2
+
+# 一本目
+w11E      ke  11 0
+oE0       ta  w11E
+bHE1      sa  KV03 BW
+aE1       ko  bHE1 oE0
+w12F      ke  12 0
+uE1       ta  w12F
+.         ti  aE1 uE1
+
+# 二本目
+w11F      ke  11 0
+oE1       ta  w11F
+o1F       ke  1 0
+oE2       ko  oE1 o1F
+bHE2      sa  KV03 BW
+aE2       ko  bHE2 oE2
+w12G      ke  12 0
+uE2       ta  w12G
+.         ti  aE2 uE2
+
+w11G      ke  11 0
+oE3       ta  w11G
+t2E       ke  2 0
+oE4       ko  oE3 t2E
+.         ti  w11G oE4
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- zi：Ω_a。2 → 1。箱を作らない（22 式 22.10）----
+#
+#   Ω_a[β_a; x₀] = a
+#
+# 集積点は初期値に依らないので、第一のワイヤを落として第二をそのまま返す。
+# 基準点がワイヤで来るので正準添字が要らない。反復を回す箱は 𝒢 に無い（16 §5.2）
+
+GZI       ke  10 0
+cZI       ta  GZI
+w9ZI      ke  9 0
+fZI       ta  w9ZI
+o1ZI      ke  1 0
+cZI1      ko  cZI o1ZI
+.         se  cZI1 fZI ZI1
+.         so  BAD
+
+ZI1       sa  KV02 BW
+aZI       ko  ZI1 cZI1
+vZI       ta  aZI
+zRGZI      ke  0 0
+.         se  vZI       zRGZI BAD
+kRGZI      ke  1048576 0
+.         se  vZI       kRGZI oRGZI
+.         so  BAD
+oRGZI      ke  0 0
+w11ZI     ke  11 0
+oZI       ta  w11ZI
+bFZI      sa  KV03 BW
+aFZI      ko  bFZI oZI
+.         ti  aFZI vZI
+o1ZIb     ke  1 0
+oZI2      ko  oZI o1ZIb
+.         ti  w11ZI oZI2
+w10ZI     ke  10 0
+cZI2      ta  w10ZI
+t2ZI      ke  2 0
+cZI3      ko  cZI2 t2ZI
+.         ti  w10ZI cZI3
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- za：β_a。2 → 1。三箱へ開く（22 式 22.9）----
+#
+#   n+0 : Add(u, a)        x + a        深度 max(du, da)
+#   n+1 : Cst(1,1)         1/2
+#   n+2 : Mul(n+0, n+1)    (x + a)/2    深度は一つ深い
+#
+# 16 式 (5.6) の Cst(1,0) が第二のワイヤに変わる。基準点が 1 に固定されないので、
+# 零から半分を立てる遠回りが要らなくなる
+
+GZA       ke  10 0
+cZA       ta  GZA
+w9ZA      ke  9 0
+fZA       ta  w9ZA
+o1ZA      ke  1 0
+cZA1      ko  cZA o1ZA
+.         se  cZA1 fZA ZA1
+.         so  BAD
+
+ZA1       sa  KV02 BW
+aZAu      ko  ZA1 cZA
+uZA       ta  aZAu
+zRGZU      ke  0 0
+.         se  uZA       zRGZU BAD
+kRGZU      ke  1048576 0
+.         se  uZA       kRGZU oRGZU
+.         so  BAD
+oRGZU      ke  0 0
+w12ZA     ke  12 0
+.         ti  w12ZA uZA
+bZA2      sa  KV02 BW
+aZAv      ko  bZA2 cZA1
+vZA       ta  aZAv
+zRGZV      ke  0 0
+.         se  vZA       zRGZV BAD
+kRGZV      ke  1048576 0
+.         se  vZA       kRGZV oRGZV
+.         so  BAD
+oRGZV      ke  0 0
+w13ZA     ke  13 0
+.         ti  w13ZA vZA
+
+w10ZA     ke  10 0
+t2ZA      ke  2 0
+cZA3      ko  cZA t2ZA
+.         ti  w10ZA cZA3
+
+# 深度は max(du, da)。語 59 へ置く
+dZA1      sa  KV10 BW
+aZAdu     ko  dZA1 uZA
+duZA      ta  aZAdu
+dZA2      sa  KV10 BW
+aZAdv     ko  dZA2 vZA
+dvZA      ta  aZAdv
+.         se  duZA dvZA ZA2
+w59ZA     ke  59 0
+.         ti  w59ZA duZA
+.         so  ZA3
+
+ZA2       ke  59 0
+.         ti  ZA2 dvZA
+.         so  ZA3
+
+# 三つの箱番号を語 40〜42 へ
+ZA3       ke  6 0
+n0ZA      ta  ZA3
+w40ZA     ke  40 0
+.         ti  w40ZA n0ZA
+o1ZAb     ke  1 0
+n1ZA      ko  n0ZA o1ZAb
+w41ZA     ke  41 0
+.         ti  w41ZA n1ZA
+n2ZA      ko  n1ZA o1ZAb
+w42ZA     ke  42 0
+.         ti  w42ZA n2ZA
+t3ZA      ke  3 0
+n3ZA      ko  n0ZA t3ZA
+.         ti  ZA3 n3ZA
+
+# 箱 n+0 : Add(u, a)
+ZA4       ke  40 0
+b0ZA      ta  ZA4
+oKZA      sa  KV04 BW
+a0ZA      ko  oKZA b0ZA
+k2ZA      ke  2 0
+.         ti  a0ZA k2ZA
+bAZA      sa  KV06 BW
+a1ZA      ko  bAZA b0ZA
+w12ZB     ke  12 0
+uZA2      ta  w12ZB
+.         ti  a1ZA uZA2
+bBZA      sa  KV08 BW
+a2ZA      ko  bBZA b0ZA
+w13ZB     ke  13 0
+vZA2      ta  w13ZB
+.         ti  a2ZA vZA2
+dDZA      sa  KV10 BW
+a3ZA      ko  dDZA b0ZA
+w59ZB     ke  59 0
+dmZA      ta  w59ZB
+.         ti  a3ZA dmZA
+
+# 箱 n+1 : Cst(1,1)
+ZA5       ke  41 0
+b1ZA      ta  ZA5
+oK1ZA     sa  KV04 BW
+a4ZA      ko  oK1ZA b1ZA
+k1ZA      ke  1 0
+.         ti  a4ZA k1ZA
+bA1ZA     sa  KV06 BW
+a5ZA      ko  bA1ZA b1ZA
+.         ti  a5ZA k1ZA
+dD1ZA     sa  KV10 BW
+a6ZA      ko  dD1ZA b1ZA
+.         ti  a6ZA k1ZA
+
+# 箱 n+2 : Mul(n+0, n+1)
+ZA6       ke  42 0
+b2ZA      ta  ZA6
+oK2ZA     sa  KV04 BW
+a7ZA      ko  oK2ZA b2ZA
+k3ZA      ke  3 0
+.         ti  a7ZA k3ZA
+w40ZB     ke  40 0
+b0ZAb     ta  w40ZB
+bA2ZA     sa  KV06 BW
+a8ZA      ko  bA2ZA b2ZA
+.         ti  a8ZA b0ZAb
+w41ZB     ke  41 0
+b1ZAb     ta  w41ZB
+bB2ZA     sa  KV08 BW
+a9ZA      ko  bB2ZA b2ZA
+.         ti  a9ZA b1ZAb
+w59ZC     ke  59 0
+dmZA2     ta  w59ZC
+o1ZAc     ke  1 0
+d2ZA      ko  dmZA2 o1ZAc
+dD2ZA     sa  KV10 BW
+aAZA      ko  dD2ZA b2ZA
+.         ti  aAZA d2ZA
+
+# 出口 frontier へ n+2 を積む
+w11ZA     ke  11 0
+oZA       ta  w11ZA
+bFZA      sa  KV03 BW
+aFZA      ko  bFZA oZA
+w42ZB     ke  42 0
+b2ZAb     ta  w42ZB
+.         ti  aFZA b2ZAb
+o1ZAd     ke  1 0
+oZA2      ko  oZA o1ZAd
+.         ti  w11ZA oZA2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ================= 圏論層（構成語 §6、§7）=================
+#
+# Trace も Point も Reflection も compile 時に決まる。降下は出力境界の幅の分だけ
+# 箱を出す（Descend の K に対応する）。frontier には負の値で置く。
+#
+#   FRN[q] >= 0    実行時の語。箱番号そのもの
+#   FRN[q] <  0    compile 時の値。番号は −FRN[q] − 1
+#
+# 置き場は CVK 26B（種類）と CV0 28B 〜 CV5 38B（欄）になる。
+#
+#   種類 1  Trace        m  e  spot  符号  語長  末尾
+#   種類 2  Point        実成分  無限成分  深度
+#   種類 3  Reflection   番号 0..7
+#
+# 語は常に交替語になる。applyU が末尾と同じ記号を畳み、違えば伸ばすので、
+# ii も jj も隣り合わない。だから語長と末尾の二つで語が決まり、置き場が要らない。
+#
+#   dinf の (m, e) は押しても畳んでも同じ式で動く
+#     j:  m += 1 − 2e、  e ← 1 − e
+#     i:  m そのまま、    e ← 1 − e
+
+# ---- 入口 frontier から compile 時の値を一つ読む。戻り先は語 69 ----
+RD1       ke  10 0
+cR1       ta  RD1
+w9R1      ke  9 0
+fR1       ta  w9R1
+.         se  cR1 fR1 RD2
+.         so  BAD
+
+RD2       sa  KV02 BW
+aR1       ko  RD2 cR1
+vR1       ta  aR1
+zR1       ke  0 0
+.         se  vR1 zR1 RD3
+.         so  BAD                        # 実行時の語は圏論層へ入らない
+
+RD3       si  vR1
+o1R1      ke  1 0
+nR1       si  o1R1
+idR1      ko  RD3 nR1                     # id = −v − 1
+w62Rz      ke  62 0
+bKR       sa  KV26 BW
+aKR       ko  bKR idR1
+kR1       ta  aKR
+.         ti  w62Rz kR1
+w63Rz     ke  63 0
+b0Rz       sa  KV28 BW
+a0R       ko  b0Rz idR1
+f0R       ta  a0R
+.         ti  w63Rz f0R
+w64R      ke  64 0
+b1Rz       sa  KV30 BW
+a1R       ko  b1Rz idR1
+f1R       ta  a1R
+.         ti  w64R f1R
+w65R      ke  65 0
+b2Rz       sa  KV32 BW
+a2R       ko  b2Rz idR1
+f2R       ta  a2R
+.         ti  w65R f2R
+w66R      ke  66 0
+b3Rz       sa  KV34 BW
+a3R       ko  b3Rz idR1
+f3R       ta  a3R
+.         ti  w66R f3R
+w67R      ke  67 0
+b4R       sa  KV36 BW
+a4R       ko  b4R idR1
+f4R       ta  a4R
+.         ti  w67R f4R
+w68R      ke  68 0
+b5R       sa  KV38 BW
+a5R       ko  b5R idR1
+f5R       ta  a5R
+.         ti  w68R f5R
+w10R      ke  10 0
+cR2       ta  w10R
+cR3       ko  cR2 o1R1
+.         ti  w10R cR3
+
+# 戻り先
+w69R      ke  69 0
+gR1       ta  w69R
+r1az       ke  1 0
+.         su  gR1 r1az R1A
+r1b       ke  2 0
+.         su  gR1 r1b R1B
+r1c       ke  3 0
+.         su  gR1 r1c R1C
+r1d       ke  4 0
+.         su  gR1 r1d R1D
+r1e       ke  5 0
+.         su  gR1 r1e R1E
+r1f       ke  6 0
+.         su  gR1 r1f R1F
+r1g       ke  7 0
+.         su  gR1 r1g R1G
+r1h       ke  8 0
+.         su  gR1 r1h R1H
+# 𝒬 層の読み（qlayer.cam）
+r1i       ke  9 0
+.         su  gR1 r1i QN1R
+r1j       ke  10 0
+.         su  gR1 r1j QN2R
+r1k       ke  11 0
+.         su  gR1 r1k QE1R
+r1l       ke  12 0
+.         su  gR1 r1l QE2R
+r1m       ke  13 0
+.         su  gR1 r1m QO1R
+r1n       ke  14 0
+.         su  gR1 r1n QO2R
+r1o       ke  15 0
+.         su  gR1 r1o QU1R
+r1p       ke  16 0
+.         su  gR1 r1p QU2R
+r1q       ke  17 0
+.         su  gR1 r1q QR1R
+r1r       ke  18 0
+.         su  gR1 r1r QR2R
+r1s       ke  19 0
+.         su  gR1 r1s QP1R
+r1t       ke  20 0
+.         su  gR1 r1t QH1R
+r1u       ke  21 0
+.         su  gR1 r1u QG1R
+r1v       ke  22 0
+.         su  gR1 r1v R1KO
+r1w       ke  23 0
+.         su  gR1 r1w R1DE
+r1x       ke  24 0
+.         su  gR1 r1x R1DO
+r1y       ke  25 0
+.         su  gR1 r1y R1TA
+r1z       ke  26 0
+.         su  gR1 r1z R1TB
+q1a       ke  32 0
+.         su  gR1 q1a QI1R
+q1b       ke  33 0
+.         su  gR1 q1b QI2R
+# 名詞層の読み
+n1a       ke  27 0
+.         su  gR1 n1a R1NU
+n1b       ke  28 0
+.         su  gR1 n1b R1NR
+n1c       ke  29 0
+.         su  gR1 n1c R1NS
+n1d       ke  30 0
+.         su  gR1 n1d R1ND
+n1e       ke  31 0
+.         su  gR1 n1e R1NP
+# 領域層の読み（region.cam）
+g1a       ke  40 0
+.         su  gR1 g1a R1RGA               # 単位領域の名詞
+g1b       ke  41 0
+.         su  gR1 g1b R1RGB               # 二引数の第二
+g1c       ke  42 0
+.         su  gR1 g1c R1CHB               # ∂ の入力の鎖
+g1d       ke  43 0
+.         su  gR1 g1d R1CHA               # 鎖の加算の第一
+g1e       ke  44 0
+.         su  gR1 g1e R1CHC               # 鎖の加算の第二
+g1f       ke  45 0
+.         su  gR1 g1f R1RG1               # 二引数の第一
+g1g       ke  46 0
+.         su  gR1 g1g R1RGP               # 道
+g1h       ke  47 0
+.         su  gR1 g1h R1RGD               # 境界
+g1i       ke  48 0
+.         su  gR1 g1i R1KE                # 恒等道
+g1j       ke  50 0
+.         su  gR1 g1j QXN1                # 量子ビットの名詞（qbit.cam）
+.         so  BAD
+
+# ---- 語 62 の種類と語 63..68 の欄で値を作り、出口 frontier へ積む ----
+PSC       ke  60 0
+idP       ta  PSC
+o1P2      ke  1 0
+idP2      ko  idP o1P2
+.         ti  PSC idP2
+bKP       sa  KV26 BW
+aKP       ko  bKP idP
+w62P      ke  62 0
+kP1       ta  w62P
+.         ti  aKP kP1
+b0P       sa  KV28 BW
+a0P       ko  b0P idP
+w63P      ke  63 0
+f0P       ta  w63P
+.         ti  a0P f0P
+b1P       sa  KV30 BW
+a1P       ko  b1P idP
+w64P      ke  64 0
+f1P       ta  w64P
+.         ti  a1P f1P
+b2P       sa  KV32 BW
+a2P       ko  b2P idP
+w65P      ke  65 0
+f2P       ta  w65P
+.         ti  a2P f2P
+b3P       sa  KV34 BW
+a3P       ko  b3P idP
+w66P      ke  66 0
+f3P       ta  w66P
+.         ti  a3P f3P
+b4P       sa  KV36 BW
+a4P       ko  b4P idP
+w67P      ke  67 0
+f4P       ta  w67P
+.         ti  a4P f4P
+b5P       sa  KV38 BW
+a5P       ko  b5P idP
+w68P      ke  68 0
+f5P       ta  w68P
+.         ti  a5P f5P
+nP1       si  idP
+nOneP     si  o1P2
+nP4       ko  nP1 nOneP                   # −id − 1
+w11PC     ke  11 0
+oPC       ta  w11PC
+bPC       sa  KV03 BW
+aPC       ko  bPC oPC
+.         ti  aPC nP4
+oPC2      ko  oPC o1P2
+.         ti  w11PC oPC2
+# 二つ押す語（関係述語と複製）は語 579 を立てる
+w579P     ke  579 0
+gPC       ta  w579P
+zPC       ke  0 0
+.         ti  w579P zPC
+.         su  gPC zPC CNTW1              # 閉じへ寄せる前方分離
+.         so  PSC2R
+
+# ---- re：trace。I → Trace。原点は空語、spot = 1、符号 = 1 ----
+GRE       ke  62 0
+kRE1      ke  1 0
+.         ti  GRE kRE1
+w63E      ke  63 0
+zRE       ke  0 0
+.         ti  w63E zRE
+w64E      ke  64 0
+.         ti  w64E zRE
+w65E      ke  65 0
+.         ti  w65E kRE1
+w66E      ke  66 0
+.         ti  w66E kRE1
+w67E      ke  67 0
+.         ti  w67E zRE
+w68E      ke  68 0
+.         ti  w68E zRE
+.         so  PSC
+
+# ---- sa：i。si：j。Trace → Trace。押すか畳むかは末尾で決まる ----
+GSA       ke  70 0
+zSA       ke  0 0
+.         ti  GSA zSA
+w69A      ke  69 0
+o1Az       ke  1 0
+.         ti  w69A o1Az
+.         so  RD1
+
+GSI       ke  70 0
+o1I       ke  1 0
+.         ti  GSI o1I
+w69I      ke  69 0
+.         ti  w69I o1I
+.         so  RD1
+
+R1A       ke  62 0
+kR1A      ta  R1A
+o1A2      ke  1 0
+.         su  kR1A o1A2 R1A2
+.         so  BAD
+
+R1A2      ke  70 0
+uA1       ta  R1A2
+w67A      ke  67 0
+lA1       ta  w67A
+zA1       ke  0 0
+.         se  zA1 lA1 R1A3                # 語長 > 0 なら末尾を見る
+.         so  R1A5                        # 空語なので押す
+
+R1A3      ke  68 0
+tA1       ta  R1A3
+.         su  tA1 uA1 R1A4                # 末尾が同じなら畳む
+.         so  R1A5
+
+# ---- 畳む。i なら spot と符号が反転する ----
+R1A4      ke  67 0
+lA2       ta  R1A4
+nA1z       ke  -1 0
+lA3       ko  lA2 nA1z
+.         ti  R1A4 lA3
+w68A      ke  68 0
+uA2       ta  R1A2
+o1A3      ke  1 0
+nuA       si  uA2
+tA2       ko  o1A3 nuA                     # 交替語なので直前は反対の記号
+.         ti  w68A tA2
+uA3       ta  R1A2
+zA2       ke  0 0
+.         su  uA3 zA2 R1A6                # i なら符号を反転する
+.         so  R1A7
+
+R1A6      ke  65 0
+sA1       ta  R1A6
+sA2       si  sA1
+.         ti  R1A6 sA2
+w66A      ke  66 0
+gA1       ta  w66A
+gA2       si  gA1
+.         ti  w66A gA2
+.         so  R1A7
+
+# ---- 押す ----
+R1A5      ke  67 0
+lA4       ta  R1A5
+o1A4      ke  1 0
+lA5       ko  lA4 o1A4
+.         ti  R1A5 lA5
+w68A2     ke  68 0
+uA4       ta  R1A2
+.         ti  w68A2 uA4
+.         so  R1A7
+
+# ---- (m, e) は押しても畳んでも同じ式で動く ----
+R1A7      ke  70 0
+uA5z       ta  R1A7
+o1A5      ke  1 0
+.         su  uA5z o1A5 R1A8                # j なら m が動く
+.         so  R1A9
+
+R1A8      ke  64 0
+eA1       ta  R1A8
+o1A6      ke  1 0
+t2A       ke  2 0
+dA1       sa  t2A eA1
+ndA       si  dA1
+dA2       ko  o1A6 ndA                     # 1 − 2e
+w63A      ke  63 0
+mA1       ta  w63A
+mA2       ko  mA1 dA2
+.         ti  w63A mA2
+.         so  R1A9
+
+R1A9      ke  64 0
+eA2       ta  R1A9
+o1A7      ke  1 0
+neA       si  eA2
+eA3       ko  o1A7 neA
+.         ti  R1A9 eA3
+.         so  PSC
+
+# ---- ro：rho−。Trace → Trace。spot と符号を反転する ----
+GRO       ke  69 0
+t2O       ke  2 0
+.         ti  GRO t2O
+.         so  RD1
+
+R1B       ke  62 0
+kR1B      ta  R1B
+o1Bz       ke  1 0
+.         su  kR1B o1Bz R1B2
+.         so  BAD
+
+R1B2      ke  65 0
+sB1       ta  R1B2
+sB2       si  sB1
+.         ti  R1B2 sB2
+w66B      ke  66 0
+gB1       ta  w66B
+gB2       si  gB1
+.         ti  w66B gB2
+.         so  PSC
+
+# ---- wa：rho+。Trace → Trace。j² = +1 なので値は動かない ----
+GWA       ke  69 0
+t3W       ke  3 0
+.         ti  GWA t3W
+.         so  RD1
+
+R1C       ke  62 0
+kR1C      ta  R1C
+o1Cz       ke  1 0
+.         su  kR1C o1Cz PSC
+.         so  BAD
+
+# ---- wi：endpoint。Trace → Point。正準点は §7.4 の並びになる ----
+GWI       ke  69 0
+t4W       ke  4 0
+.         ti  GWI t4W
+.         so  RD1
+
+R1D       ke  62 0
+kR1D      ta  R1D
+o1D       ke  1 0
+.         su  kR1D o1D R1D2
+.         so  BAD
+
+# v = 符号 × |spot|
+R1D2      ke  65 0
+sD1       ta  R1D2
+zD1       ke  0 0
+.         se  sD1 zD1 R1D3
+.         so  R1D4
+R1D3      si  sD1
+w71D      ke  71 0
+.         ti  w71D R1D3
+.         so  R1D5
+R1D4      ke  71 0
+.         ti  R1D4 sD1
+.         so  R1D5
+
+R1D5      ke  71 0
+aD1       ta  R1D5
+w66D      ke  66 0
+gD1       ta  w66D
+vD1       sa  gD1 aD1
+w72D      ke  72 0
+.         ti  w72D vD1
+
+# 語長と末尾で正準点を選ぶ
+w67D      ke  67 0
+lD1       ta  w67D
+zD2       ke  0 0
+.         su  lD1 zD2 R1DA
+o1D2      ke  1 0
+.         su  lD1 o1D2 R1DB
+t2D       ke  2 0
+.         su  lD1 t2D R1DC
+.         so  BAD
+
+# 空語。実軸の (v, 0)
+R1DA      ke  63 0
+vDA       ta  w72D
+.         ti  R1DA vDA
+w64DA     ke  64 0
+zDA       ke  0 0
+.         ti  w64DA zDA
+.         so  R1DZ
+
+# 一文字。i なら (0, v)、j なら (0, −v)
+R1DB      ke  63 0
+zDB       ke  0 0
+.         ti  R1DB zDB
+w68DB     ke  68 0
+tDB       ta  w68DB
+zDB2      ke  0 0
+.         su  tDB zDB2 R1DB1
+vDB       ta  w72D
+nvDB      si  vDB
+w64DB     ke  64 0
+.         ti  w64DB nvDB
+.         so  R1DZ
+R1DB1     ke  64 0
+vDB2      ta  w72D
+.         ti  R1DB1 vDB2
+.         so  R1DZ
+
+# 二文字。ij は (v, v)、ji は (v, −v)
+R1DC      ke  63 0
+vDC       ta  w72D
+.         ti  R1DC vDC
+w68DC     ke  68 0
+tDC       ta  w68DC
+o1DC      ke  1 0
+.         su  tDC o1DC R1DC1
+vDC2      ta  w72D
+nvDC      si  vDC2
+w64DC     ke  64 0
+.         ti  w64DC nvDC
+.         so  R1DZ
+R1DC1     ke  64 0
+vDC3      ta  w72D
+.         ti  R1DC1 vDC3
+.         so  R1DZ
+
+R1DZ      ke  62 0
+t2DZ      ke  2 0
+.         ti  R1DZ t2DZ
+w65DZ     ke  65 0
+zDZ       ke  0 0
+.         ti  w65DZ zDZ                    # 深度は 0
+.         so  PSC
+
+# ---- wu / we / wo：折返しの生成元。E、R_r、R_ij ----
+GWU       ke  62 0
+t3U       ke  3 0
+.         ti  GWU t3U
+w63U      ke  63 0
+zU1       ke  0 0
+.         ti  w63U zU1
+.         so  PSC
+
+GWE       ke  62 0
+t3E2      ke  3 0
+.         ti  GWE t3E2
+w63E2     ke  63 0
+o1E2      ke  1 0
+.         ti  w63E2 o1E2
+.         so  PSC
+
+GWO       ke  62 0
+t3O2      ke  3 0
+.         ti  GWO t3O2
+w63O      ke  63 0
+t3O3      ke  3 0
+.         ti  w63O t3O3
+.         so  PSC
+
+# ---- ga：折返しの合成。表を持たず、符号つき置換として掛ける ----
+GGA       ke  69 0
+t5G       ke  5 0
+.         ti  GGA t5G
+.         so  RD1
+
+R1E       ke  62 0
+kR1E      ta  R1E
+t3G       ke  3 0
+.         su  kR1E t3G R1E2
+.         so  BAD
+R1E2      ke  73 0
+aG1z       ta  w63Rz
+.         ti  R1E2 aG1z                     # 先に来た折返しを控える
+w69G      ke  69 0
+t6G       ke  6 0
+.         ti  w69G t6G
+.         so  RD1
+
+R1F       ke  62 0
+kR1F      ta  R1F
+t3G2      ke  3 0
+.         su  kR1F t3G2 R1F2
+.         so  BAD
+
+# 番号を (s, p, q) へ開く。語 74..76 が先、語 77..79 が後
+R1F2      ke  73 0
+kaG       ta  R1F2
+bKTa      ke  400 0
+aKTa      ko  bKTa kaG
+caG       ta  aKTa
+w74G      ke  74 0
+zG1z       ke  0 0
+.         ti  w74G zG1z
+t4G       ke  4 0
+.         se  caG t4G R1F3
+o1G       ke  1 0
+.         ti  w74G o1G
+nt4G      si  t4G
+caG2      ko  caG nt4G
+w80G      ke  80 0
+.         ti  w80G caG2
+.         so  R1F4
+R1F3      ke  80 0
+.         ti  R1F3 caG
+.         so  R1F4
+R1F4      ke  80 0
+caG3      ta  R1F4
+w75G      ke  75 0
+zG2       ke  0 0
+.         ti  w75G zG2
+t2Gz       ke  2 0
+.         se  caG3 t2Gz R1F5
+o1G2z      ke  1 0
+.         ti  w75G o1G2z
+nt2G      si  t2Gz
+caG4      ko  caG3 nt2G
+w76G      ke  76 0
+.         ti  w76G caG4
+.         so  R1F6
+R1F5      ke  76 0
+.         ti  R1F5 caG3
+.         so  R1F6
+
+R1F6      ke  63 0
+kbG       ta  R1F6
+bKTb      ke  400 0
+aKTb      ko  bKTb kbG
+cbG       ta  aKTb
+w77G      ke  77 0
+zG3       ke  0 0
+.         ti  w77G zG3
+t4G2      ke  4 0
+.         se  cbG t4G2 R1F7
+o1G3z      ke  1 0
+.         ti  w77G o1G3z
+nt4G2     si  t4G2
+cbG2      ko  cbG nt4G2
+w81G      ke  81 0
+.         ti  w81G cbG2
+.         so  R1F8
+R1F7      ke  81 0
+.         ti  R1F7 cbG
+.         so  R1F8
+R1F8      ke  81 0
+cbG3      ta  R1F8
+w78G      ke  78 0
+zG4       ke  0 0
+.         ti  w78G zG4
+t2G2      ke  2 0
+.         se  cbG3 t2G2 R1F9
+o1G4z      ke  1 0
+.         ti  w78G o1G4z
+nt2G2     si  t2G2
+cbG4      ko  cbG3 nt2G2
+w79G      ke  79 0
+.         ti  w79G cbG4
+.         so  R1FA
+R1F9      ke  79 0
+.         ti  R1F9 cbG3
+.         so  R1FA
+
+# s = s_a ⊕ s_b。符号は 0/1 の排他的論理和になる
+R1FA      ke  74 0
+saG       ta  R1FA
+w77G2     ke  77 0
+sbG       ta  w77G2
+w82G      ke  82 0
+zG5       ke  0 0
+.         su  saG sbG R1FB
+o1G5      ke  1 0
+.         ti  w82G o1G5
+.         so  R1FC
+R1FB      ke  82 0
+.         ti  R1FB zG5
+.         so  R1FC
+
+R1FC      ke  77 0
+sbG2      ta  R1FC
+zG6       ke  0 0
+.         su  sbG2 zG6 R1FD                # 後が入れ替えなしなら素直に掛ける
+.         so  R1FE
+
+R1FD      ke  75 0
+paG       ta  R1FD
+w78G2     ke  78 0
+pbG       ta  w78G2
+w83G      ke  83 0
+zG7       ke  0 0
+.         su  paG pbG R1FD1
+o1G6      ke  1 0
+.         ti  w83G o1G6
+.         so  R1FD2
+R1FD1     ke  83 0
+.         ti  R1FD1 zG7
+.         so  R1FD2
+R1FD2     ke  76 0
+qaG       ta  R1FD2
+w79G2     ke  79 0
+qbG       ta  w79G2
+w84G      ke  84 0
+zG8       ke  0 0
+.         su  qaG qbG R1FD3
+o1G7      ke  1 0
+.         ti  w84G o1G7
+.         so  R1FG
+R1FD3     ke  84 0
+.         ti  R1FD3 zG8
+.         so  R1FG
+
+R1FE      ke  76 0
+qaG2      ta  R1FE
+w78G3     ke  78 0
+pbG2      ta  w78G3
+w83G2     ke  83 0
+zG9       ke  0 0
+.         su  qaG2 pbG2 R1FE1
+o1G8      ke  1 0
+.         ti  w83G2 o1G8
+.         so  R1FE2
+R1FE1     ke  83 0
+.         ti  R1FE1 zG9
+.         so  R1FE2
+R1FE2     ke  75 0
+paG2      ta  R1FE2
+w79G3     ke  79 0
+qbG2      ta  w79G3
+w84G2     ke  84 0
+zGA       ke  0 0
+.         su  paG2 qbG2 R1FE3
+o1G9      ke  1 0
+.         ti  w84G2 o1G9
+.         so  R1FG
+R1FE3     ke  84 0
+.         ti  R1FE3 zGA
+.         so  R1FG
+
+# code = 4s + 2p + q。表を引いて番号へ戻す
+R1FG      ke  82 0
+sG1       ta  R1FG
+t4G3      ke  4 0
+c1G       sa  t4G3 sG1
+w83G3     ke  83 0
+pG1       ta  w83G3
+t2G3      ke  2 0
+c2G       sa  t2G3 pG1
+c3G       ko  c1G c2G
+w84G3     ke  84 0
+qG1       ta  w84G3
+c4G       ko  c3G qG1
+bCTK      ke  408 0
+aCTK      ko  bCTK c4G
+kG1       ta  aCTK
+w62G      ke  62 0
+t3G3      ke  3 0
+.         ti  w62G t3G3
+w63G      ke  63 0
+.         ti  w63G kG1
+.         so  PSC
+
+# ---- gi：act。Reflection ⊗ Point → Point（§7.4 の作用表）----
+GGI       ke  69 0
+t7I       ke  7 0
+.         ti  GGI t7I
+.         so  RD1
+
+R1G       ke  62 0
+kR1G      ta  R1G
+t3I       ke  3 0
+.         su  kR1G t3I R1G2
+.         so  BAD
+R1G2      ke  73 0
+kI1       ta  w63Rz
+.         ti  R1G2 kI1
+w69I2     ke  69 0
+t8I       ke  8 0
+.         ti  w69I2 t8I
+.         so  RD1
+
+R1H       ke  62 0
+kR1H      ta  R1H
+t2I       ke  2 0
+.         su  kR1H t2I R1H2
+.         so  BAD
+
+# 折返しの番号を (s, p, q) へ開く
+R1H2      ke  73 0
+kI2       ta  R1H2
+bKTI      ke  400 0
+aKTI      ko  bKTI kI2
+cI1       ta  aKTI
+w74I      ke  74 0
+zI1       ke  0 0
+.         ti  w74I zI1
+t4I       ke  4 0
+.         se  cI1 t4I R1H3
+o1I2      ke  1 0
+.         ti  w74I o1I2
+nt4I      si  t4I
+cI2       ko  cI1 nt4I
+w80I      ke  80 0
+.         ti  w80I cI2
+.         so  R1H4
+R1H3      ke  80 0
+.         ti  R1H3 cI1
+.         so  R1H4
+R1H4      ke  80 0
+cI3       ta  R1H4
+w75I      ke  75 0
+zI2       ke  0 0
+.         ti  w75I zI2
+t2I2      ke  2 0
+.         se  cI3 t2I2 R1H5
+o1I3      ke  1 0
+.         ti  w75I o1I3
+nt2I      si  t2I2
+cI4       ko  cI3 nt2I
+w76I      ke  76 0
+.         ti  w76I cI4
+.         so  R1H6
+R1H5      ke  76 0
+.         ti  R1H5 cI3
+.         so  R1H6
+
+# 入れ替え。s = 1 なら (r, w) を交換する
+R1H6      ke  74 0
+sI1       ta  R1H6
+zI3       ke  0 0
+.         su  sI1 zI3 R1H7
+w85I      ke  85 0
+wI1       ta  w64R
+.         ti  w85I wI1
+w86I      ke  86 0
+rI1       ta  w63Rz
+.         ti  w86I rI1
+.         so  R1H8
+R1H7      ke  85 0
+rI2       ta  w63Rz
+.         ti  R1H7 rI2
+w86I2     ke  86 0
+wI2       ta  w64R
+.         ti  w86I2 wI2
+.         so  R1H8
+
+# 符号
+R1H8      ke  75 0
+pI1       ta  R1H8
+zI4       ke  0 0
+.         su  pI1 zI4 R1H9
+w85I2     ke  85 0
+xI1       ta  w85I2
+xI2       si  xI1
+.         ti  w85I2 xI2
+.         so  R1H9
+R1H9      ke  76 0
+qI1       ta  R1H9
+zI5       ke  0 0
+.         su  qI1 zI5 R1HA
+w86I3     ke  86 0
+yI1       ta  w86I3
+yI2       si  yI1
+.         ti  w86I3 yI2
+.         so  R1HA
+
+R1HA      ke  63 0
+w85IA     ke  85 0
+xI3       ta  w85IA
+.         ti  R1HA xI3
+w64I      ke  64 0
+w86IA     ke  86 0
+yI3       ta  w86IA
+.         ti  w64I yI3
+w62I      ke  62 0
+t2I3      ke  2 0
+.         ti  w62I t2I3
+.         so  PSC
+
+# ---- ko：座標の恒等。Point → Point。値は動かない ----
+GKO       ke  69 0
+t22K      ke  22 0
+.         ti  GKO t22K
+.         so  RD1
+
+R1KO      ke  62 0
+kR1K      ta  R1KO
+t2K       ke  2 0
+.         su  kR1K t2K PSC
+.         so  BAD
+
+# ---- de：実成分。(r, w, d) → (r, 0, d) ----
+GDE       ke  69 0
+t23D      ke  23 0
+.         ti  GDE t23D
+.         so  RD1
+
+R1DE      ke  62 0
+kR1DE     ta  R1DE
+t2DE      ke  2 0
+.         su  kR1DE t2DE R1DE2
+.         so  BAD
+R1DE2     ke  64 0
+zDE       ke  0 0
+.         ti  R1DE2 zDE                    # 無限成分を落とす
+.         so  PSC
+
+# ---- do：無限成分。(r, w, d) → (w, 0, d) ----
+GDO       ke  69 0
+t24D      ke  24 0
+.         ti  GDO t24D
+.         so  RD1
+
+R1DO      ke  62 0
+kR1DO     ta  R1DO
+t2DO      ke  2 0
+.         su  kR1DO t2DO R1DO2
+.         so  BAD
+R1DO2     ke  64 0
+wDO       ta  R1DO2
+w63DO     ke  63 0
+.         ti  w63DO wDO                    # 無限成分を実成分の席へ移す
+zDO       ke  0 0
+.         ti  R1DO2 zDO
+.         so  PSC
+
+# ---- ta：座標の加算。平行四辺形則。深い側へそろえてから足す ----
+GTA       ke  69 0
+t25T      ke  25 0
+.         ti  GTA t25T
+.         so  RD1
+
+R1TA      ke  62 0
+kR1TA     ta  R1TA
+t2TA      ke  2 0
+.         su  kR1TA t2TA R1TA2
+.         so  BAD
+R1TA2     ke  63 0
+r1TA      ta  R1TA2
+w575T     ke  600 0
+.         ti  w575T r1TA
+w64TA     ke  64 0
+w1TA      ta  w64TA
+w576T     ke  601 0
+.         ti  w576T w1TA
+w65TA     ke  65 0
+d1TA      ta  w65TA
+w577T     ke  602 0
+.         ti  w577T d1TA
+w69TA     ke  69 0
+t26T      ke  26 0
+.         ti  w69TA t26T
+.         so  RD1
+
+R1TB      ke  62 0
+kR1TB     ta  R1TB
+t2TB      ke  2 0
+.         su  kR1TB t2TB R1TB2
+.         so  BAD
+
+# 深度をそろえる。浅い側を差の回数だけ倍にする
+R1TB2     ke  602 0
+d1TB      ta  R1TB2
+w65TB     ke  65 0
+d2TB      ta  w65TB
+.         se  d1TB d2TB TAL                # d1 < d2 なら一つ目を寄せる
+.         so  TAR
+
+TAL       ke  603 0
+nd1TA     si  d1TB
+kTAL      ko  d2TB nd1TA
+.         ti  TAL kTAL
+w579T     ke  604 0
+r1TAL     ta  w575T
+.         ti  w579T r1TAL
+w580T     ke  605 0
+w1TAL     ta  w576T
+.         ti  w580T w1TAL
+.         so  TASH
+
+TAR       ke  603 0
+nd2TA     si  d2TB
+kTAR      ko  d1TB nd2TA
+.         ti  TAR kTAR
+w579R     ke  604 0
+r2TAR     ta  w63Rz
+.         ti  w579R r2TAR
+w580R     ke  605 0
+w2TAR     ta  w64R
+.         ti  w580R w2TAR
+.         so  TASH
+
+# 倍にする回数だけ回す
+TASH      ke  603 0
+kTASH     ta  TASH
+zTASH     ke  0 0
+.         se  zTASH kTASH TASL
+.         so  TAEN
+
+TASL      ke  604 0
+rTASL     ta  TASL
+rTASL2    ko  rTASL rTASL
+.         ti  TASL rTASL2
+w580S     ke  605 0
+wTASL     ta  w580S
+wTASL2    ko  wTASL wTASL
+.         ti  w580S wTASL2
+w578S     ke  603 0
+kTASL     ta  w578S
+mTASL     ke  -1 0
+kTASL2    ko  kTASL mTASL
+.         ti  w578S kTASL2
+zTASL     ke  0 0
+.         se  zTASL kTASL2 TASL
+.         so  TAEN
+
+# 寄せた側と、そのままの側を足す
+TAEN      ke  602 0
+d1TE      ta  TAEN
+w65TE     ke  65 0
+d2TE      ta  w65TE
+.         se  d1TE d2TE TAE1
+.         so  TAE2
+
+TAE1      ke  604 0
+r1TE      ta  TAE1
+w580E     ke  605 0
+w1TE      ta  w580E
+r2TE      ta  w63Rz
+w2TE      ta  w64R
+rTE       ko  r1TE r2TE
+wTE       ko  w1TE w2TE
+w63TE     ke  63 0
+.         ti  w63TE rTE
+w64TE     ke  64 0
+.         ti  w64TE wTE
+w65TE2    ke  65 0
+.         ti  w65TE2 d2TE
+.         so  PSC
+
+TAE2      ke  604 0
+r2TF      ta  TAE2
+w580F     ke  605 0
+w2TF      ta  w580F
+r1TF      ta  w575T
+w1TF      ta  w576T
+rTF       ko  r1TF r2TF
+wTF       ko  w1TF w2TF
+w63TF     ke  63 0
+.         ti  w63TF rTF
+w64TF     ke  64 0
+.         ti  w64TF wTF
+w65TF     ke  65 0
+.         ti  w65TF d1TE
+.         so  PSC
+
+# ---- di：Ko。外部環境への失敗報告（16 §5.0）。0 → 0 ----
+GDI       ke  6 0
+nDI       ta  GDI
+oDIK      sa  KV04 BW
+aDIK      ko  oDIK nDI
+kDIv      ke  10 0
+.         ti  aDIK kDIv
+dDID      sa  KV10 BW
+aDID      ko  dDID nDI
+zDI       ke  0 0
+.         ti  aDID zDI
+o1DI      ke  1 0
+nDI2      ko  nDI o1DI
+.         ti  GDI nDI2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- du：Put。外部環境への一 byte 出力（16 §5.0）。1 → 0 ----
+#
+# 値は [0,255] の整数として読み、範囲外は下位 8 bit を採る（10 §2）
+
+GDU       ke  10 0
+cDU       ta  GDU
+w9DU      ke  9 0
+fDU       ta  w9DU
+.         se  cDU fDU DU1
+.         so  BAD
+
+DU1       sa  KV02 BW
+aDU       ko  DU1 cDU
+uDU       ta  aDU
+zDU0      ke  0 0
+.         se  uDU zDU0 BAD
+w10DU     ke  10 0
+o1DU      ke  1 0
+cDU2      ko  cDU o1DU
+.         ti  w10DU cDU2
+w6DU      ke  6 0
+nDU       ta  w6DU
+oDUK      sa  KV04 BW
+aDUK      ko  oDUK nDU
+kDUv      ke  11 0
+.         ti  aDUK kDUv
+bDUA      sa  KV06 BW
+aDUA      ko  bDUA nDU
+.         ti  aDUA uDU
+dDUD      sa  KV10 BW
+aDUD      ko  dDUD nDU
+zDU       ke  0 0
+.         ti  aDUD zDU
+nDU2      ko  nDU o1DU
+.         ti  w6DU nDU2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ================= 名詞層（07 §5、§7、17 §4）=================
+#
+# 名詞ノードは QCoeff (n, d, 語, 符号) を持つ。ma から i と j で伸ばす限り
+# n = 1、d = 0 のままなので、欄は五つで足りる。
+#
+#   種類 5  Noun    m  e  符号  語長  末尾
+#
+# 語は Trace と同じく交替語になる。pushW が applyU と同じ形をしているので、
+# 押しても畳んでも (m, e) は同じ式で動く
+
+# ---- ma：node。I → Noun。原点ノード Ô に立つ（16 式 3.2、17 §3）----
+GMA       ke  62 0
+kMA5      ke  5 0
+.         ti  GMA kMA5
+w63M      ke  63 0
+zMA       ke  0 0
+.         ti  w63M zMA
+w64M      ke  64 0
+.         ti  w64M zMA
+w65M      ke  65 0
+o1MA      ke  1 0
+.         ti  w65M o1MA
+w66M      ke  66 0
+.         ti  w66M zMA
+w67M      ke  67 0
+.         ti  w67M zMA
+.         so  PSC
+
+# ---- zu / ze：node への i と j。Noun → Noun ----
+GZU       ke  70 0
+zZU       ke  0 0
+.         ti  GZU zZU
+w69U      ke  69 0
+t27U      ke  27 0
+.         ti  w69U t27U
+.         so  RD1
+
+GZE       ke  70 0
+o1ZE      ke  1 0
+.         ti  GZE o1ZE
+w69E2     ke  69 0
+t27E      ke  27 0
+.         ti  w69E2 t27E
+.         so  RD1
+
+R1NU      ke  62 0
+kR1NU     ta  R1NU
+t5NU      ke  5 0
+.         su  kR1NU t5NU NAPP
+.         so  BAD
+
+# ---- 語の押し引き。末尾が同じなら畳み、i なら符号を反転する ----
+NAPP      ke  70 0
+uNA       ta  NAPP
+w66N      ke  66 0
+lNA       ta  w66N
+zNA       ke  0 0
+.         se  zNA lNA NAP1
+.         so  NAP3
+
+NAP1      ke  67 0
+tNA       ta  NAP1
+.         su  tNA uNA NAP2
+.         so  NAP3
+
+# 畳む
+NAP2      ke  66 0
+lNA2      ta  NAP2
+mNA       ke  -1 0
+lNA3      ko  lNA2 mNA
+.         ti  NAP2 lNA3
+w67N      ke  67 0
+uNA2      ta  NAPP
+o1NA      ke  1 0
+nuNA      si  uNA2
+tNA2      ko  o1NA nuNA
+.         ti  w67N tNA2
+uNA3      ta  NAPP
+zNA2      ke  0 0
+.         su  uNA3 zNA2 NAP4
+.         so  NAP5
+
+NAP4      ke  65 0
+sNA       ta  NAP4
+sNA2      si  sNA
+.         ti  NAP4 sNA2
+.         so  NAP5
+
+# 押す
+NAP3      ke  66 0
+lNA4      ta  NAP3
+o1NA2     ke  1 0
+lNA5      ko  lNA4 o1NA2
+.         ti  NAP3 lNA5
+w67N2     ke  67 0
+uNA4      ta  NAPP
+.         ti  w67N2 uNA4
+.         so  NAP5
+
+# (m, e) は押しても畳んでも同じ式で動く
+NAP5      ke  70 0
+uNA5      ta  NAP5
+o1NA3     ke  1 0
+.         su  uNA5 o1NA3 NAP6
+.         so  NAP7
+
+NAP6      ke  64 0
+eNA       ta  NAP6
+o1NA4     ke  1 0
+t2NA      ke  2 0
+dNA       sa  t2NA eNA
+ndNA      si  dNA
+dNA2      ko  o1NA4 ndNA
+w63N      ke  63 0
+mNA2      ta  w63N
+mNA3      ko  mNA2 dNA2
+.         ti  w63N mNA3
+.         so  NAP7
+
+NAP7      ke  64 0
+eNA2      ta  NAP7
+o1NA5     ke  1 0
+neNA      si  eNA2
+eNA3      ko  o1NA5 neNA
+.         ti  NAP7 eNA3
+w71N      ke  71 0
+rNA       ta  w71N
+zNA3      ke  0 0
+.         su  rNA zNA3 PSC
+.         so  NREL
+
+# ---- zo / da：関係述語 T_w。主語へ語を当て、目的語は素通しにする（07 §5.1）----
+GZO       ke  71 0
+o1ZO      ke  1 0
+.         ti  GZO o1ZO
+w70O      ke  70 0
+zZO       ke  0 0
+.         ti  w70O zZO
+w69O2     ke  69 0
+t28O      ke  28 0
+.         ti  w69O2 t28O
+.         so  RD1
+
+GDA       ke  71 0
+o1DA      ke  1 0
+.         ti  GDA o1DA
+w70A      ke  70 0
+.         ti  w70A o1DA
+w69A2     ke  69 0
+t28A      ke  28 0
+.         ti  w69A2 t28A
+.         so  RD1
+
+R1NR      ke  62 0
+kR1NR     ta  R1NR
+t5NR      ke  5 0
+.         su  kR1NR t5NR NAPP
+.         so  BAD
+
+# 語を当てた主語を控え、目的語を読む
+NREL      ke  572 0
+kNRL      ta  R1NR
+.         ti  NREL kNRL
+w573R     ke  573 0
+w63RL     ke  63 0
+m1RL      ta  w63RL
+.         ti  w573R m1RL
+w574R     ke  574 0
+w64RL     ke  64 0
+e1RL      ta  w64RL
+.         ti  w574R e1RL
+w575R     ke  575 0
+w65RL     ke  65 0
+s1RL      ta  w65RL
+.         ti  w575R s1RL
+w576R     ke  576 0
+w66RL     ke  66 0
+l1RL      ta  w66RL
+.         ti  w576R l1RL
+w577R     ke  577 0
+w67RL     ke  67 0
+t1RL      ta  w67RL
+.         ti  w577R t1RL
+w71R2     ke  71 0
+zRL       ke  0 0
+.         ti  w71R2 zRL
+w69R2     ke  69 0
+t29R      ke  29 0
+.         ti  w69R2 t29R
+.         so  RD1
+
+# 目的語を控え、主語を先に押す。文の並びは主語・目的語になる（02 (9.1)）
+R1NS      ke  62 0
+kR1NS     ta  R1NS
+t5NS      ke  5 0
+.         su  kR1NS t5NS NRL2
+.         so  BAD
+
+NRL2      ke  582 0
+kNS       ta  R1NS
+.         ti  NRL2 kNS
+w583S     ke  583 0
+w63NS     ke  63 0
+mNS       ta  w63NS
+.         ti  w583S mNS
+w584S     ke  584 0
+w64NS     ke  64 0
+eNS       ta  w64NS
+.         ti  w584S eNS
+w585S     ke  585 0
+w65NS     ke  65 0
+sNS       ta  w65NS
+.         ti  w585S sNS
+w586S     ke  586 0
+w66NS     ke  66 0
+lNS       ta  w66NS
+.         ti  w586S lNS
+w587S     ke  587 0
+w67NS     ke  67 0
+tNS       ta  w67NS
+.         ti  w587S tNS
+
+# 主語を語 62..67 へ戻し、押した後に目的語を押す
+w62NB     ke  62 0
+w572B     ke  572 0
+kNB       ta  w572B
+.         ti  w62NB kNB
+w63NB     ke  63 0
+w573B     ke  573 0
+mNB       ta  w573B
+.         ti  w63NB mNB
+w64NB     ke  64 0
+w574B     ke  574 0
+eNB       ta  w574B
+.         ti  w64NB eNB
+w65NB     ke  65 0
+w575B     ke  575 0
+sNB       ta  w575B
+.         ti  w65NB sNB
+w66NB     ke  66 0
+w576B     ke  576 0
+lNB       ta  w576B
+.         ti  w66NB lNB
+w67NB     ke  67 0
+w577B     ke  577 0
+tNB       ta  w577B
+.         ti  w67NB tNB
+w579B     ke  579 0
+o1NB      ke  1 0
+.         ti  w579B o1NB
+.         so  PSC
+
+# 一つ目を押した後の戻り。控えた二つ目を押す
+PSC2R     ke  62 0
+w582C     ke  582 0
+kPC2      ta  w582C
+.         ti  PSC2R kPC2
+w63PC     ke  63 0
+w583C     ke  583 0
+mPC2      ta  w583C
+.         ti  w63PC mPC2
+w64PC     ke  64 0
+w584C     ke  584 0
+ePC2      ta  w584C
+.         ti  w64PC ePC2
+w65PC     ke  65 0
+w585C     ke  585 0
+sPC2      ta  w585C
+.         ti  w65PC sPC2
+w66PC     ke  66 0
+w586C     ke  586 0
+lPC2      ta  w586C
+.         ti  w66PC lPC2
+w67PC     ke  67 0
+w587C     ke  587 0
+tPC2      ta  w587C
+.         ti  w67PC tPC2
+.         so  PSC
+
+# ---- tu：Δ。名詞ノードの明示複製（07 §8.4）----
+GTU       ke  69 0
+t30U      ke  30 0
+.         ti  GTU t30U
+.         so  RD1
+
+R1ND      ke  62 0
+kR1ND     ta  R1ND
+t5ND      ke  5 0
+.         su  kR1ND t5ND NDUP
+.         so  BAD
+
+NDUP      ke  582 0
+kND       ta  R1ND
+.         ti  NDUP kND
+w583D     ke  583 0
+w63ND     ke  63 0
+mND       ta  w63ND
+.         ti  w583D mND
+w584D     ke  584 0
+w64ND     ke  64 0
+eND       ta  w64ND
+.         ti  w584D eND
+w585D     ke  585 0
+w65ND     ke  65 0
+sND       ta  w65ND
+.         ti  w585D sND
+w586D     ke  586 0
+w66ND     ke  66 0
+lND       ta  w66ND
+.         ti  w586D lND
+w587D     ke  587 0
+w67ND     ke  67 0
+tND       ta  w67ND
+.         ti  w587D tND
+w579D     ke  579 0
+o1ND      ke  1 0
+.         ti  w579D o1ND
+.         so  PSC
+
+# ---- te：!。名詞ノードの明示廃棄（07 §8.4）----
+GTE       ke  69 0
+t31E      ke  31 0
+.         ti  GTE t31E
+.         so  RD1
+
+R1NP      ke  62 0
+kR1NP     ta  R1NP
+t5NP      ke  5 0
+.         su  kR1NP t5NP CNTW1
+.         so  BAD
+
+# ---- ho：!。1 → 0。ワイヤを落とすだけになる ----
+GHO       ke  10 0
+cHO       ta  GHO
+w9O       ke  9 0
+fHO       ta  w9O
+.         se  cHO fHO HO1
+.         so  BAD
+
+HO1       sa  KV02 BW
+aHO2      ko  HO1 cHO
+uHO       ta  aHO2
+zRGHO     ke  0 0
+.         se  uHO zRGHO BAD
+kRGHO     ke  1048576 0
+.         se  uHO kRGHO oRGHO
+.         so  BAD
+oRGHO     ke  0 0
+o1HO      ke  1 0
+cO2       ko  cHO o1HO
+w10O      ke  10 0
+.         ti  w10O cO2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- no：⊕。種類 2、深度は max(du, dv) ----
+GNO       ke  36 0
+v2N       ke  2 0
+.         ti  GNO v2N
+.         so  BIN
+
+# ---- ti：⋆。種類 3、深度は du + dv ----
+GTI       ke  36 0
+v3T       ke  3 0
+.         ti  GTI v3T
+.         so  BIN
+
+# 二項の共通処理
+BIN       ke  10 0
+cB        ta  BIN
+w9B       ke  9 0
+fB        ta  w9B
+o1B       ke  1 0
+cB1       ko  cB o1B
+.         se  cB1 fB BI1
+.         so  BAD
+
+# u = FRN[cur]
+BI1       ke  10 0
+cB2       ta  BI1
+bB1x      sa  KV02 BW
+aBu       ko  bB1x cB2
+uB        ta  aBu
+zRGBU      ke  0 0
+.         se  uB        zRGBU BAD
+kRGBU      ke  1048576 0
+.         se  uB        kRGBU oRGBU
+.         so  BAD
+oRGBU      ke  0 0
+w12B      ke  12 0
+.         ti  w12B uB
+
+# v = FRN[cur+1]
+w10a      ke  10 0
+cB3       ta  w10a
+o1a       ke  1 0
+cB4       ko  cB3 o1a
+bB2       sa  KV02 BW
+aBv       ko  bB2 cB4
+vB        ta  aBv
+zRGBV      ke  0 0
+.         se  vB        zRGBV BAD
+kRGBV      ke  1048576 0
+.         se  vB        kRGBV oRGBV
+.         so  BAD
+oRGBV      ke  0 0
+w13B      ke  13 0
+.         ti  w13B vB
+
+# cur += 2
+w10b      ke  10 0
+cB5       ta  w10b
+t2b       ke  2 0
+cB6       ko  cB5 t2b
+.         ti  w10b cB6
+
+# du と dv を語へ置く
+w12C      ke  12 0
+uB2       ta  w12C
+dOD       sa  KV10 BW
+aDu       ko  dOD uB2
+duB       ta  aDu
+w44       ke  44 0
+.         ti  w44 duB
+w13C      ke  13 0
+vB2       ta  w13C
+dOE       sa  KV10 BW
+aDv       ko  dOE vB2
+dvB       ta  aDv
+w45       ke  45 0
+.         ti  w45 dvB
+
+# 箱の種類
+w6B       ke  6 0
+nB        ta  w6B
+oBK       sa  KV04 BW
+aBK       ko  oBK nB
+w36B      ke  36 0
+kB        ta  w36B
+.         ti  aBK kB
+
+# 第一引数
+w6C       ke  6 0
+nB2       ta  w6C
+w12D      ke  12 0
+uB3       ta  w12D
+bBA       sa  KV06 BW
+aBA       ko  bBA nB2
+.         ti  aBA uB3
+
+# 第二引数
+w6D       ke  6 0
+nB3       ta  w6D
+w13D      ke  13 0
+vB3       ta  w13D
+bBB       sa  KV08 BW
+aBB       ko  bBB nB3
+.         ti  aBB vB3
+
+# 深度。⋆ は和、⊕ は大きい方（core/01 式 4.2）
+w36C      ke  36 0
+kB2       ta  w36C
+t3B       ke  3 0
+.         su  kB2 t3B BML
+w44a      ke  44 0
+duC       ta  w44a
+w45a      ke  45 0
+dvC       ta  w45a
+.         se  duC dvC BDV
+.         so  BDU
+
+BML       ke  44 0
+duM       ta  BML
+w45b      ke  45 0
+dvM       ta  w45b
+dsM       ko  duM dvM
+w20M      ke  20 0
+.         ti  w20M dsM
+.         so  BDW
+
+BDU       ke  44 0
+duU       ta  BDU
+w20U      ke  20 0
+.         ti  w20U duU
+.         so  BDW
+
+BDV       ke  45 0
+dvV       ta  BDV
+w20V      ke  20 0
+.         ti  w20V dvV
+.         so  BDW
+
+BDW       ke  6 0
+nBW       ta  BDW
+dODW      sa  KV10 BW
+aBD       ko  dODW nBW
+w20W      ke  20 0
+dW        ta  w20W
+.         ti  aBD dW
+.         so  PSB
+
+# ---- mi：Load。1 → 1 ----
+GMI       ke  52 0
+i1G       ke  1 0
+.         ti  GMI i1G
+w53I      ke  53 0
+k7I       ke  7 0
+.         ti  w53I k7I
+w54I      ke  54 0
+.         ti  w54I i1G
+w55I      ke  55 0
+z5I       ke  0 0
+.         ti  w55I z5I
+.         so  GEN
+
+# ---- mu：Store。2 → 0 ----
+GMU       ke  52 0
+t2G       ke  2 0
+.         ti  GMU t2G
+w53U      ke  53 0
+k5U       ke  5 0
+.         ti  w53U k5U
+w54U      ke  54 0
+z5U       ke  0 0
+.         ti  w54U z5U
+w55U      ke  55 0
+.         ti  w55U z5U
+.         so  GEN
+
+# ---- me：Ok。0 → 0 ----
+GME       ke  52 0
+z5M       ke  0 0
+.         ti  GME z5M
+w53M      ke  53 0
+k6M       ke  6 0
+.         ti  w53M k6M
+w54M      ke  54 0
+.         ti  w54M z5M
+w55M      ke  55 0
+.         ti  w55M z5M
+.         so  GEN
+
+# ---- 共通処理：語 52 本のワイヤを取り、種類 53 の箱を一つ置く ----
+GEN       ke  52 0
+nIG       ta  GEN
+w10G      ke  10 0
+cG0       ta  w10G
+w9G       ke  9 0
+fG0       ta  w9G
+cG1       ko  cG0 nIG
+.         se  fG0 cG1 BAD
+.         so  GE1
+
+# u = FRN[cur]、v = FRN[cur+1]。消費数が足りない分は 0 のまま
+GE1       ke  12 0
+zG1       ke  0 0
+.         ti  GE1 zG1
+w13G      ke  13 0
+.         ti  w13G zG1
+w52a      ke  52 0
+nIG2      ta  w52a
+z0G       ke  0 0
+.         su  nIG2 z0G GE4
+.         so  GE2
+
+GE2       ke  10 0
+cG2       ta  GE2
+bG1       sa  KV02 BW
+aG1       ko  bG1 cG2
+uG1       ta  aG1
+zRGNU      ke  0 0
+.         se  uG1       zRGNU BAD
+kRGNU      ke  1048576 0
+.         se  uG1       kRGNU oRGNU
+.         so  BAD
+oRGNU      ke  0 0
+w12Gz     ke  12 0
+.         ti  w12Gz uG1
+w52b      ke  52 0
+nIG3      ta  w52b
+o1G2      ke  1 0
+.         su  nIG3 o1G2 GE4
+.         so  GE3
+
+GE3       ke  10 0
+cG3       ta  GE3
+o1G3      ke  1 0
+cG4       ko  cG3 o1G3
+bG2       sa  KV02 BW
+aG2       ko  bG2 cG4
+vG1       ta  aG2
+zRGNV      ke  0 0
+.         se  vG1       zRGNV BAD
+kRGNV      ke  1048576 0
+.         se  vG1       kRGNV oRGNV
+.         so  BAD
+oRGNV      ke  0 0
+w13G2     ke  13 0
+.         ti  w13G2 vG1
+.         so  GE4
+
+# cur += nIn
+GE4       ke  10 0
+cG5       ta  GE4
+w52c      ke  52 0
+nIG4      ta  w52c
+cG6       ko  cG5 nIG4
+.         ti  GE4 cG6
+
+# 箱を置く
+w6G       ke  6 0
+nBG       ta  w6G
+oGK       sa  KV04 BW
+aGK       ko  oGK nBG
+w53G      ke  53 0
+kG        ta  w53G
+.         ti  aGK kG
+w6G2      ke  6 0
+nBG2      ta  w6G2
+w12G3     ke  12 0
+uG2       ta  w12G3
+bGA       sa  KV06 BW
+aGA       ko  bGA nBG2
+.         ti  aGA uG2
+w6G3      ke  6 0
+nBG3      ta  w6G3
+w13G3     ke  13 0
+vG2       ta  w13G3
+bGB       sa  KV08 BW
+aGB       ko  bGB nBG3
+.         ti  aGB vG2
+w6G4      ke  6 0
+nBG4      ta  w6G4
+dGD       sa  KV10 BW
+aGD       ko  dGD nBG4
+w55G      ke  55 0
+dpG       ta  w55G
+.         ti  aGD dpG
+
+# 積むかどうか
+w54G      ke  54 0
+pshG      ta  w54G
+z0G2      ke  0 0
+.         su  pshG z0G2 GE5
+.         so  PSB
+
+# 積まない場合は箱番号だけ進める
+GE5       ke  6 0
+nBG5      ta  GE5
+o1G4      ke  1 0
+nBG6      ko  nBG5 o1G4
+.         ti  GE5 nBG6
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- hi：≤。2 → 1。A = v、B = u、既定 0 → 値は ［u ≤ v］----
+GHI       ke  10 0
+cHI       ta  GHI
+w9H2      ke  9 0
+fHI       ta  w9H2
+o1H2      ke  1 0
+cHI1      ko  cHI o1H2
+.         se  cHI1 fHI HI1
+.         so  BAD
+
+HI1       ke  10 0
+cHI2      ta  HI1
+bHI       sa  KV02 BW
+aHI       ko  bHI cHI2
+uHI       ta  aHI
+zRGHU      ke  0 0
+.         se  uHI       zRGHU BAD
+kRGHU      ke  1048576 0
+.         se  uHI       kRGHU oRGHU
+.         so  BAD
+oRGHU      ke  0 0
+w49H      ke  49 0
+.         ti  w49H uHI
+w10H2     ke  10 0
+cHI3      ta  w10H2
+o1H3      ke  1 0
+cHI4      ko  cHI3 o1H3
+bHI2      sa  KV02 BW
+aHI2      ko  bHI2 cHI4
+vHI       ta  aHI2
+zRGHV      ke  0 0
+.         se  vHI       zRGHV BAD
+kRGHV      ke  1048576 0
+.         se  vHI       kRGHV oRGHV
+.         so  BAD
+oRGHV      ke  0 0
+w48H      ke  48 0
+.         ti  w48H vHI
+w10H3     ke  10 0
+cHI5      ta  w10H3
+t2H       ke  2 0
+cHI6      ko  cHI5 t2H
+.         ti  w10H3 cHI6
+w50H      ke  50 0
+z0H       ke  0 0
+.         ti  w50H z0H
+w501H     ke  501 0
+.         ti  w501H z0H                   # 戻り符号 0 = 出口 frontier へ積む
+.         so  BIT
+
+# ---- so：φ∂。1 → 1。A は自分の零箱、既定 1 → 値は ［0 < u］----
+GSO       ke  10 0
+cSO       ta  GSO
+w9O2      ke  9 0
+fSO       ta  w9O2
+.         se  cSO fSO SO1
+.         so  BAD
+
+SO1       ke  10 0
+cSO2      ta  SO1
+bSO       sa  KV02 BW
+aSO       ko  bSO cSO2
+uSO       ta  aSO
+zRGSO      ke  0 0
+.         se  uSO       zRGSO BAD
+kRGSO      ke  1048576 0
+.         se  uSO       kRGSO oRGSO
+.         so  BAD
+oRGSO      ke  0 0
+w49S      ke  49 0
+.         ti  w49S uSO
+w10O3     ke  10 0
+cSO3      ta  w10O3
+o1O4      ke  1 0
+cSO4      ko  cSO3 o1O4
+.         ti  w10O3 cSO4
+w48S      ke  48 0
+nA1       ke  1 0
+nA2       si  nA1
+.         ti  w48S nA2
+w50S      ke  50 0
+o1O5      ke  1 0
+.         ti  w50S o1O5
+w501S     ke  501 0
+z0S9      ke  0 0
+.         ti  w501S z0S9                  # 戻り符号 0 = 出口 frontier へ積む
+.         so  BIT
+
+# ---- 二値を作る八箱（16 §5.3 式 5.9）----
+#
+#   n+0 Cst(0,0)   n+1 Cst(31,0)   n+2 Cst(d,0)   n+3 Store(n+1,n+2)
+#   n+4 LtBr(A,B,n+7)   n+5 Cst(1−d,0)   n+6 Store(n+1,n+5)   n+7 Load(n+1)
+#
+# 退避語は 31（16 式 5.10）。読み戻した直後に死ぬので一語で足りる
+
+BIT       ke  6 0
+n0T       ta  BIT
+w51T      ke  51 0
+.         ti  w51T n0T
+
+# n+0 : Cst(0,0)
+T00       ke  51 0
+b0T       ta  T00
+oT0       sa  KV04 BW
+aT0       ko  oT0 b0T
+k1T       ke  1 0
+.         ti  aT0 k1T
+w51a      ke  51 0
+b0Ta      ta  w51a
+bT0       sa  KV06 BW
+aT0a      ko  bT0 b0Ta
+z0T       ke  0 0
+.         ti  aT0a z0T
+w51b      ke  51 0
+b0Tb      ta  w51b
+dT0       sa  KV10 BW
+aT0b      ko  dT0 b0Tb
+.         ti  aT0b z0T
+
+# n+1 : Cst(31,0)
+w51c      ke  51 0
+b1T       ta  w51c
+o1T       ke  1 0
+n1T       ko  b1T o1T
+oT1       sa  KV04 BW
+aT1       ko  oT1 n1T
+k1Tb      ke  1 0
+.         ti  aT1 k1Tb
+w51d      ke  51 0
+b1Tb      ta  w51d
+o1Tb      ke  1 0
+n1Tb      ko  b1Tb o1Tb
+bT1       sa  KV06 BW
+aT1a      ko  bT1 n1Tb
+v31T      ke  31 0
+.         ti  aT1a v31T
+
+# 退避語の箱を控える。S は出力語の数が決まってから初めて分かる（22 式 22.3）
+SCTw      ke  94 0
+SCTc      ta  SCTw
+SCTb      sa  KV40 BW
+SCTa      ko  SCTb SCTc
+.         ti  SCTa n1Tb
+SCTo      ke  1 0
+SCTc2     ko  SCTc SCTo
+.         ti  SCTw SCTc2
+w51e      ke  51 0
+b1Tc      ta  w51e
+o1Tc      ke  1 0
+n1Tc      ko  b1Tc o1Tc
+dT1       sa  KV10 BW
+aT1b      ko  dT1 n1Tc
+z1T       ke  0 0
+.         ti  aT1b z1T
+
+# n+2 : Cst(d,0)
+w51f      ke  51 0
+b2T       ta  w51f
+t2T       ke  2 0
+n2T       ko  b2T t2T
+oT2       sa  KV04 BW
+aT2       ko  oT2 n2T
+k1Tc      ke  1 0
+.         ti  aT2 k1Tc
+w51g      ke  51 0
+b2Tb      ta  w51g
+t2Tb      ke  2 0
+n2Tb      ko  b2Tb t2Tb
+bT2       sa  KV06 BW
+aT2a      ko  bT2 n2Tb
+w50T      ke  50 0
+dvT       ta  w50T
+.         ti  aT2a dvT
+w51h      ke  51 0
+b2Tc      ta  w51h
+t2Tc      ke  2 0
+n2Tc      ko  b2Tc t2Tc
+dT2       sa  KV10 BW
+aT2b      ko  dT2 n2Tc
+z2T       ke  0 0
+.         ti  aT2b z2T
+
+# n+3 : Store(n+1, n+2)
+w51i      ke  51 0
+b3T       ta  w51i
+t3T       ke  3 0
+n3T       ko  b3T t3T
+oT3       sa  KV04 BW
+aT3       ko  oT3 n3T
+k5T       ke  5 0
+.         ti  aT3 k5T
+w51j      ke  51 0
+b3Tb      ta  w51j
+t3Tb      ke  3 0
+n3Tb      ko  b3Tb t3Tb
+o1Td      ke  1 0
+m1T       ko  b3Tb o1Td
+bT3       sa  KV06 BW
+aT3a      ko  bT3 n3Tb
+.         ti  aT3a m1T
+w51k      ke  51 0
+b3Tc      ta  w51k
+t3Tc      ke  3 0
+n3Tc      ko  b3Tc t3Tc
+t2Td      ke  2 0
+m2T       ko  b3Tc t2Td
+bT3b      sa  KV08 BW
+aT3b      ko  bT3b n3Tc
+.         ti  aT3b m2T
+w51l      ke  51 0
+b3Td      ta  w51l
+t3Td      ke  3 0
+n3Td      ko  b3Td t3Td
+dT3       sa  KV10 BW
+aT3c      ko  dT3 n3Td
+z3T       ke  0 0
+.         ti  aT3c z3T
+
+# n+4 : LtBr(A, B, n+7)。A が負なら n+0 を使う（φ∂ の場合）
+w51m      ke  51 0
+b4T       ta  w51m
+t4T       ke  4 0
+n4T       ko  b4T t4T
+oT4       sa  KV04 BW
+aT4       ko  oT4 n4T
+k9T       ke  9 0
+.         ti  aT4 k9T
+w48T      ke  48 0
+aWT       ta  w48T
+z4T       ke  0 0
+.         se  aWT z4T BT4
+.         so  BT5
+
+BT4       ke  48 0
+w51n      ke  51 0
+b4Tb      ta  w51n
+.         ti  BT4 b4Tb
+.         so  BT5
+
+BT5       ke  51 0
+b4Tc      ta  BT5
+t4Tb      ke  4 0
+n4Tb      ko  b4Tc t4Tb
+bT4       sa  KV06 BW
+aT4a      ko  bT4 n4Tb
+w48b      ke  48 0
+aWT2      ta  w48b
+.         ti  aT4a aWT2
+w51o      ke  51 0
+b4Td      ta  w51o
+t4Tc      ke  4 0
+n4Tc      ko  b4Td t4Tc
+bT4b      sa  KV08 BW
+aT4b      ko  bT4b n4Tc
+w49T      ke  49 0
+bWT       ta  w49T
+.         ti  aT4b bWT
+w51p      ke  51 0
+b4Te      ta  w51p
+t4Td      ke  4 0
+n4Td      ko  b4Te t4Td
+t7T       ke  7 0
+m7T       ko  b4Te t7T
+bT4c      sa  KV12 BW
+aT4c      ko  bT4c n4Td
+.         ti  aT4c m7T
+w51q      ke  51 0
+b4Tf      ta  w51q
+t4Te      ke  4 0
+n4Te      ko  b4Tf t4Te
+dT4       sa  KV10 BW
+aT4d      ko  dT4 n4Te
+z4Tb      ke  0 0
+.         ti  aT4d z4Tb
+
+# n+5 : Cst(1−d,0)
+w51r      ke  51 0
+b5T       ta  w51r
+t5T       ke  5 0
+n5T       ko  b5T t5T
+oT5       sa  KV04 BW
+aT5       ko  oT5 n5T
+k1Td      ke  1 0
+.         ti  aT5 k1Td
+w51s      ke  51 0
+b5Tb      ta  w51s
+t5Tb      ke  5 0
+n5Tb      ko  b5Tb t5Tb
+bT5       sa  KV06 BW
+aT5a      ko  bT5 n5Tb
+w50b      ke  50 0
+dvTb      ta  w50b
+ndT       si  dvTb
+o1Te      ke  1 0
+edT       ko  o1Te ndT
+.         ti  aT5a edT
+w51t      ke  51 0
+b5Tc      ta  w51t
+t5Tc      ke  5 0
+n5Tc      ko  b5Tc t5Tc
+dT5       sa  KV10 BW
+aT5b      ko  dT5 n5Tc
+z5T2      ke  0 0
+.         ti  aT5b z5T2
+
+# n+6 : Store(n+1, n+5)
+w51u      ke  51 0
+b6T       ta  w51u
+t6T       ke  6 0
+n6T       ko  b6T t6T
+oT6       sa  KV04 BW
+aT6       ko  oT6 n6T
+k5Tb      ke  5 0
+.         ti  aT6 k5Tb
+w51v      ke  51 0
+b6Tb      ta  w51v
+t6Tb      ke  6 0
+n6Tb      ko  b6Tb t6Tb
+o1Tf      ke  1 0
+m1Tb      ko  b6Tb o1Tf
+bT6       sa  KV06 BW
+aT6a      ko  bT6 n6Tb
+.         ti  aT6a m1Tb
+w51w      ke  51 0
+b6Tc      ta  w51w
+t6Tc      ke  6 0
+n6Tc      ko  b6Tc t6Tc
+t5Td      ke  5 0
+m5T       ko  b6Tc t5Td
+bT6b      sa  KV08 BW
+aT6b      ko  bT6b n6Tc
+.         ti  aT6b m5T
+w51x      ke  51 0
+b6Td      ta  w51x
+t6Td      ke  6 0
+n6Td      ko  b6Td t6Td
+dT6       sa  KV10 BW
+aT6c      ko  dT6 n6Td
+z6T       ke  0 0
+.         ti  aT6c z6T
+
+# n+7 : Load(n+1)
+w51y      ke  51 0
+b7T       ta  w51y
+t7Tb      ke  7 0
+n7T       ko  b7T t7Tb
+oT7       sa  KV04 BW
+aT7       ko  oT7 n7T
+k7T       ke  7 0
+.         ti  aT7 k7T
+w51z      ke  51 0
+b7Tb      ta  w51z
+t7Tc      ke  7 0
+n7Tb      ko  b7Tb t7Tc
+o1Tg      ke  1 0
+m1Tc      ko  b7Tb o1Tg
+bT7       sa  KV06 BW
+aT7a      ko  bT7 n7Tb
+.         ti  aT7a m1Tc
+w51A      ke  51 0
+b7Tc      ta  w51A
+t7Td      ke  7 0
+n7Tc      ko  b7Tc t7Td
+dT7       sa  KV10 BW
+aT7b      ko  dT7 n7Tc
+z7T       ke  0 0
+.         ti  aT7b z7T
+
+# nBox += 8。結果の箱を語 500 へ置き、戻り符号（語 501）で行き先を分ける。
+# 0 は出口 frontier へ積む道（hi と so）。1 以上は 𝒬 層の呼び出し元へ戻る
+w6T       ke  6 0
+nBT       ta  w6T
+t8T       ke  8 0
+nBT2      ko  nBT t8T
+.         ti  w6T nBT2
+w51B      ke  51 0
+b7Td      ta  w51B
+t7Te      ke  7 0
+n7Td      ko  b7Td t7Te
+w500T     ke  500 0
+.         ti  w500T n7Td
+w501T     ke  501 0
+gT9       ta  w501T
+zT9       ke  0 0
+.         su  gT9 zT9 BTPU
+.         so  LTBR
+
+BTPU      ke  11 0
+oTF       ta  BTPU
+bTF       sa  KV03 BW
+aTF       ko  bTF oTF
+w500Tb    ke  500 0
+n7Te      ta  w500Tb
+kTFB      ke  1048576 0
+n7Tf      ko  n7Te kTFB
+.         ti  aTF n7Tf
+o1Th      ke  1 0
+oTF2      ko  oTF o1Th
+.         ti  BTPU oTF2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- mo：閉包の開き。本体の先頭箱番号を積む ----
+GMO       ke  46 0
+dMO       ta  GMO
+bOMS      sa  KV25 BW
+aOMS      ko  bOMS dMO
+w6O       ke  6 0
+nMO       ta  w6O
+.         ti  aOMS nMO
+w46b      ke  46 0
+dMO2      ta  w46b
+o1O6      ke  1 0
+dMO3      ko  dMO2 o1O6
+.         ti  w46b dMO3
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- ya：閉包の閉じ。単調フラグを一本受け、後退分岐を置く ----
+GYA       ke  10 0
+cYA       ta  GYA
+w9Y       ke  9 0
+fYA       ta  w9Y
+.         se  cYA fYA YA1
+.         so  BAD
+
+YA1       ke  10 0
+cY0       ta  YA1
+bYA       sa  KV02 BW
+aYA       ko  bYA cY0
+hYA       ta  aYA
+kYAB      ke  1048576 0
+.         se  hYA kYAB BAD                # 印が無い。単調フラグは二値になる
+nYAB      si  kYAB
+hYAu      ko  hYA nYAB
+w12Y      ke  12 0
+.         ti  w12Y hYAu
+w10Y      ke  10 0
+cY1       ta  w10Y
+o1Y       ke  1 0
+cY2       ko  cY1 o1Y
+.         ti  w10Y cY2
+
+# 開きを取り出す
+w46c      ke  46 0
+dYA       ta  w46c
+o1Y2      ke  1 0
+nY1       si  o1Y2
+dYA2      ko  dYA nY1
+.         ti  w46c dYA2
+w46d      ke  46 0
+dYA3      ta  w46d
+bOM2      sa  KV25 BW
+aOM2      ko  bOM2 dYA3
+b0Y       ta  aOM2
+w14Y      ke  14 0
+.         ti  w14Y b0Y
+
+# 箱 z : Cst(0,0)
+w6Y       ke  6 0
+nYZ       ta  w6Y
+oYK       sa  KV04 BW
+aYK       ko  oYK nYZ
+k1Y       ke  1 0
+.         ti  aYK k1Y
+w6Y2      ke  6 0
+nYZ2      ta  w6Y2
+bYA2      sa  KV06 BW
+aYA2      ko  bYA2 nYZ2
+zY        ke  0 0
+.         ti  aYA2 zY
+w6Y3      ke  6 0
+nYZ3      ta  w6Y3
+dYD       sa  KV10 BW
+aYD       ko  dYD nYZ3
+zY2       ke  0 0
+.         ti  aYD zY2
+
+# 箱 z+1 : EqBr(h, z, b0)
+w6Y4      ke  6 0
+nYZ4      ta  w6Y4
+o1Y3      ke  1 0
+nYB       ko  nYZ4 o1Y3
+oYK2      sa  KV04 BW
+aYK2      ko  oYK2 nYB
+k8Y       ke  8 0
+.         ti  aYK2 k8Y
+w6Y5      ke  6 0
+nYZ5      ta  w6Y5
+o1Y4      ke  1 0
+nYB2      ko  nYZ5 o1Y4
+w12Y2     ke  12 0
+hYA2      ta  w12Y2
+bYA3      sa  KV06 BW
+aYA3      ko  bYA3 nYB2
+.         ti  aYA3 hYA2
+w6Y6      ke  6 0
+nYZ6      ta  w6Y6
+o1Y5      ke  1 0
+nYB3      ko  nYZ6 o1Y5
+bYB       sa  KV08 BW
+aYB       ko  bYB nYB3
+.         ti  aYB nYZ6
+w6Y7      ke  6 0
+nYZ7      ta  w6Y7
+o1Y6      ke  1 0
+nYB4      ko  nYZ7 o1Y6
+bYL       sa  KV12 BW
+aYL       ko  bYL nYB4
+w14Y2     ke  14 0
+b0Y2      ta  w14Y2
+.         ti  aYL b0Y2
+w6Y8      ke  6 0
+nYZ8      ta  w6Y8
+o1Y7      ke  1 0
+nYB5      ko  nYZ8 o1Y7
+dYD2      sa  KV10 BW
+aYD2      ko  dYD2 nYB5
+zY3       ke  0 0
+.         ti  aYD2 zY3
+
+# nBox += 2
+w6Y9      ke  6 0
+nYZ9      ta  w6Y9
+t2Y       ke  2 0
+nYZA      ko  nYZ9 t2Y
+.         ti  w6Y9 nYZA
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- 出口 frontier へ箱番号を積み、箱を一つ進める ----
+PSB       ke  6 0
+nP        ta  PSB
+w11P      ke  11 0
+oP        ta  w11P
+bP        sa  KV03 BW
+aP        ko  bP oP
+.         ti  aP nP
+o1P       ke  1 0
+oP2       ko  oP o1P
+.         ti  w11P oP2
+nP2       ko  nP o1P
+.         ti  PSB nP2
+.         so  CNTW1                      # 閉じへ寄せる前方分離
+
+# ---- 出口 frontier へ二値のワイヤを積む ----
+#
+# frontier の項は三つに分かれる。
+#
+#   負            compile 時の値。−id−1
+#   n             二進有理数のワイヤ。箱 n
+#   n + 2^20      二値のワイヤ。箱 n
+#
+# 箱の番号は 2B（B ≥ 4096）を越えないので、印と衝突しない。
+# 型は境界の幾何の観測であり（54 章）、二値と二進有理数は別の型になる。
+# 印を持たせると、二値を受けられない箱がそこで止まる
+
+PSBIT     ke  6 0
+nPB       ta  PSBIT
+kPBIAS    ke  1048576 0
+nPB2      ko  nPB kPBIAS
+w11PB     ke  11 0
+oPB       ta  w11PB
+bPB       sa  KV03 BW
+aPB       ko  bPB oPB
+.         ti  aPB nPB2
+o1PB      ke  1 0
+oPB2      ko  oPB o1PB
+.         ti  w11PB oPB2
+nPB3      ko  nPB o1PB
+.         ti  PSBIT nPB3
+.         so  CNTW1
+
+# ---- 出口 frontier へ既存のワイヤを積む（箱を作らない）----
+PSW       ke  11 0
+oW        ta  PSW
+bW        sa  KV03 BW
+aW        ko  bW oW
+w12W      ke  12 0
+.         ti  aW wKI
+o1W       ke  1 0
+oW2       ko  oW o1W
+.         ti  PSW oW2
+w10W      ke  10 0
+cW        ta  w10W
+cW2       ko  cW o1W
+.         ti  w10W cW2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW1     ke  0 0
+L2W1z     ke  8 0
+i2W1z     ta  L2W1z
+w5LW1z    ke  5 0
+nSyW1z    ta  w5LW1z
+.         se  i2W1z nSyW1z L2
+.         so  E2                         # 境界に届いた
+
+# ================= 層を閉じる（ka と入力の終わりで使う）=================
+#
+# 残った入口 frontier を出口へ素通しし、FR2 を FRN へ写す。
+# 戻り先は語 28 が持つ
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW2     ke  0 0
+CLOW2     ke  10 0
+cCW2      ta  CLOW2
+w9CW2     ke  9 0
+fCW2      ta  w9CW2
+.         se  cCW2 fCW2 CLO
+.         so  CLF
+CLO       ke  10 0
+cC        ta  CLO
+w9C       ke  9 0
+fC        ta  w9C
+
+CLP       sa  KV02 BW
+aCP       ko  CLP cC
+wCP       ta  aCP
+w11C      ke  11 0
+oC        ta  w11C
+bCP       sa  KV03 BW
+aC2       ko  bCP oC
+.         ti  aC2 wCP
+o1C2      ke  1 0
+oC2b      ko  oC o1C2
+.         ti  w11C oC2b
+w10C      ke  10 0
+cC2       ko  cC o1C2
+.         ti  w10C cC2
+.         so  CNTW2                      # 閉じへ寄せる前方分離
+
+CLF       ke  20 0
+zCF       ke  0 0
+.         ti  CLF zCF
+
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW3     ke  0 0
+CFLW3     ke  20 0
+jCFW3     ta  CFLW3
+w11FxW3   ke  11 0
+oCFW3     ta  w11FxW3
+.         se  jCFW3 oCFW3 CFL
+.         so  CFE
+CFL       ke  20 0
+jCF       ta  CFL
+w11Fx     ke  11 0
+oCF       ta  w11Fx
+
+CFB       sa  KV03 BW
+aF2       ko  CFB jCF
+vF2       ta  aF2
+bF1       sa  KV02 BW
+aF1       ko  bF1 jCF
+.         ti  aF1 vF2
+o1Fx      ke  1 0
+jF2       ko  jCF o1Fx
+.         ti  CFL jF2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW3     ke  0 0
+CFLW3z    ke  20 0
+jCFW3z    ta  CFLW3z
+w11FxW3z  ke  11 0
+oCFW3z    ta  w11FxW3z
+.         se  jCFW3z oCFW3z CFL
+.         so  CFE                        # 境界に届いた
+
+CFE       ke  9 0
+w11Gx     ke  11 0
+oCE       ta  w11Gx
+.         ti  CFE oCE
+zCE       ke  0 0
+.         ti  w11Gx zCE
+w10Gz     ke  10 0
+.         ti  w10Gz zCE
+# ---- 語の中の層は、語を置いた位置 q から始まる（16 式 1.6）。語の最後の層は戻るだけ ----
+w133C     ke  133 0
+dC        ta  w133C
+zC3       ke  0 0
+.         su  dC zC3 CFRET
+o1C3      ke  1 0
+nC3       si  o1C3
+dC1       ko  dC nC3
+bXC       sa  KV271 BW
+aXC       ko  bXC dC1
+endC      ta  aXC
+w8C       ke  8 0
+iC        ta  w8C
+.         su  iC endC CFRET
+bQC       sa  KV270 BW
+aQC       ko  bQC dC1
+qC        ta  aQC
+w139C     ke  139 0
+.         ti  w139C qC
+CFQ       ke  139 0
+rQ        ta  CFQ
+zQ        ke  0 0
+.         su  rQ zQ CFRET
+w10Q      ke  10 0
+cQ        ta  w10Q
+bFQ       sa  KV02 BW
+aFQ       ko  bFQ cQ
+vQ        ta  aFQ
+w11Q      ke  11 0
+oQ        ta  w11Q
+bF2Q      sa  KV03 BW
+aF2Q      ko  bF2Q oQ
+.         ti  aF2Q vQ
+lxo1Q       ke  1 0
+oQ2       ko  oQ lxo1Q
+.         ti  w11Q oQ2
+cQ2       ko  cQ lxo1Q
+.         ti  w10Q cQ2
+nQ        si  lxo1Q
+rQ2       ko  rQ nQ
+.         ti  CFQ rQ2
+.         so  CFQ
+CFRET     ke  28 0
+rC        ta  CFRET
+zC2       ke  0 0
+.         su  rC zC2 ENTW1               # 入口へ向け直す
+.         so  E3
+
+# ================= 入力の終わり：最後の層を閉じる =================
+
+E2        ke  28 0
+o1Z       ke  1 0
+.         ti  E2 o1Z
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW2     ke  0 0
+CLOW2z    ke  10 0
+cCW2z     ta  CLOW2z
+w9CW2z    ke  9 0
+fCW2z     ta  w9CW2z
+.         se  cCW2z fCW2z CLO
+.         so  CLF                        # 境界に届いた
+
+# ================= 第 3 段：出力の格納と報告 =================
+#
+# 残った frontier が Γ⁺ になる。語 0.. へ置いて成功を報告する
+
+E3        ke  20 0
+z20       ke  0 0
+.         ti  E3 z20
+w61E3     ke  61 0
+.         ti  w61E3 z20                   # 出力語の数
+
+# ---- 第一巡：値の箱を置き、語ごとのワイヤを FR2 へ控える ----
+#
+# Haskell の descend は境界の値を先に全部 materialize し、その後で番地と
+# Store を並べる（Descend.storeAll）。箱の並びを合わせるために同じ順にする。
+# FR2 はこの段では使い終わっているので、控えの置き場に使う
+
+ENTW4     ke  0 0
+L3W4      ke  20 0
+j3W4      ta  L3W4
+w9JW4     ke  9 0
+f3W4      ta  w9JW4
+.         se  j3W4 f3W4 L3
+.         so  E3B
+L3        ke  20 0
+j3        ta  L3
+
+bFJ0      sa  KV02 BW
+aFJ0      ko  bFJ0 j3
+vJ0       ta  aFJ0
+zJ0       ke  0 0
+.         se  vJ0 zJ0 L3CV
+.         so  L3RT
+
+# ---- 実行時の語。箱は既にあるので控えるだけになる ----
+L3RT      ke  742 0
+kRTB      ke  1048576 0
+.         ti  L3RT vJ0
+.         se  vJ0 kRTB L3RT2
+nRTB      si  kRTB
+vJ0b      ko  vJ0 nRTB
+w742RT    ke  742 0
+.         ti  w742RT vJ0b                 # 二値の印を外して語へ落とす
+L3RT2     ke  61 0
+wnJ       ta  L3RT2
+bOW       sa  KV03 BW
+aOW       ko  bOW wnJ
+w742RT2   ke  742 0
+vRT       ta  w742RT2
+.         ti  aOW vRT
+o1J       ke  1 0
+wnJ2      ko  wnJ o1J
+.         ti  L3RT2 wnJ2
+.         so  L3NX
+
+# ================= compile 時の値を語へ開く =================
+#
+# 種類ごとに欄の数と深度が決まる。欄ひとつにつき Cst を一箱置く。
+#
+#   種類 1  Trace        m  e  spot  符号        深度 0
+#   種類 2  Point        実成分  無限成分        深度は欄 2
+#   種類 3  Reflection   番号                    深度 0
+
+L3CV      si  vJ0
+o1CV      ke  1 0
+nCV       si  o1CV
+idCV      ko  L3CV nCV                    # id = −v − 1
+bKV1      sa  KV26 BW
+aKV1      ko  bKV1 idCV
+kCV       ta  aKV1
+
+w92V      ke  92 0
+zCV2      ke  0 0
+.         ti  w92V zCV2
+o1CV2     ke  1 0
+.         su  kCV o1CV2 L3T1
+t2CV      ke  2 0
+.         su  kCV t2CV L3T2
+t3CV      ke  3 0
+.         su  kCV t3CV L3T3
+t4CVq     ke  4 0
+.         su  kCV t4CVq QMAT                # 判定層は五語へ開く（qlayer.cam）
+t5CVq     ke  5 0
+.         su  kCV t5CVq NMAT                # 名詞層も五語へ開く
+t6CVq     ke  6 0
+.         su  kCV t6CVq RMAT                # 有理数は二語へ開く
+t34CV     ke  34 0
+.         su  kCV t34CV GMAT                # 領域は 1 + |A| 語へ開く
+t35CV     ke  35 0
+.         su  kCV t35CV CMAT                # 鎖は 1 + 3·|∂| 語へ開く
+.         so  BAD
+
+L3T1      ke  91 0
+t4CV      ke  4 0
+.         ti  L3T1 t4CV
+.         so  L3CL
+
+L3T2      ke  91 0
+t2CV2     ke  2 0
+.         ti  L3T2 t2CV2
+w92V2     ke  92 0
+b2CV      sa  KV32 BW
+a2CV      ko  b2CV idCV
+d2CV      ta  a2CV
+.         ti  w92V2 d2CV                  # 深度は欄 2 が持つ
+.         so  L3CL
+
+L3T3      ke  91 0
+o1CV3     ke  1 0
+.         ti  L3T3 o1CV3
+.         so  L3CL
+
+# ---- 欄の走査 ----
+L3CL      ke  93 0
+zCL       ke  0 0
+.         ti  L3CL zCL
+
+ENTV      ke  0 0
+L3CW      ke  93 0
+cCW       ta  L3CW
+w91W      ke  91 0
+nCW       ta  w91W
+.         se  cCW nCW L3CB
+.         so  L3NX
+
+L3CB      ke  93 0
+cCB       ta  L3CB
+t2CB      ke  2 0
+oCB       sa  t2CB cCB
+sCB       sa  oCB BW
+bCB       sa  KV28 BW
+aCB0      ko  bCB sCB                     # 欄 c の基底は (28 + 2c)·B
+aCB       ko  aCB0 idCV
+vCB       ta  aCB                         # 欄 c の値
+
+# 箱 n : Cst(欄の値, 深度)
+L3CC      ke  6 0
+nCC       ta  L3CC
+oCK       sa  KV04 BW
+aCKv      ko  oCK nCC
+k1CC      ke  1 0
+.         ti  aCKv k1CC
+bCA       sa  KV06 BW
+aCA       ko  bCA nCC
+.         ti  aCA vCB
+dCD       sa  KV10 BW
+aCD       ko  dCD nCC
+w92CC     ke  92 0
+dCC       ta  w92CC
+.         ti  aCD dCC
+
+# 出力語のワイヤとして控える
+w61CB     ke  61 0
+wnCB      ta  w61CB
+bOC       sa  KV03 BW
+aOC       ko  bOC wnCB
+.         ti  aOC nCC
+
+# nBox += 1、出力語 += 1、欄 += 1
+o1CC      ke  1 0
+nCC4      ko  nCC o1CC
+.         ti  L3CC nCC4
+wnCB2     ko  wnCB o1CC
+.         ti  w61CB wnCB2
+w93CC     ke  93 0
+cCC       ta  w93CC
+cCC2      ko  cCC o1CC
+.         ti  w93CC cCC2
+
+CNTV      ke  0 0
+L3CWz     ke  93 0
+cCWz      ta  L3CWz
+w91Wz     ke  91 0
+nCWz      ta  w91Wz
+.         se  cCWz nCWz L3CB
+.         so  L3NX
+
+# ---- 次の frontier の位置へ ----
+L3NX      ke  20 0
+jNX       ta  L3NX
+o1NX      ke  1 0
+jNX2      ko  jNX o1NX
+.         ti  L3NX jNX2
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW4     ke  0 0
+L3W4z     ke  20 0
+j3W4z     ta  L3W4z
+w9JW4z    ke  9 0
+f3W4z     ta  w9JW4z
+.         se  j3W4z f3W4z L3
+.         so  E3B                         # 境界に届いた
+
+# ---- 第二巡：番地と Store を並べる（Descend.storeAll と同じ順）----
+
+# ---- 退避語を決めて、控えた箱へ書き戻す（22 式 22.3）----
+#
+#   S = 1 + max(31, 出力語の数 − 1)
+#
+# 16 式 (5.10) の 31 は compiler 自身の割付であって平文の予約ではない。
+# 平文は語 0 から出力を積むので、退避語は本文の上へ置く
+
+E3B       ke  95 0
+SPn       ke  31 0
+.         ti  E3B SPn
+w61SP     ke  61 0
+nSP       ta  w61SP
+o1SP      ke  1 0
+nSPm      si  o1SP
+nSP2      ko  nSP nSPm
+w95SP     ke  95 0
+sSP       ta  w95SP
+.         se  sSP nSP2 SPU
+.         so  SPV
+
+SPU       ke  95 0
+.         ti  SPU nSP2
+.         so  SPV
+
+SPV       ke  95 0
+sSP2      ta  SPV
+o1SP2     ke  1 0
+sSP3      ko  sSP2 o1SP2
+.         ti  SPV sSP3
+
+w96SP     ke  96 0
+z96SP     ke  0 0
+.         ti  w96SP z96SP
+
+ENTSP     ke  0 0
+SPE       ke  96 0
+kSP       ta  SPE
+w94SP     ke  94 0
+mSP       ta  w94SP
+.         se  kSP mSP SPL
+.         so  E3C
+
+SPL       ke  96 0
+kSP2      ta  SPL
+bSP       sa  KV40 BW
+aSP       ko  bSP kSP2
+bxSP      ta  aSP
+oASP      sa  KV06 BW
+aASP      ko  oASP bxSP
+w95SP2    ke  95 0
+sSP4      ta  w95SP2
+.         ti  aASP sSP4
+o1SP3     ke  1 0
+kSP3      ko  kSP2 o1SP3
+.         ti  SPL kSP3
+
+CNTSP     ke  0 0
+SPZ       ke  96 0
+kSP4      ta  SPZ
+w94SP2    ke  94 0
+mSP2      ta  w94SP2
+.         se  kSP4 mSP2 SPL
+.         so  E3C
+
+E3C       ke  20 0
+z20B      ke  0 0
+.         ti  E3C z20B
+
+ENTW4B    ke  0 0
+L3BW      ke  20 0
+iBW       ta  L3BW
+w61BW     ke  61 0
+nBWo       ta  w61BW
+.         se  iBW nBWo L3S
+.         so  E4
+L3S       ke  20 0
+iS        ta  L3S
+
+# 語番号は 256 未満に限る（19 式 2.2）
+c256S     ke  256 0
+.         se  iS c256S L3S2
+.         so  BAD
+
+# 箱 n : Cst(語番号, 0)
+L3S2      ke  6 0
+nSo        ta  L3S2
+oSK       sa  KV04 BW
+aSK       ko  oSK nSo
+k1S       ke  1 0
+.         ti  aSK k1S
+bSA       sa  KV06 BW
+aSA       ko  bSA nSo
+.         ti  aSA iS
+dSD       sa  KV10 BW
+aSD       ko  dSD nSo
+zSo        ke  0 0
+.         ti  aSD zSo
+
+# 箱 n+1 : Store(n, 控えたワイヤ)
+o1So       ke  1 0
+nS2o       ko  nSo o1So
+aSK2      ko  oSK nS2o
+k5S       ke  5 0
+.         ti  aSK2 k5S
+aSA2      ko  bSA nS2o
+.         ti  aSA2 nSo
+bOS       sa  KV03 BW
+aOS       ko  bOS iS
+wOS       ta  aOS
+bSB       sa  KV08 BW
+aSB       ko  bSB nS2o
+.         ti  aSB wOS
+aSD2      ko  dSD nS2o
+.         ti  aSD2 zSo
+
+# nBox += 2、語番号 += 1
+t2So       ke  2 0
+nS3       ko  nSo t2So
+.         ti  L3S2 nS3
+iS2       ko  iS o1So
+.         ti  L3S iS2
+
+CNTW4B    ke  0 0
+L3BWz     ke  20 0
+iBWz      ta  L3BWz
+w61BWz    ke  61 0
+nBWz      ta  w61BWz
+.         se  iBWz nBWz L3S
+.         so  E4                          # 境界に届いた
+
+# ---- 報告の箱 ----
+E4        ke  6 0
+n4        ta  E4
+oEK       sa  KV04 BW
+aEK       ko  oEK n4
+k6E       ke  6 0
+.         ti  aEK k6E
+o1E4      ke  1 0
+n4b       ko  n4 o1E4
+.         ti  E4 n4b
+
+# nNeed = 64 + nBox
+c64       ke  64 0
+nd        ko  n4b c64
+w3N       ke  3 0
+.         ti  w3N nd
+

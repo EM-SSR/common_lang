@@ -1,0 +1,14 @@
+{
+ "id": "sigma/determinism/tape8",
+ "function": "sigma",
+ "family": "determinism",
+ "section": "式 5.12a、19.1",
+ "role": "rounds 桁の系列。連続する shot の一致率を、遠い shot の組と比べる（C3）。shot の順序を残す",
+ "phi": null,
+ "meta": {
+  "rounds": 8,
+  "shots": 20000,
+  "ordered": true
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

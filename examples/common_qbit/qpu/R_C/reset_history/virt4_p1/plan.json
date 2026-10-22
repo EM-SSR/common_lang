@@ -1,0 +1,13 @@
+{
+ "id": "R_C/reset_history/virt4_p1",
+ "function": "R_C",
+ "family": "reset_history",
+ "section": "式 12.15〜12.18、19.6",
+ "role": "前史 virt4 の後のリセットを越えた z_j",
+ "phi": 1.5707963267948966,
+ "meta": {
+  "history": "virt4",
+  "tag": "virt4"
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

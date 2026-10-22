@@ -1,0 +1,1653 @@
+# code(C) の読み取りと診断
+# doc: grammar.table diagram.to.ser cnf.faithful diagnostics cml.text cml.diag
+#
+#   Common-Lang/Common言語のチェンバー構文と構成語の意味的正規形
+#   §2.4（文法表）、§2.6（型付け判断）、定理 2.2、§13.1（忠実性）、§15.4（診断）
+#   13 章 §2、§6
+#
+# Common 言語のソースは語の並びになる。
+#
+#     code(C) = mu  d0 d1 d2  n^-  n^+  n^a  Gamma^-  Gamma^+  addr  A_0 A_1 …  (-1)
+#     A       = ( r, q, g, m, alpha_0 … alpha_{m-1} )
+#
+# r は因果深度、q は frontier 上の左端位置、g は生成元の ord、m は引数の本数になる。
+# 原子箱は (r, q) の辞書順に並ぶ。これは三次元疎テンソル S(k,q,r) = Atom を
+# k = 0 の断面で読んだものであり、復元は定理 4.1 が与える。
+#
+# 読み取りは、字面を解析してから型を推測するのではない。各部分が境界から境界への
+# 射として読めることを、層ごとに逐次確認する。
+#
+#   * 引数の本数が arity(g) に等しい
+#   * 一層の入力区間が重なりなく全境界を覆う。隙間があれば暗黙廃棄、
+#     重なりがあれば暗黙複製、飛び地があれば非連続入力になる
+#   * 層 r の出力欄長が層 r+1 の入力欄長に等しい
+#   * 複製 Delta_A と廃棄 !_A は、型が許すときだけ置ける。Trace は
+#     構成履歴を運ぶので、無断で複製すると ij と ji の差が壊れる
+#   * 注記した作図深度が、本体から計算した順序数に等しい
+#
+# frontier は箱のポート列だけから決まるので、名前解決も型推論の選択肢も無い
+# （定理 2.2、命題 5.1）。
+#
+# 読んだ語列を、格付け・欄長・境界語・原子箱から組み直して比べる。
+# 一致することが parse ∘ ser = id の内容になる（定理 13.1）。
+#
+# 語列を二本読む。二本目は Trace を複製しようとするので、診断 4 が出る。
+#
+#   診断 0 整形式   1 引数の本数   2 被覆の破れ   3 境界不一致
+#         4 複製不能  5 廃棄不能   6 深度不一致
+#
+# 例に取るチェンバーは Dyad 二本を受けて Bit 一本を出す。
+#
+#     Gamma^- = (Dyad, Dyad)
+#     Lambda_0 = Delta ⊗ id        幅 2 -> 3
+#     Lambda_1 = star ⊗ id         幅 3 -> 2
+#     Lambda_2 = phi_d ⊗ !         幅 2 -> 1
+#     Gamma^+ = (Bit)
+#
+# 作図深度は d(Lambda_k) = max(箱の深度) を順に足して 1 + 1 + 1 = 3 になる。
+#
+# 作業領域
+#   語 0    p     語列の走査位置
+#   語 1    i     一般の走査
+#   語 2    j
+#   語 3    k     原子箱の中の位置
+#   語 4    dg    診断
+#   語 5    kw    突き合わせ位置
+#   語 6    r     いま読んでいる層
+#   語 7    q     左端位置
+#   語 8    g     生成元の ord
+#   語 9    m     引数の本数
+#   語 10   w     いまの frontier の幅
+#   語 11   qe    覆った位置
+#   語 12   nx    次の frontier の幅
+#   語 13   dm    層の中の最大深度
+#   語 14   dp    本体の深度
+#   語 15   cu    いまの層の番号
+#   語 20   c     語列の番号
+#   語 21   o     復元先の書き込み位置
+#   語 22   b     読む語列の先頭
+#   語 23   s     境界語と集積点の総語数
+#   語 24   POW   冪表
+#   語 32   ARI   生成元ごとの引数の本数
+#   語 80   PIN   入力ポート数
+#   語 128  POUT  出力ポート数
+#   語 176  DEP   生成元ごとの深度
+#   語 224  CPY   型ごとの複製・廃棄の可否
+#   語 240  SB    読む語列の先頭表
+#   語 256  S1    整形式な code(C)
+#   語 320  S2    壊した code(C)
+#   語 384  REC   復元した語列
+#   語 448  DGN   診断
+#   語 512  OUT   出力
+#   語 640  EXP   期待値
+
+mu i
+d  0
+
+# 冪表 POW[k] = 2^k
+w000a     ke  24 0
+w000v     ke  1 0
+.         ti  w000a w000v
+w001a     ke  25 0
+w001v     ke  2 0
+.         ti  w001a w001v
+w002a     ke  26 0
+w002v     ke  4 0
+.         ti  w002a w002v
+w003a     ke  27 0
+w003v     ke  8 0
+.         ti  w003a w003v
+w004a     ke  28 0
+w004v     ke  16 0
+.         ti  w004a w004v
+w005a     ke  29 0
+w005v     ke  32 0
+.         ti  w005a w005v
+# 生成元ごとの引数の本数（13 章 §1.4）
+r000a     ke  32 0
+r000v     ke  2 0
+.         ti  r000a r000v
+r001a     ke  33 0
+r001v     ke  0 0
+.         ti  r001a r001v
+r002a     ke  34 0
+r002v     ke  0 0
+.         ti  r002a r002v
+r003a     ke  35 0
+r003v     ke  0 0
+.         ti  r003a r003v
+r004a     ke  36 0
+r004v     ke  1 0
+.         ti  r004a r004v
+r005a     ke  37 0
+r005v     ke  1 0
+.         ti  r005a r005v
+r006a     ke  38 0
+r006v     ke  1 0
+.         ti  r006a r006v
+r007a     ke  39 0
+r007v     ke  0 0
+.         ti  r007a r007v
+r008a     ke  40 0
+r008v     ke  0 0
+.         ti  r008a r008v
+r009a     ke  41 0
+r009v     ke  0 0
+.         ti  r009a r009v
+r010a     ke  42 0
+r010v     ke  0 0
+.         ti  r010a r010v
+r011a     ke  43 0
+r011v     ke  1 0
+.         ti  r011a r011v
+r012a     ke  44 0
+r012v     ke  1 0
+.         ti  r012a r012v
+r013a     ke  45 0
+r013v     ke  1 0
+.         ti  r013a r013v
+r014a     ke  46 0
+r014v     ke  0 0
+.         ti  r014a r014v
+r015a     ke  47 0
+r015v     ke  0 0
+.         ti  r015a r015v
+r016a     ke  48 0
+r016v     ke  0 0
+.         ti  r016a r016v
+r017a     ke  49 0
+r017v     ke  0 0
+.         ti  r017a r017v
+r018a     ke  50 0
+r018v     ke  0 0
+.         ti  r018a r018v
+r019a     ke  51 0
+r019v     ke  0 0
+.         ti  r019a r019v
+r020a     ke  52 0
+r020v     ke  1 0
+.         ti  r020a r020v
+r021a     ke  53 0
+r021v     ke  1 0
+.         ti  r021a r021v
+r022a     ke  54 0
+r022v     ke  1 0
+.         ti  r022a r022v
+r023a     ke  55 0
+r023v     ke  0 0
+.         ti  r023a r023v
+r024a     ke  56 0
+r024v     ke  0 0
+.         ti  r024a r024v
+r025a     ke  57 0
+r025v     ke  0 0
+.         ti  r025a r025v
+r026a     ke  58 0
+r026v     ke  0 0
+.         ti  r026a r026v
+r027a     ke  59 0
+r027v     ke  0 0
+.         ti  r027a r027v
+r028a     ke  60 0
+r028v     ke  0 0
+.         ti  r028a r028v
+r029a     ke  61 0
+r029v     ke  0 0
+.         ti  r029a r029v
+r030a     ke  62 0
+r030v     ke  0 0
+.         ti  r030a r030v
+r031a     ke  63 0
+r031v     ke  0 0
+.         ti  r031a r031v
+r032a     ke  64 0
+r032v     ke  0 0
+.         ti  r032a r032v
+r033a     ke  65 0
+r033v     ke  0 0
+.         ti  r033a r033v
+r034a     ke  66 0
+r034v     ke  2 0
+.         ti  r034a r034v
+r035a     ke  67 0
+r035v     ke  2 0
+.         ti  r035a r035v
+r036a     ke  68 0
+r036v     ke  0 0
+.         ti  r036a r036v
+r037a     ke  69 0
+r037v     ke  0 0
+.         ti  r037a r037v
+r038a     ke  70 0
+r038v     ke  0 0
+.         ti  r038a r038v
+r039a     ke  71 0
+r039v     ke  0 0
+.         ti  r039a r039v
+# 生成元ごとの入力ポート数
+i000a     ke  80 0
+i000v     ke  0 0
+.         ti  i000a i000v
+i001a     ke  81 0
+i001v     ke  2 0
+.         ti  i001a i001v
+i002a     ke  82 0
+i002v     ke  2 0
+.         ti  i002a i002v
+i003a     ke  83 0
+i003v     ke  1 0
+.         ti  i003a i003v
+i004a     ke  84 0
+i004v     ke  2 0
+.         ti  i004a i004v
+i005a     ke  85 0
+i005v     ke  2 0
+.         ti  i005a i005v
+i006a     ke  86 0
+i006v     ke  0 0
+.         ti  i006a i006v
+i007a     ke  87 0
+i007v     ke  1 0
+.         ti  i007a i007v
+i008a     ke  88 0
+i008v     ke  2 0
+.         ti  i008a i008v
+i009a     ke  89 0
+i009v     ke  0 0
+.         ti  i009a i009v
+i010a     ke  90 0
+i010v     ke  0 0
+.         ti  i010a i010v
+i011a     ke  91 0
+i011v     ke  1 0
+.         ti  i011a i011v
+i012a     ke  92 0
+i012v     ke  1 0
+.         ti  i012a i012v
+i013a     ke  93 0
+i013v     ke  1 0
+.         ti  i013a i013v
+i014a     ke  94 0
+i014v     ke  0 0
+.         ti  i014a i014v
+i015a     ke  95 0
+i015v     ke  0 0
+.         ti  i015a i015v
+i016a     ke  96 0
+i016v     ke  1 0
+.         ti  i016a i016v
+i017a     ke  97 0
+i017v     ke  1 0
+.         ti  i017a i017v
+i018a     ke  98 0
+i018v     ke  1 0
+.         ti  i018a i018v
+i019a     ke  99 0
+i019v     ke  1 0
+.         ti  i019a i019v
+i020a     ke  100 0
+i020v     ke  1 0
+.         ti  i020a i020v
+i021a     ke  101 0
+i021v     ke  1 0
+.         ti  i021a i021v
+i022a     ke  102 0
+i022v     ke  1 0
+.         ti  i022a i022v
+i023a     ke  103 0
+i023v     ke  1 0
+.         ti  i023a i023v
+i024a     ke  104 0
+i024v     ke  1 0
+.         ti  i024a i024v
+i025a     ke  105 0
+i025v     ke  2 0
+.         ti  i025a i025v
+i026a     ke  106 0
+i026v     ke  2 0
+.         ti  i026a i026v
+i027a     ke  107 0
+i027v     ke  2 0
+.         ti  i027a i027v
+i028a     ke  108 0
+i028v     ke  2 0
+.         ti  i028a i028v
+i029a     ke  109 0
+i029v     ke  1 0
+.         ti  i029a i029v
+i030a     ke  110 0
+i030v     ke  1 0
+.         ti  i030a i030v
+i031a     ke  111 0
+i031v     ke  1 0
+.         ti  i031a i031v
+i032a     ke  112 0
+i032v     ke  2 0
+.         ti  i032a i032v
+i033a     ke  113 0
+i033v     ke  0 0
+.         ti  i033a i033v
+i034a     ke  114 0
+i034v     ke  2 0
+.         ti  i034a i034v
+i035a     ke  115 0
+i035v     ke  2 0
+.         ti  i035a i035v
+i036a     ke  116 0
+i036v     ke  1 0
+.         ti  i036a i036v
+i037a     ke  117 0
+i037v     ke  1 0
+.         ti  i037a i037v
+i038a     ke  118 0
+i038v     ke  0 0
+.         ti  i038a i038v
+i039a     ke  119 0
+i039v     ke  0 0
+.         ti  i039a i039v
+# 生成元ごとの出力ポート数
+o000a     ke  128 0
+o000v     ke  1 0
+.         ti  o000a o000v
+o001a     ke  129 0
+o001v     ke  1 0
+.         ti  o001a o001v
+o002a     ke  130 0
+o002v     ke  1 0
+.         ti  o002a o002v
+o003a     ke  131 0
+o003v     ke  1 0
+.         ti  o003a o003v
+o004a     ke  132 0
+o004v     ke  0 0
+.         ti  o004a o004v
+o005a     ke  133 0
+o005v     ke  0 0
+.         ti  o005a o005v
+o006a     ke  134 0
+o006v     ke  0 0
+.         ti  o006a o006v
+o007a     ke  135 0
+o007v     ke  1 0
+.         ti  o007a o007v
+o008a     ke  136 0
+o008v     ke  0 0
+.         ti  o008a o008v
+o009a     ke  137 0
+o009v     ke  0 0
+.         ti  o009a o009v
+o010a     ke  138 0
+o010v     ke  0 0
+.         ti  o010a o010v
+o011a     ke  139 0
+o011v     ke  1 0
+.         ti  o011a o011v
+o012a     ke  140 0
+o012v     ke  2 0
+.         ti  o012a o012v
+o013a     ke  141 0
+o013v     ke  0 0
+.         ti  o013a o013v
+o014a     ke  142 0
+o014v     ke  0 0
+.         ti  o014a o014v
+o015a     ke  143 0
+o015v     ke  0 0
+.         ti  o015a o015v
+o016a     ke  144 0
+o016v     ke  1 0
+.         ti  o016a o016v
+o017a     ke  145 0
+o017v     ke  1 0
+.         ti  o017a o017v
+o018a     ke  146 0
+o018v     ke  1 0
+.         ti  o018a o018v
+o019a     ke  147 0
+o019v     ke  1 0
+.         ti  o019a o019v
+o020a     ke  148 0
+o020v     ke  1 0
+.         ti  o020a o020v
+o021a     ke  149 0
+o021v     ke  1 0
+.         ti  o021a o021v
+o022a     ke  150 0
+o022v     ke  1 0
+.         ti  o022a o022v
+o023a     ke  151 0
+o023v     ke  1 0
+.         ti  o023a o023v
+o024a     ke  152 0
+o024v     ke  1 0
+.         ti  o024a o024v
+o025a     ke  153 0
+o025v     ke  1 0
+.         ti  o025a o025v
+o026a     ke  154 0
+o026v     ke  1 0
+.         ti  o026a o026v
+o027a     ke  155 0
+o027v     ke  1 0
+.         ti  o027a o027v
+o028a     ke  156 0
+o028v     ke  1 0
+.         ti  o028a o028v
+o029a     ke  157 0
+o029v     ke  1 0
+.         ti  o029a o029v
+o030a     ke  158 0
+o030v     ke  1 0
+.         ti  o030a o030v
+o031a     ke  159 0
+o031v     ke  1 0
+.         ti  o031a o031v
+o032a     ke  160 0
+o032v     ke  1 0
+.         ti  o032a o032v
+o033a     ke  161 0
+o033v     ke  1 0
+.         ti  o033a o033v
+o034a     ke  162 0
+o034v     ke  1 0
+.         ti  o034a o034v
+o035a     ke  163 0
+o035v     ke  1 0
+.         ti  o035a o035v
+o036a     ke  164 0
+o036v     ke  1 0
+.         ti  o036a o036v
+o037a     ke  165 0
+o037v     ke  1 0
+.         ti  o037a o037v
+o038a     ke  166 0
+o038v     ke  0 0
+.         ti  o038a o038v
+o039a     ke  167 0
+o039v     ke  0 0
+.         ti  o039a o039v
+# 生成元ごとの作図深度。恒等は 0、原始箱は 1
+d000a     ke  176 0
+d000v     ke  1 0
+.         ti  d000a d000v
+d001a     ke  177 0
+d001v     ke  1 0
+.         ti  d001a d001v
+d002a     ke  178 0
+d002v     ke  1 0
+.         ti  d002a d002v
+d003a     ke  179 0
+d003v     ke  1 0
+.         ti  d003a d003v
+d004a     ke  180 0
+d004v     ke  1 0
+.         ti  d004a d004v
+d005a     ke  181 0
+d005v     ke  1 0
+.         ti  d005a d005v
+d006a     ke  182 0
+d006v     ke  1 0
+.         ti  d006a d006v
+d007a     ke  183 0
+d007v     ke  1 0
+.         ti  d007a d007v
+d008a     ke  184 0
+d008v     ke  1 0
+.         ti  d008a d008v
+d009a     ke  185 0
+d009v     ke  1 0
+.         ti  d009a d009v
+d010a     ke  186 0
+d010v     ke  1 0
+.         ti  d010a d010v
+d011a     ke  187 0
+d011v     ke  0 0
+.         ti  d011a d011v
+d012a     ke  188 0
+d012v     ke  1 0
+.         ti  d012a d012v
+d013a     ke  189 0
+d013v     ke  1 0
+.         ti  d013a d013v
+d014a     ke  190 0
+d014v     ke  1 0
+.         ti  d014a d014v
+d015a     ke  191 0
+d015v     ke  1 0
+.         ti  d015a d015v
+d016a     ke  192 0
+d016v     ke  1 0
+.         ti  d016a d016v
+d017a     ke  193 0
+d017v     ke  1 0
+.         ti  d017a d017v
+d018a     ke  194 0
+d018v     ke  1 0
+.         ti  d018a d018v
+d019a     ke  195 0
+d019v     ke  1 0
+.         ti  d019a d019v
+d020a     ke  196 0
+d020v     ke  1 0
+.         ti  d020a d020v
+d021a     ke  197 0
+d021v     ke  1 0
+.         ti  d021a d021v
+d022a     ke  198 0
+d022v     ke  1 0
+.         ti  d022a d022v
+d023a     ke  199 0
+d023v     ke  1 0
+.         ti  d023a d023v
+d024a     ke  200 0
+d024v     ke  1 0
+.         ti  d024a d024v
+d025a     ke  201 0
+d025v     ke  1 0
+.         ti  d025a d025v
+d026a     ke  202 0
+d026v     ke  1 0
+.         ti  d026a d026v
+d027a     ke  203 0
+d027v     ke  1 0
+.         ti  d027a d027v
+d028a     ke  204 0
+d028v     ke  1 0
+.         ti  d028a d028v
+d029a     ke  205 0
+d029v     ke  1 0
+.         ti  d029a d029v
+d030a     ke  206 0
+d030v     ke  1 0
+.         ti  d030a d030v
+d031a     ke  207 0
+d031v     ke  1 0
+.         ti  d031a d031v
+d032a     ke  208 0
+d032v     ke  1 0
+.         ti  d032a d032v
+d033a     ke  209 0
+d033v     ke  1 0
+.         ti  d033a d033v
+d034a     ke  210 0
+d034v     ke  1 0
+.         ti  d034a d034v
+d035a     ke  211 0
+d035v     ke  1 0
+.         ti  d035a d035v
+d036a     ke  212 0
+d036v     ke  1 0
+.         ti  d036a d036v
+d037a     ke  213 0
+d037v     ke  1 0
+.         ti  d037a d037v
+d038a     ke  214 0
+d038v     ke  1 0
+.         ti  d038a d038v
+d039a     ke  215 0
+d039v     ke  1 0
+.         ti  d039a d039v
+# 型ごとの複製・廃棄の可否（13 章 §1.2）
+c000a     ke  224 0
+c000v     ke  1 0
+.         ti  c000a c000v
+c001a     ke  225 0
+c001v     ke  0 0
+.         ti  c001a c001v
+c002a     ke  226 0
+c002v     ke  1 0
+.         ti  c002a c002v
+c003a     ke  227 0
+c003v     ke  1 0
+.         ti  c003a c003v
+c004a     ke  228 0
+c004v     ke  1 0
+.         ti  c004a c004v
+c005a     ke  229 0
+c005v     ke  0 0
+.         ti  c005a c005v
+c006a     ke  230 0
+c006v     ke  1 0
+.         ti  c006a c006v
+c007a     ke  231 0
+c007v     ke  1 0
+.         ti  c007a c007v
+c008a     ke  232 0
+c008v     ke  1 0
+.         ti  c008a c008v
+c009a     ke  233 0
+c009v     ke  1 0
+.         ti  c009a c009v
+c010a     ke  234 0
+c010v     ke  1 0
+.         ti  c010a c010v
+c011a     ke  235 0
+c011v     ke  1 0
+.         ti  c011a c011v
+c012a     ke  236 0
+c012v     ke  1 0
+.         ti  c012a c012v
+c013a     ke  237 0
+c013v     ke  1 0
+.         ti  c013a c013v
+c014a     ke  238 0
+c014v     ke  1 0
+.         ti  c014a c014v
+c015a     ke  239 0
+c015v     ke  1 0
+.         ti  c015a c015v
+# 読む語列の先頭
+b000a     ke  240 0
+b000v     ke  256 0
+.         ti  b000a b000v
+b001a     ke  241 0
+b001v     ke  320 0
+.         ti  b001a b001v
+# 整形式な code(C)
+s000a     ke  256 0
+s000v     ke  3 0
+.         ti  s000a s000v
+s001a     ke  257 0
+s001v     ke  3 0
+.         ti  s001a s001v
+s002a     ke  258 0
+s002v     ke  0 0
+.         ti  s002a s002v
+s003a     ke  259 0
+s003v     ke  0 0
+.         ti  s003a s003v
+s004a     ke  260 0
+s004v     ke  2 0
+.         ti  s004a s004v
+s005a     ke  261 0
+s005v     ke  1 0
+.         ti  s005a s005v
+s006a     ke  262 0
+s006v     ke  0 0
+.         ti  s006a s006v
+s007a     ke  263 0
+s007v     ke  3 0
+.         ti  s007a s007v
+s008a     ke  264 0
+s008v     ke  3 0
+.         ti  s008a s008v
+s009a     ke  265 0
+s009v     ke  4 0
+.         ti  s009a s009v
+s010a     ke  266 0
+s010v     ke  0 0
+.         ti  s010a s010v
+s011a     ke  267 0
+s011v     ke  0 0
+.         ti  s011a s011v
+s012a     ke  268 0
+s012v     ke  12 0
+.         ti  s012a s012v
+s013a     ke  269 0
+s013v     ke  1 0
+.         ti  s013a s013v
+s014a     ke  270 0
+s014v     ke  3 0
+.         ti  s014a s014v
+s015a     ke  271 0
+s015v     ke  0 0
+.         ti  s015a s015v
+s016a     ke  272 0
+s016v     ke  1 0
+.         ti  s016a s016v
+s017a     ke  273 0
+s017v     ke  11 0
+.         ti  s017a s017v
+s018a     ke  274 0
+s018v     ke  1 0
+.         ti  s018a s018v
+s019a     ke  275 0
+s019v     ke  3 0
+.         ti  s019a s019v
+s020a     ke  276 0
+s020v     ke  1 0
+.         ti  s020a s020v
+s021a     ke  277 0
+s021v     ke  0 0
+.         ti  s021a s021v
+s022a     ke  278 0
+s022v     ke  25 0
+.         ti  s022a s022v
+s023a     ke  279 0
+s023v     ke  0 0
+.         ti  s023a s023v
+s024a     ke  280 0
+s024v     ke  1 0
+.         ti  s024a s024v
+s025a     ke  281 0
+s025v     ke  2 0
+.         ti  s025a s025v
+s026a     ke  282 0
+s026v     ke  11 0
+.         ti  s026a s026v
+s027a     ke  283 0
+s027v     ke  1 0
+.         ti  s027a s027v
+s028a     ke  284 0
+s028v     ke  3 0
+.         ti  s028a s028v
+s029a     ke  285 0
+s029v     ke  2 0
+.         ti  s029a s029v
+s030a     ke  286 0
+s030v     ke  0 0
+.         ti  s030a s030v
+s031a     ke  287 0
+s031v     ke  23 0
+.         ti  s031a s031v
+s032a     ke  288 0
+s032v     ke  0 0
+.         ti  s032a s032v
+s033a     ke  289 0
+s033v     ke  2 0
+.         ti  s033a s033v
+s034a     ke  290 0
+s034v     ke  1 0
+.         ti  s034a s034v
+s035a     ke  291 0
+s035v     ke  13 0
+.         ti  s035a s035v
+s036a     ke  292 0
+s036v     ke  1 0
+.         ti  s036a s036v
+s037a     ke  293 0
+s037v     ke  3 0
+.         ti  s037a s037v
+s038a     ke  294 0
+s038v     ke  -1 0
+.         ti  s038a s038v
+# Trace を複製しようとする code(C)
+t000a     ke  320 0
+t000v     ke  3 0
+.         ti  t000a t000v
+t001a     ke  321 0
+t001v     ke  3 0
+.         ti  t001a t001v
+t002a     ke  322 0
+t002v     ke  0 0
+.         ti  t002a t002v
+t003a     ke  323 0
+t003v     ke  0 0
+.         ti  t003a t003v
+t004a     ke  324 0
+t004v     ke  2 0
+.         ti  t004a t004v
+t005a     ke  325 0
+t005v     ke  1 0
+.         ti  t005a t005v
+t006a     ke  326 0
+t006v     ke  0 0
+.         ti  t006a t006v
+t007a     ke  327 0
+t007v     ke  3 0
+.         ti  t007a t007v
+t008a     ke  328 0
+t008v     ke  3 0
+.         ti  t008a t008v
+t009a     ke  329 0
+t009v     ke  4 0
+.         ti  t009a t009v
+t010a     ke  330 0
+t010v     ke  0 0
+.         ti  t010a t010v
+t011a     ke  331 0
+t011v     ke  0 0
+.         ti  t011a t011v
+t012a     ke  332 0
+t012v     ke  12 0
+.         ti  t012a t012v
+t013a     ke  333 0
+t013v     ke  1 0
+.         ti  t013a t013v
+t014a     ke  334 0
+t014v     ke  1 0
+.         ti  t014a t014v
+t015a     ke  335 0
+t015v     ke  0 0
+.         ti  t015a t015v
+t016a     ke  336 0
+t016v     ke  1 0
+.         ti  t016a t016v
+t017a     ke  337 0
+t017v     ke  11 0
+.         ti  t017a t017v
+t018a     ke  338 0
+t018v     ke  1 0
+.         ti  t018a t018v
+t019a     ke  339 0
+t019v     ke  3 0
+.         ti  t019a t019v
+t020a     ke  340 0
+t020v     ke  1 0
+.         ti  t020a t020v
+t021a     ke  341 0
+t021v     ke  0 0
+.         ti  t021a t021v
+t022a     ke  342 0
+t022v     ke  25 0
+.         ti  t022a t022v
+t023a     ke  343 0
+t023v     ke  0 0
+.         ti  t023a t023v
+t024a     ke  344 0
+t024v     ke  1 0
+.         ti  t024a t024v
+t025a     ke  345 0
+t025v     ke  2 0
+.         ti  t025a t025v
+t026a     ke  346 0
+t026v     ke  11 0
+.         ti  t026a t026v
+t027a     ke  347 0
+t027v     ke  1 0
+.         ti  t027a t027v
+t028a     ke  348 0
+t028v     ke  3 0
+.         ti  t028a t028v
+t029a     ke  349 0
+t029v     ke  2 0
+.         ti  t029a t029v
+t030a     ke  350 0
+t030v     ke  0 0
+.         ti  t030a t030v
+t031a     ke  351 0
+t031v     ke  23 0
+.         ti  t031a t031v
+t032a     ke  352 0
+t032v     ke  0 0
+.         ti  t032a t032v
+t033a     ke  353 0
+t033v     ke  2 0
+.         ti  t033a t033v
+t034a     ke  354 0
+t034v     ke  1 0
+.         ti  t034a t034v
+t035a     ke  355 0
+t035v     ke  13 0
+.         ti  t035a t035v
+t036a     ke  356 0
+t036v     ke  1 0
+.         ti  t036a t036v
+t037a     ke  357 0
+t037v     ke  3 0
+.         ti  t037a t037v
+t038a     ke  358 0
+t038v     ke  -1 0
+.         ti  t038a t038v
+# 期待値: 復元した語列と、二本の診断
+x000a     ke  640 0
+x000v     ke  3 0
+.         ti  x000a x000v
+x001a     ke  641 0
+x001v     ke  3 0
+.         ti  x001a x001v
+x002a     ke  642 0
+x002v     ke  0 0
+.         ti  x002a x002v
+x003a     ke  643 0
+x003v     ke  0 0
+.         ti  x003a x003v
+x004a     ke  644 0
+x004v     ke  2 0
+.         ti  x004a x004v
+x005a     ke  645 0
+x005v     ke  1 0
+.         ti  x005a x005v
+x006a     ke  646 0
+x006v     ke  0 0
+.         ti  x006a x006v
+x007a     ke  647 0
+x007v     ke  3 0
+.         ti  x007a x007v
+x008a     ke  648 0
+x008v     ke  3 0
+.         ti  x008a x008v
+x009a     ke  649 0
+x009v     ke  4 0
+.         ti  x009a x009v
+x010a     ke  650 0
+x010v     ke  0 0
+.         ti  x010a x010v
+x011a     ke  651 0
+x011v     ke  0 0
+.         ti  x011a x011v
+x012a     ke  652 0
+x012v     ke  12 0
+.         ti  x012a x012v
+x013a     ke  653 0
+x013v     ke  1 0
+.         ti  x013a x013v
+x014a     ke  654 0
+x014v     ke  3 0
+.         ti  x014a x014v
+x015a     ke  655 0
+x015v     ke  0 0
+.         ti  x015a x015v
+x016a     ke  656 0
+x016v     ke  1 0
+.         ti  x016a x016v
+x017a     ke  657 0
+x017v     ke  11 0
+.         ti  x017a x017v
+x018a     ke  658 0
+x018v     ke  1 0
+.         ti  x018a x018v
+x019a     ke  659 0
+x019v     ke  3 0
+.         ti  x019a x019v
+x020a     ke  660 0
+x020v     ke  1 0
+.         ti  x020a x020v
+x021a     ke  661 0
+x021v     ke  0 0
+.         ti  x021a x021v
+x022a     ke  662 0
+x022v     ke  25 0
+.         ti  x022a x022v
+x023a     ke  663 0
+x023v     ke  0 0
+.         ti  x023a x023v
+x024a     ke  664 0
+x024v     ke  1 0
+.         ti  x024a x024v
+x025a     ke  665 0
+x025v     ke  2 0
+.         ti  x025a x025v
+x026a     ke  666 0
+x026v     ke  11 0
+.         ti  x026a x026v
+x027a     ke  667 0
+x027v     ke  1 0
+.         ti  x027a x027v
+x028a     ke  668 0
+x028v     ke  3 0
+.         ti  x028a x028v
+x029a     ke  669 0
+x029v     ke  2 0
+.         ti  x029a x029v
+x030a     ke  670 0
+x030v     ke  0 0
+.         ti  x030a x030v
+x031a     ke  671 0
+x031v     ke  23 0
+.         ti  x031a x031v
+x032a     ke  672 0
+x032v     ke  0 0
+.         ti  x032a x032v
+x033a     ke  673 0
+x033v     ke  2 0
+.         ti  x033a x033v
+x034a     ke  674 0
+x034v     ke  1 0
+.         ti  x034a x034v
+x035a     ke  675 0
+x035v     ke  13 0
+.         ti  x035a x035v
+x036a     ke  676 0
+x036v     ke  1 0
+.         ti  x036a x036v
+x037a     ke  677 0
+x037v     ke  3 0
+.         ti  x037a x037v
+x038a     ke  678 0
+x038v     ke  -1 0
+.         ti  x038a x038v
+x039a     ke  679 0
+x039v     ke  0 0
+.         ti  x039a x039v
+x040a     ke  680 0
+x040v     ke  4 0
+.         ti  x040a x040v
+
+# ======== 語列を二本とも読む ========
+v00001    ke  0 0
+v00002    ke  20 0
+.         ti  v00002 v00001
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW5     ke  0 0
+LcW5      ke  20 0
+v00003W5  ke  20 0
+v00004W5  ta  v00003W5
+v00005W5  ke  2 0
+.         se  v00004W5 v00005W5 Lc
+.         so  Lce
+Lc        ke  20 0
+v00003    ke  20 0
+v00004    ta  v00003
+v00005    ke  2 0
+v00006    ke  240 0
+v00007    ko  v00006 v00004
+v00008    ta  v00007
+v00009    ke  22 0
+.         ti  v00009 v00008
+v00010    ke  0 0
+v00011    ke  4 0
+.         ti  v00011 v00010
+#   格付けと欄長を読む（13 章 §2 式 2.1）
+v00012    ke  22 0
+v00013    ta  v00012
+v00014    ke  0 0
+.         ti  v00014 v00013
+v00015    ke  0 0
+v00016    ke  1 0
+.         ti  v00016 v00015
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW0     ke  0 0
+LhdW0     ke  1 0
+v00017W0  ke  1 0
+v00018W0  ta  v00017W0
+v00019W0  ke  7 0
+.         se  v00018W0 v00019W0 Lhd
+.         so  Lhde
+Lhd       ke  1 0
+v00017    ke  1 0
+v00018    ta  v00017
+v00019    ke  7 0
+v00020    ke  0 0
+v00021    ta  v00020
+v00022    ko  v00021 v00018
+v00023    ke  0 0
+v00024    ko  v00023 v00022
+v00025    ta  v00024
+v00026    ke  384 0
+v00027    ko  v00026 v00018
+.         ti  v00027 v00025
+v00028    ke  1 0
+v00029    ko  v00018 v00028
+v00030    ke  1 0
+.         ti  v00030 v00029
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW0     ke  0 0
+LhdW0z    ke  1 0
+v00017W0z ke  1 0
+v00018W0z ta  v00017W0z
+v00019W0z ke  7 0
+.         se  v00018W0z v00019W0z Lhd
+.         so  Lhde                       # 境界に届いた
+Lhde      ke  0 0
+#   境界語と集積点アドレスをそのまま写す
+v00031    ke  4 0
+v00032    ke  384 0
+v00033    ko  v00032 v00031
+v00034    ta  v00033
+v00035    ke  5 0
+v00036    ke  384 0
+v00037    ko  v00036 v00035
+v00038    ta  v00037
+v00039    ko  v00034 v00038
+v00040    ke  6 0
+v00041    ke  384 0
+v00042    ko  v00041 v00040
+v00043    ta  v00042
+v00044    ko  v00039 v00043
+v00045    ke  23 0
+.         ti  v00045 v00044
+v00046    ke  0 0
+v00047    ke  1 0
+.         ti  v00047 v00046
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW1     ke  0 0
+LgbW1     ke  1 0
+v00048W1  ke  1 0
+v00049W1  ta  v00048W1
+v00050W1  ke  23 0
+v00051W1  ta  v00050W1
+.         se  v00049W1 v00051W1 Lgb
+.         so  Lgbe
+Lgb       ke  1 0
+v00048    ke  1 0
+v00049    ta  v00048
+v00050    ke  23 0
+v00051    ta  v00050
+v00052    ke  0 0
+v00053    ta  v00052
+v00054    ke  7 0
+v00055    ko  v00053 v00054
+v00056    ko  v00055 v00049
+v00057    ke  0 0
+v00058    ko  v00057 v00056
+v00059    ta  v00058
+v00060    ke  391 0
+v00061    ko  v00060 v00049
+.         ti  v00061 v00059
+v00062    ke  1 0
+v00063    ko  v00049 v00062
+v00064    ke  1 0
+.         ti  v00064 v00063
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW1     ke  0 0
+LgbW1z    ke  1 0
+v00048W1z ke  1 0
+v00049W1z ta  v00048W1z
+v00050W1z ke  23 0
+v00051W1z ta  v00050W1z
+.         se  v00049W1z v00051W1z Lgb
+.         so  Lgbe                       # 境界に届いた
+Lgbe      ke  0 0
+v00065    ke  7 0
+v00066    ke  23 0
+v00067    ta  v00066
+v00068    ko  v00065 v00067
+v00069    ke  21 0
+.         ti  v00069 v00068
+v00070    ke  0 0
+v00071    ta  v00070
+v00072    ke  21 0
+v00073    ta  v00072
+v00074    ko  v00071 v00073
+v00075    ke  0 0
+.         ti  v00075 v00074
+
+#   原子箱の走査。層ごとに q が重なりなく境界を覆うことを確かめる
+v00076    ke  4 0
+v00077    ke  384 0
+v00078    ko  v00077 v00076
+v00079    ta  v00078
+v00080    ke  10 0
+.         ti  v00080 v00079
+v00081    ke  0 0
+v00082    ke  11 0
+.         ti  v00082 v00081
+v00083    ke  0 0
+v00084    ke  12 0
+.         ti  v00084 v00083
+v00085    ke  0 0
+v00086    ke  13 0
+.         ti  v00086 v00085
+v00087    ke  0 0
+v00088    ke  14 0
+.         ti  v00088 v00087
+v00089    ke  0 0
+v00090    ke  15 0
+.         ti  v00090 v00089
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW3     ke  0 0
+LaW3      ke  0 0
+v00091W3  ke  0 0
+v00092W3  ta  v00091W3
+v00093W3  ke  0 0
+v00094W3  ko  v00093W3 v00092W3
+v00095W3  ta  v00094W3
+v00096W3  ke  -1 0
+.         se  v00096W3 v00095W3 La
+.         so  Lae
+La        ke  0 0
+v00091    ke  0 0
+v00092    ta  v00091
+v00093    ke  0 0
+v00094    ko  v00093 v00092
+v00095    ta  v00094
+v00096    ke  -1 0
+v00097    ke  0 0
+v00098    ta  v00097
+v00099    ke  0 0
+v00100    ko  v00099 v00098
+v00101    ta  v00100
+v00102    ke  6 0
+.         ti  v00102 v00101
+v00103    ke  0 0
+v00104    ta  v00103
+v00105    ke  1 0
+v00106    ko  v00104 v00105
+v00107    ke  0 0
+v00108    ko  v00107 v00106
+v00109    ta  v00108
+v00110    ke  7 0
+.         ti  v00110 v00109
+v00111    ke  0 0
+v00112    ta  v00111
+v00113    ke  2 0
+v00114    ko  v00112 v00113
+v00115    ke  0 0
+v00116    ko  v00115 v00114
+v00117    ta  v00116
+v00118    ke  8 0
+.         ti  v00118 v00117
+v00119    ke  0 0
+v00120    ta  v00119
+v00121    ke  3 0
+v00122    ko  v00120 v00121
+v00123    ke  0 0
+v00124    ko  v00123 v00122
+v00125    ta  v00124
+v00126    ke  9 0
+.         ti  v00126 v00125
+#   引数の本数（13 章 §6「引数の本数」）
+v00127    ke  9 0
+v00128    ta  v00127
+v00129    ke  8 0
+v00130    ta  v00129
+v00131    ke  32 0
+v00132    ko  v00131 v00130
+v00133    ta  v00132
+.         su  v00128 v00133 La1
+v00134    ke  1 0
+v00135    ke  4 0
+.         ti  v00135 v00134
+.         so  Lrep
+La1       ke  0 0
+#   層が変わったら、前の層が全境界を覆ったかを見る
+v00136    ke  6 0
+v00137    ta  v00136
+v00138    ke  15 0
+v00139    ta  v00138
+.         su  v00137 v00139 La2
+v00140    ke  11 0
+v00141    ta  v00140
+v00142    ke  10 0
+v00143    ta  v00142
+.         su  v00141 v00143 La1b
+v00144    ke  2 0
+v00145    ke  4 0
+.         ti  v00145 v00144
+.         so  Lrep
+La1b      ke  0 0
+v00146    ke  14 0
+v00147    ta  v00146
+v00148    ke  13 0
+v00149    ta  v00148
+v00150    ko  v00147 v00149
+v00151    ke  14 0
+.         ti  v00151 v00150
+v00152    ke  12 0
+v00153    ta  v00152
+v00154    ke  10 0
+.         ti  v00154 v00153
+v00155    ke  0 0
+v00156    ke  12 0
+.         ti  v00156 v00155
+v00157    ke  0 0
+v00158    ke  11 0
+.         ti  v00158 v00157
+v00159    ke  0 0
+v00160    ke  13 0
+.         ti  v00160 v00159
+v00161    ke  6 0
+v00162    ta  v00161
+v00163    ke  15 0
+.         ti  v00163 v00162
+La2       ke  0 0
+#   左端が続いているか。隙間も重なりも許さない（非連続入力・暗黙複製・暗黙廃棄）
+v00164    ke  7 0
+v00165    ta  v00164
+v00166    ke  11 0
+v00167    ta  v00166
+.         su  v00165 v00167 La3
+v00168    ke  2 0
+v00169    ke  4 0
+.         ti  v00169 v00168
+.         so  Lrep
+La3       ke  0 0
+#   複製と廃棄は型が許すときだけ置ける（§2.6）
+v00170    ke  8 0
+v00171    ta  v00170
+v00172    ke  12 0
+.         su  v00171 v00172 Lcp
+v00173    ke  8 0
+v00174    ta  v00173
+v00175    ke  13 0
+.         su  v00174 v00175 Lds
+.         so  La4
+Lcp       ke  0 0
+v00176    ke  0 0
+v00177    ta  v00176
+v00178    ke  4 0
+v00179    ko  v00177 v00178
+v00180    ke  0 0
+v00181    ko  v00180 v00179
+v00182    ta  v00181
+v00183    ke  224 0
+v00184    ko  v00183 v00182
+v00185    ta  v00184
+v00186    ke  1 0
+.         su  v00185 v00186 La4
+v00187    ke  4 0
+v00188    ke  4 0
+.         ti  v00188 v00187
+.         so  Lrep
+Lds       ke  0 0
+v00189    ke  0 0
+v00190    ta  v00189
+v00191    ke  4 0
+v00192    ko  v00190 v00191
+v00193    ke  0 0
+v00194    ko  v00193 v00192
+v00195    ta  v00194
+v00196    ke  224 0
+v00197    ko  v00196 v00195
+v00198    ta  v00197
+v00199    ke  1 0
+.         su  v00198 v00199 La4
+v00200    ke  5 0
+v00201    ke  4 0
+.         ti  v00201 v00200
+.         so  Lrep
+La4       ke  0 0
+#   frontier を進める。幅は箱のポート列だけから決まる（命題 5.1）
+v00202    ke  11 0
+v00203    ta  v00202
+v00204    ke  8 0
+v00205    ta  v00204
+v00206    ke  80 0
+v00207    ko  v00206 v00205
+v00208    ta  v00207
+v00209    ko  v00203 v00208
+v00210    ke  11 0
+.         ti  v00210 v00209
+v00211    ke  12 0
+v00212    ta  v00211
+v00213    ke  8 0
+v00214    ta  v00213
+v00215    ke  128 0
+v00216    ko  v00215 v00214
+v00217    ta  v00216
+v00218    ko  v00212 v00217
+v00219    ke  12 0
+.         ti  v00219 v00218
+v00220    ke  13 0
+v00221    ta  v00220
+v00222    ke  8 0
+v00223    ta  v00222
+v00224    ke  176 0
+v00225    ko  v00224 v00223
+v00226    ta  v00225
+.         se  v00221 v00226 La5
+.         so  La6
+La5       ke  0 0
+v00227    ke  8 0
+v00228    ta  v00227
+v00229    ke  176 0
+v00230    ko  v00229 v00228
+v00231    ta  v00230
+v00232    ke  13 0
+.         ti  v00232 v00231
+La6       ke  0 0
+#   原子箱をそのまま復元先へ写す
+v00233    ke  0 0
+v00234    ke  3 0
+.         ti  v00234 v00233
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW2     ke  0 0
+LakW2     ke  3 0
+v00235W2  ke  3 0
+v00236W2  ta  v00235W2
+v00237W2  ke  4 0
+v00238W2  ke  9 0
+v00239W2  ta  v00238W2
+v00240W2  ko  v00237W2 v00239W2
+.         se  v00236W2 v00240W2 Lak
+.         so  Lake
+Lak       ke  3 0
+v00235    ke  3 0
+v00236    ta  v00235
+v00237    ke  4 0
+v00238    ke  9 0
+v00239    ta  v00238
+v00240    ko  v00237 v00239
+v00241    ke  21 0
+v00242    ta  v00241
+v00243    ko  v00242 v00236
+v00244    ke  0 0
+v00245    ta  v00244
+v00246    ke  3 0
+v00247    ta  v00246
+v00248    ko  v00245 v00247
+v00249    ke  0 0
+v00250    ko  v00249 v00248
+v00251    ta  v00250
+v00252    ke  384 0
+v00253    ko  v00252 v00243
+.         ti  v00253 v00251
+v00254    ke  1 0
+v00255    ko  v00236 v00254
+v00256    ke  3 0
+.         ti  v00256 v00255
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW2     ke  0 0
+LakW2z    ke  3 0
+v00235W2z ke  3 0
+v00236W2z ta  v00235W2z
+v00237W2z ke  4 0
+v00238W2z ke  9 0
+v00239W2z ta  v00238W2z
+v00240W2z ko  v00237W2z v00239W2z
+.         se  v00236W2z v00240W2z Lak
+.         so  Lake                       # 境界に届いた
+Lake      ke  0 0
+v00257    ke  21 0
+v00258    ta  v00257
+v00259    ke  4 0
+v00260    ke  9 0
+v00261    ta  v00260
+v00262    ko  v00259 v00261
+v00263    ko  v00258 v00262
+v00264    ke  21 0
+.         ti  v00264 v00263
+v00265    ke  0 0
+v00266    ta  v00265
+v00267    ke  4 0
+v00268    ke  9 0
+v00269    ta  v00268
+v00270    ko  v00267 v00269
+v00271    ko  v00266 v00270
+v00272    ke  0 0
+.         ti  v00272 v00271
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW3     ke  0 0
+LaW3z     ke  0 0
+v00091W3z ke  0 0
+v00092W3z ta  v00091W3z
+v00093W3z ke  0 0
+v00094W3z ko  v00093W3z v00092W3z
+v00095W3z ta  v00094W3z
+v00096W3z ke  -1 0
+.         se  v00096W3z v00095W3z La
+.         so  Lae                        # 境界に届いた
+Lae       ke  0 0
+#   最後の層も全境界を覆ったか
+v00273    ke  11 0
+v00274    ta  v00273
+v00275    ke  10 0
+v00276    ta  v00275
+.         su  v00274 v00276 Lb1
+v00277    ke  2 0
+v00278    ke  4 0
+.         ti  v00278 v00277
+.         so  Lrep
+Lb1       ke  0 0
+v00279    ke  14 0
+v00280    ta  v00279
+v00281    ke  13 0
+v00282    ta  v00281
+v00283    ko  v00280 v00282
+v00284    ke  14 0
+.         ti  v00284 v00283
+#   本体の出力が公開境界と一致するか（境界不一致）
+v00285    ke  12 0
+v00286    ta  v00285
+v00287    ke  5 0
+v00288    ke  384 0
+v00289    ko  v00288 v00287
+v00290    ta  v00289
+.         su  v00286 v00290 Lb2
+v00291    ke  3 0
+v00292    ke  4 0
+.         ti  v00292 v00291
+.         so  Lrep
+Lb2       ke  0 0
+#   注記した作図深度が本体から計算した順序数と一致するか（深度不一致）
+#   ここでは閉包が無いので d は有限。w と w^2 のけたは 0 になる
+v00293    ke  14 0
+v00294    ta  v00293
+v00295    ke  1 0
+v00296    ke  384 0
+v00297    ko  v00296 v00295
+v00298    ta  v00297
+.         su  v00294 v00298 Lb3
+v00299    ke  6 0
+v00300    ke  4 0
+.         ti  v00300 v00299
+.         so  Lrep
+Lb3       ke  0 0
+v00301    ke  2 0
+v00302    ke  384 0
+v00303    ko  v00302 v00301
+v00304    ta  v00303
+v00305    ke  0 0
+.         su  v00304 v00305 Lb4
+v00306    ke  6 0
+v00307    ke  4 0
+.         ti  v00307 v00306
+.         so  Lrep
+Lb4       ke  0 0
+v00308    ke  3 0
+v00309    ke  384 0
+v00310    ko  v00309 v00308
+v00311    ta  v00310
+v00312    ke  0 0
+.         su  v00311 v00312 Lb5
+v00313    ke  6 0
+v00314    ke  4 0
+.         ti  v00314 v00313
+.         so  Lrep
+Lb5       ke  0 0
+#   終端を置く。これで復元した語列が閉じる
+v00315    ke  21 0
+v00316    ta  v00315
+v00317    ke  -1 0
+v00318    ke  384 0
+v00319    ko  v00318 v00316
+.         ti  v00319 v00317
+v00320    ke  21 0
+v00321    ta  v00320
+v00322    ke  1 0
+v00323    ko  v00321 v00322
+v00324    ke  21 0
+.         ti  v00324 v00323
+#   整形式な語列だけを OUT へ写す。parse ∘ ser = id（定理 13.1）
+v00325    ke  20 0
+v00326    ta  v00325
+v00327    ke  0 0
+.         su  v00326 v00327 Lcopy
+.         so  Lrep
+Lcopy     ke  0 0
+v00328    ke  0 0
+v00329    ke  1 0
+.         ti  v00329 v00328
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW4     ke  0 0
+Lcp2W4    ke  1 0
+v00330W4  ke  1 0
+v00331W4  ta  v00330W4
+v00332W4  ke  21 0
+v00333W4  ta  v00332W4
+.         se  v00331W4 v00333W4 Lcp2
+.         so  Lcp2e
+Lcp2      ke  1 0
+v00330    ke  1 0
+v00331    ta  v00330
+v00332    ke  21 0
+v00333    ta  v00332
+v00334    ke  384 0
+v00335    ko  v00334 v00331
+v00336    ta  v00335
+v00337    ke  512 0
+v00338    ko  v00337 v00331
+.         ti  v00338 v00336
+v00339    ke  1 0
+v00340    ko  v00331 v00339
+v00341    ke  1 0
+.         ti  v00341 v00340
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW4     ke  0 0
+Lcp2W4z   ke  1 0
+v00330W4z ke  1 0
+v00331W4z ta  v00330W4z
+v00332W4z ke  21 0
+v00333W4z ta  v00332W4z
+.         se  v00331W4z v00333W4z Lcp2
+.         so  Lcp2e                      # 境界に届いた
+Lcp2e     ke  0 0
+Lrep      ke  0 0
+v00342    ke  20 0
+v00343    ta  v00342
+v00344    ke  4 0
+v00345    ta  v00344
+v00346    ke  448 0
+v00347    ko  v00346 v00343
+.         ti  v00347 v00345
+v00348    ke  20 0
+v00349    ta  v00348
+v00350    ke  1 0
+v00351    ko  v00349 v00350
+v00352    ke  20 0
+.         ti  v00352 v00351
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW5     ke  0 0
+LcW5z     ke  20 0
+v00003W5z ke  20 0
+v00004W5z ta  v00003W5z
+v00005W5z ke  2 0
+.         se  v00004W5z v00005W5z Lc
+.         so  Lce                        # 境界に届いた
+Lce       ke  0 0
+
+#   診断を OUT の末尾へ
+v00353    ke  0 0
+v00354    ke  0 0
+v00355    ke  448 0
+v00356    ko  v00355 v00354
+v00357    ta  v00356
+v00358    ke  551 0
+v00359    ko  v00358 v00353
+.         ti  v00359 v00357
+v00360    ke  1 0
+v00361    ke  1 0
+v00362    ke  448 0
+v00363    ko  v00362 v00361
+v00364    ta  v00363
+v00365    ke  551 0
+v00366    ko  v00365 v00360
+.         ti  v00366 v00364
+
+# ======== 突き合わせ（13 章 §5）========
+Lcmp      ke  5 0
+v00367    ke  0 0
+v00368    ke  5 0
+.         ti  v00368 v00367
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW6     ke  0 0
+LcmplW6   ke  5 0
+v00369W6  ta  LcmplW6
+v00370W6  ke  41 0
+.         se  v00369W6 v00370W6 Lcmpl
+.         so  Lok
+Lcmpl     ke  5 0
+v00369    ta  Lcmpl
+v00370    ke  41 0
+v00371    ke  512 0
+v00372    ko  v00371 v00369
+v00373    ta  v00372
+v00374    ke  640 0
+v00375    ko  v00374 v00369
+v00376    ta  v00375
+.         su  v00373 v00376 Lcmpn
+.         so  Lko
+Lcmpn     ke  1 0
+v00377    ko  v00369 Lcmpn
+v00378    ke  5 0
+.         ti  v00378 v00377
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW6     ke  0 0
+LcmplW6z  ke  5 0
+v00369W6z ta  LcmplW6z
+v00370W6z ke  41 0
+.         se  v00369W6z v00370W6z Lcmpl
+.         so  Lok                        # 境界に届いた
+Lok       tu
+Lko       te

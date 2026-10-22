@@ -1,0 +1,13 @@
+{
+ "id": "A_g/mobius/sx4inv_N32",
+ "function": "A_g",
+ "family": "mobius",
+ "section": "式 16.4〜16.8",
+ "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+ "phi": null,
+ "meta": {
+  "word": "sx4inv",
+  "N": 32
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

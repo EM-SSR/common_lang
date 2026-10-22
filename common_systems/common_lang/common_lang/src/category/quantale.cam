@@ -1,0 +1,162 @@
+# 豊穣の基底 𝒬 の束構造
+# doc: Q.quantale star.distrib_sup Q.base
+#
+#   幾何連合論理集合/圏論/GCLS-圏論のIndex 定理 3.3
+#
+# 𝒬 = ([0,1], ≤, ⋆, 1) は完備束の上に結合的・単位的な乗法 ⋆ を載せた quantale で、
+# 任意の上限に対して左右から分配する。この program はその束の側を確かめる。
+#
+# 意味レジストリに ⋁ や ⋀ の原子は無い。要らないからである。系 5.3 のとおり
+# program は原始命令の有限列であって、上限は選択で書ける。
+#
+#     ⋁(x,y) = c ⋆ y ⊕ (1 ⊖ c) ⋆ x,      c = [x < y]           16 §5.4
+#     ⋀(x,y) = c ⋆ x ⊕ (1 ⊖ c) ⋆ y
+#
+# 判定 c は §5.3 の形で作る。既定 0 を作業語へ置き、分離の側で 1 へ書き換えてから
+# 読み戻す。
+#
+# ---- 作業領域は分子だけを持つ ----
+#
+# 深度は build 時の型であって、register にも語にも載らない（01 章、§32.2）。
+# だから ta が返す値の深度は 0 になる。値そのものを作業領域で受け渡すと、
+# 往復した側だけ深度が落ちて比較が割れる。判定 c は深度 0 なので往復してよい。
+# 選択を算術で書くのは、この一点のためになる。
+#
+#   語 0   判定 c の受け渡し。読んだ直後に死ぬので一語で足りる
+#
+# 定数はその場で作り直す。長く生かすと landmark が足りなくなる。
+# 検査も値が出来た所で済ませて、生存区間を短く保つ。
+#
+# ---- 確かめる法則 ----
+#
+#   冪等    ⋁(p,p) = p
+#   可換    ⋁(p,q) = ⋁(q,p)
+#   吸収    ⋁(p, ⋀(p,q)) = p
+#   順序    p ≤ q  ⟺  ⋁(p,q) = q
+#   分配    a ⋆ ⋁(p,q) = ⋁(a⋆p, a⋆q)                        定理 3.3
+#
+# 標本は p = 3/16、q = 5/16、a = 1/2 を取る。深度は乗算で足し上がるので、
+# 分配の両辺はどちらも深度 5 になる。比べる二本は必ず同じ深度になる。
+
+mu i
+d  8
+
+p    ke  3 4      # 3/16
+q    ke  5 4      # 5/16
+
+# ================= 冪等: ⋁(p,p) = p =================
+W1   ke  0 0
+z1   ke  0 0
+.    ti  W1 z1
+.    se  p p A1
+.    so  B1
+A1   ke  1 0
+.    ti  W1 A1
+B1   ta  W1
+n1   si  B1
+o1   ke  1 0
+m1   ko  o1 n1
+x1   sa  B1 p
+y1   sa  m1 p
+u2   ko  x1 y1
+.    su  u2 p C2
+.    so  ko
+
+# ================= 可換: ⋁(p,q) = ⋁(q,p) =================
+C2   ke  0 0
+W2   ke  0 0
+z2   ke  0 0
+.    ti  W2 z2
+.    se  p q A2
+.    so  B2
+A2   ke  1 0
+.    ti  W2 A2
+B2   ta  W2
+n2   si  B2
+o2   ke  1 0
+m2   ko  o2 n2
+x2   sa  B2 q
+y2   sa  m2 p
+u1   ko  x2 y2
+
+W3   ke  0 0
+z3   ke  0 0
+.    ti  W3 z3
+.    se  q p A3
+.    so  B3
+A3   ke  1 0
+.    ti  W3 A3
+B3   ta  W3
+n3   si  B3
+o3   ke  1 0
+m3   ko  o3 n3
+x3   sa  B3 p
+y3   sa  m3 q
+u3   ko  x3 y3
+.    su  u1 u3 C3
+.    so  ko
+
+# ================= 順序: p ≤ q なので ⋁(p,q) = q =================
+C3   ke  0 0
+.    su  u1 q C4
+.    so  ko
+
+# ================= 吸収: ⋁(p, ⋀(p,q)) = p =================
+C4   ke  0 0
+W4   ke  0 0
+z4   ke  0 0
+.    ti  W4 z4
+.    se  p q A4
+.    so  B4
+A4   ke  1 0
+.    ti  W4 A4
+B4   ta  W4
+n4   si  B4
+o4   ke  1 0
+m4   ko  o4 n4
+x4   sa  B4 p
+y4   sa  m4 q
+v1   ko  x4 y4                # ⋀(p,q)
+
+W5   ke  0 0
+z5   ke  0 0
+.    ti  W5 z5
+.    se  p v1 A5
+.    so  B5
+A5   ke  1 0
+.    ti  W5 A5
+B5   ta  W5
+n5   si  B5
+o5   ke  1 0
+m5   ko  o5 n5
+x5   sa  B5 v1
+y5   sa  m5 p
+u4   ko  x5 y5
+.    su  u4 p C5
+.    so  ko
+
+# ================= 分配: a ⋆ ⋁(p,q) = ⋁(a⋆p, a⋆q) =================
+C5   ke  1 1                  # a = 1/2
+au   sa  C5 u1                # 左辺
+ap   sa  C5 p
+aq   sa  C5 q
+
+W6   ke  0 0
+z6   ke  0 0
+.    ti  W6 z6
+.    se  ap aq A6
+.    so  B6
+A6   ke  1 0
+.    ti  W6 A6
+B6   ta  W6
+n6   si  B6
+o6   ke  1 0
+m6   ko  o6 n6
+x6   sa  B6 aq
+y6   sa  m6 ap
+u5   ko  x6 y6                # 右辺
+.    su  au u5 ok
+.    so  ko
+
+ok   tu
+ko   te

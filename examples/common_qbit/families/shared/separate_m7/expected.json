@@ -1,0 +1,43 @@
+{
+ "id": "shared/separate_m7",
+ "section": "式 13.4（M8 より前）",
+ "level": 7,
+ "note": "量子ビットごとに別の座標。どちらも u0=0.25 を読むので結果は 00",
+ "initial_u0": [
+  "1/4"
+ ],
+ "world": null,
+ "result": {
+  "h": [
+   [
+    0,
+    0,
+    null
+   ],
+   [
+    0,
+    1,
+    null
+   ],
+   [
+    "M",
+    1
+   ],
+   [
+    "M",
+    0
+   ]
+  ],
+  "zj": [
+   "1",
+   "0"
+  ],
+  "d": 0,
+  "probes": [],
+  "chi": null,
+  "omega": null,
+  "memory": [
+   "00"
+  ]
+ }
+}

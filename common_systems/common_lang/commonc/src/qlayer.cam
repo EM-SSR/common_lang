@@ -1,0 +1,4435 @@
+# commonc — 判定層 𝒬 の降下（07 §6、圏論 定理 3.3、3.4）
+#
+# 前段の第 2 段から呼ばれる。frontier の上では 𝒬 の値を
+#
+#   種類 4    CV0 = 分子の箱   CV1 = 分母の箱   CV2 = 門の箱
+#
+# の三本で持つ。構成語は空語 ([], +1) に固定する。名詞層から来る値は
+# 語が割れるので、この道では扱わない（来たら Ko で止める）。
+#
+# ---- 深度 ----
+#
+# liftQ が Store と Load を通すので、判定層の値は全部深度 0 になる（14 §1）。
+# したがってここで置く箱の OPD 欄は常に 0 になる。
+#
+# ---- 呼び出し ----
+#
+# cam に手続き呼び出しは無い。どの助けも自分を呼ばないので、戻り符号を
+# 助けごとの語へ置けば足りる。積む台は要らない。
+#
+#   500 ltB の返り      501 ltB の戻り符号
+#   502 selB の返り     503 戻り符号     504-506 引数 c x y
+#   507 eqZ の返り      508 戻り符号     509 引数 a
+#   510-511 normQ の返り  512 戻り符号   513-514 引数
+#   515-516 clamp1 の返り 517 戻り符号   518-519 引数
+#   520 ltQ の返り        521 戻り符号   522-525 引数
+#   526-527 divQ の返り   528 戻り符号   529-532 引数
+#   533-534 resB の返り   535 戻り符号   536-539 引数
+#   540-541 agrR の返り   542 戻り符号   543-546 引数
+#   547-548 agrE の返り   549 戻り符号   550-553 引数
+#   554-555 lftQ の返り   556 戻り符号   557 引数
+#   560-579 生成元の作業
+#   580-589 selectJudge の作業
+
+# ================= ltB の戻り先 =================
+#
+# 八箱は前段が持つ。戻り符号（語 501）で呼び出し元へ返る
+
+LTBR      ke  501 0
+gLT       ta  LTBR
+lt1       ke  1 0
+.         su  gLT lt1 EZ1R
+lt2       ke  2 0
+.         su  gLT lt2 EZ2R
+lt3       ke  3 0
+.         su  gLT lt3 NQ1R
+lt4       ke  4 0
+.         su  gLT lt4 CL1R
+lt5       ke  5 0
+.         su  gLT lt5 LQ1R
+lt6       ke  6 0
+.         su  gLT lt6 QB1R
+lt7       ke  7 0
+.         su  gLT lt7 QB2R
+lt8       ke  8 0
+.         su  gLT lt8 QB3R
+.         so  BAD
+
+# ================= liftQ：Dyad の語を有理数の対へ持ち上げる =================
+#
+#   s = Cst(退避語, 0)      Store(s, u)      n = Load(s)      b = Cst(2^d, 0)
+#
+# Load を通すので n の深度は 0 になる。分母は入力の深度から出る（14 §1.3）
+
+LFQ       ke  557 0
+uLF       ta  LFQ
+
+# 箱 A : Cst(31, 0)
+LFA0      ke  6 0
+LFAn      ta  LFA0
+LFAk      sa  KV04 BW
+LFAka     ko  LFAk LFAn
+LFAkv     ke  1 0
+.         ti  LFAka LFAkv
+LFAa      sa  KV06 BW
+LFAaa     ko  LFAa LFAn
+LFAsw     ke  31 0
+.         ti  LFAaa LFAsw
+
+# 退避語の箱を控える（22 式 22.3）
+SCLw      ke  94 0
+SCLc      ta  SCLw
+SCLb      sa  KV40 BW
+SCLa      ko  SCLb SCLc
+.         ti  SCLa LFAn
+SCLo      ke  1 0
+SCLc2     ko  SCLc SCLo
+.         ti  SCLw SCLc2
+LFAd      sa  KV10 BW
+LFAda     ko  LFAd LFAn
+LFAz      ke  0 0
+.         ti  LFAda LFAz
+LFAo      ke  1 0
+LFAn2     ko  LFAn LFAo
+.         ti  LFA0 LFAn2
+
+# 箱 B : Store(A, u)
+LFB0      ke  6 0
+LFBn      ta  LFB0
+LFBk      sa  KV04 BW
+LFBka     ko  LFBk LFBn
+LFBkv     ke  5 0
+.         ti  LFBka LFBkv
+LFBa      sa  KV06 BW
+LFBaa     ko  LFBa LFBn
+.         ti  LFBaa LFAn
+LFBb      sa  KV08 BW
+LFBba     ko  LFBb LFBn
+.         ti  LFBba uLF
+LFBd      sa  KV10 BW
+LFBda     ko  LFBd LFBn
+LFBz      ke  0 0
+.         ti  LFBda LFBz
+LFBo      ke  1 0
+LFBn2     ko  LFBn LFBo
+.         ti  LFB0 LFBn2
+
+# 箱 C : Load(A)
+LFC0      ke  6 0
+LFCn      ta  LFC0
+LFCk      sa  KV04 BW
+LFCka     ko  LFCk LFCn
+LFCkv     ke  7 0
+.         ti  LFCka LFCkv
+LFCa      sa  KV06 BW
+LFCaa     ko  LFCa LFCn
+.         ti  LFCaa LFAn
+LFCd      sa  KV10 BW
+LFCda     ko  LFCd LFCn
+LFCz      ke  0 0
+.         ti  LFCda LFCz
+LFCo      ke  1 0
+LFCn2     ko  LFCn LFCo
+.         ti  LFC0 LFCn2
+
+# 2^d を作る。除算も冪も無いので、入力の深度の回数だけ倍にする
+LFP0      ke  560 0
+LFP1      ke  1 0
+.         ti  LFP0 LFP1
+LFP2      ke  561 0
+LFPd      sa  KV10 BW
+LFPda     ko  LFPd uLF
+LFPdv     ta  LFPda
+.         ti  LFP2 LFPdv
+
+LFPE      ke  561 0
+LFPk      ta  LFPE
+LFPz      ke  0 0
+.         se  LFPz LFPk LFPL
+.         so  LFD
+
+LFPL      ke  560 0
+LFPv      ta  LFPL
+LFPv2     ko  LFPv LFPv
+.         ti  LFPL LFPv2
+LFPE2     ke  561 0
+LFPk2     ta  LFPE2
+LFPm      ke  -1 0
+LFPk3     ko  LFPk2 LFPm
+.         ti  LFPE2 LFPk3
+LFPz2     ke  0 0
+.         se  LFPz2 LFPk3 LFPL
+.         so  LFD
+
+# 箱 D : Cst(2^d, 0)
+LFD       ke  6 0
+LFDn      ta  LFD
+LFDk      sa  KV04 BW
+LFDka     ko  LFDk LFDn
+LFDkv     ke  1 0
+.         ti  LFDka LFDkv
+LFDa      sa  KV06 BW
+LFDaa     ko  LFDa LFDn
+LFDw      ke  560 0
+LFDpw     ta  LFDw
+.         ti  LFDaa LFDpw
+LFDd      sa  KV10 BW
+LFDda     ko  LFDd LFDn
+LFDz      ke  0 0
+.         ti  LFDda LFDz
+LFDo      ke  1 0
+LFDn2     ko  LFDn LFDo
+.         ti  LFD LFDn2
+
+# 返り
+LFR0      ke  554 0
+.         ti  LFR0 LFCn
+LFR1      ke  555 0
+.         ti  LFR1 LFDn
+LFR2      ke  556 0
+gLF       ta  LFR2
+lf1       ke  1 0
+.         su  gLF lf1 LF1R
+lf2       ke  2 0
+.         su  gLF lf2 LF2R
+lf3       ke  3 0
+.         su  gLF lf3 LF3R
+lf4       ke  4 0
+.         su  gLF lf4 LF4R
+lf5       ke  5 0
+.         su  gLF lf5 LF5R
+lf6       ke  6 0
+.         su  gLF lf6 LF6R
+.         so  BAD
+
+# ================= selB：選択は算術になる（16 式 5.11）=================
+#
+#   sel(c, x, y) = c ⋆ x ⊕ (1 ⊖ c) ⋆ y
+#
+#   t1 = Mul(c,x)   o = Cst(1,0)   nc = Neg(c)   ic = Add(o,nc)
+#   t2 = Mul(ic,y)  r = Add(t1,t2)
+
+SLB       ke  504 0
+cSL       ta  SLB
+SLBx      ke  505 0
+xSL       ta  SLBx
+SLBy      ke  506 0
+ySL       ta  SLBy
+
+# 箱 1 : Mul(c, x)
+SL10      ke  6 0
+SL1n      ta  SL10
+SL1k      sa  KV04 BW
+SL1ka     ko  SL1k SL1n
+SL1kv     ke  3 0
+.         ti  SL1ka SL1kv
+SL1a      sa  KV06 BW
+SL1aa     ko  SL1a SL1n
+.         ti  SL1aa cSL
+SL1b      sa  KV08 BW
+SL1ba     ko  SL1b SL1n
+.         ti  SL1ba xSL
+SL1d      sa  KV10 BW
+SL1da     ko  SL1d SL1n
+SL1z      ke  0 0
+.         ti  SL1da SL1z
+SL1o      ke  1 0
+SL1n2     ko  SL1n SL1o
+.         ti  SL10 SL1n2
+
+# 箱 2 : Cst(1, 0)
+SL20      ke  6 0
+SL2n      ta  SL20
+SL2k      sa  KV04 BW
+SL2ka     ko  SL2k SL2n
+SL2kv     ke  1 0
+.         ti  SL2ka SL2kv
+SL2a      sa  KV06 BW
+SL2aa     ko  SL2a SL2n
+SL2one    ke  1 0
+.         ti  SL2aa SL2one
+SL2d      sa  KV10 BW
+SL2da     ko  SL2d SL2n
+SL2z      ke  0 0
+.         ti  SL2da SL2z
+SL2o      ke  1 0
+SL2n2     ko  SL2n SL2o
+.         ti  SL20 SL2n2
+
+# 箱 3 : Neg(c)
+SL30      ke  6 0
+SL3n      ta  SL30
+SL3k      sa  KV04 BW
+SL3ka     ko  SL3k SL3n
+SL3kv     ke  4 0
+.         ti  SL3ka SL3kv
+SL3a      sa  KV06 BW
+SL3aa     ko  SL3a SL3n
+.         ti  SL3aa cSL
+SL3d      sa  KV10 BW
+SL3da     ko  SL3d SL3n
+SL3z      ke  0 0
+.         ti  SL3da SL3z
+SL3o      ke  1 0
+SL3n2     ko  SL3n SL3o
+.         ti  SL30 SL3n2
+
+# 箱 4 : Add(o, nc)
+SL40      ke  6 0
+SL4n      ta  SL40
+SL4k      sa  KV04 BW
+SL4ka     ko  SL4k SL4n
+SL4kv     ke  2 0
+.         ti  SL4ka SL4kv
+SL4a      sa  KV06 BW
+SL4aa     ko  SL4a SL4n
+.         ti  SL4aa SL2n
+SL4b      sa  KV08 BW
+SL4ba     ko  SL4b SL4n
+.         ti  SL4ba SL3n
+SL4d      sa  KV10 BW
+SL4da     ko  SL4d SL4n
+SL4z      ke  0 0
+.         ti  SL4da SL4z
+SL4o      ke  1 0
+SL4n2     ko  SL4n SL4o
+.         ti  SL40 SL4n2
+
+# 箱 5 : Mul(ic, y)
+SL50      ke  6 0
+SL5n      ta  SL50
+SL5k      sa  KV04 BW
+SL5ka     ko  SL5k SL5n
+SL5kv     ke  3 0
+.         ti  SL5ka SL5kv
+SL5a      sa  KV06 BW
+SL5aa     ko  SL5a SL5n
+.         ti  SL5aa SL4n
+SL5b      sa  KV08 BW
+SL5ba     ko  SL5b SL5n
+.         ti  SL5ba ySL
+SL5d      sa  KV10 BW
+SL5da     ko  SL5d SL5n
+SL5z      ke  0 0
+.         ti  SL5da SL5z
+SL5o      ke  1 0
+SL5n2     ko  SL5n SL5o
+.         ti  SL50 SL5n2
+
+# 箱 6 : Add(t1, t2)
+SL60      ke  6 0
+SL6n      ta  SL60
+SL6k      sa  KV04 BW
+SL6ka     ko  SL6k SL6n
+SL6kv     ke  2 0
+.         ti  SL6ka SL6kv
+SL6a      sa  KV06 BW
+SL6aa     ko  SL6a SL6n
+.         ti  SL6aa SL1n
+SL6b      sa  KV08 BW
+SL6ba     ko  SL6b SL6n
+.         ti  SL6ba SL5n
+SL6d      sa  KV10 BW
+SL6da     ko  SL6d SL6n
+SL6z      ke  0 0
+.         ti  SL6da SL6z
+SL6o      ke  1 0
+SL6n2     ko  SL6n SL6o
+.         ti  SL60 SL6n2
+
+# 返り
+SLR0      ke  502 0
+.         ti  SLR0 SL6n
+SLR1      ke  503 0
+gSL       ta  SLR1
+sl1       ke  1 0
+.         su  gSL sl1 NQ2R
+sl2       ke  2 0
+.         su  gSL sl2 NQ3R
+sl3       ke  3 0
+.         su  gSL sl3 CL2R
+sl4       ke  4 0
+.         su  gSL sl4 CL3R
+sl5       ke  5 0
+.         su  gSL sl5 RB4R
+sl6       ke  6 0
+.         su  gSL sl6 RB5R
+sl7       ke  7 0
+.         su  gSL sl7 AR5R
+sl8       ke  8 0
+.         su  gSL sl8 AR6R
+sl9       ke  9 0
+.         su  gSL sl9 AR7R
+sl10      ke  10 0
+.         su  gSL sl10 SJ4R
+sl11      ke  11 0
+.         su  gSL sl11 SJ5R
+.         so  BAD
+
+# ================= eqZ：[a = 0] = 1 − [a < 0] − [0 < a] =================
+
+EQZ       ke  509 0
+aEZ       ta  EQZ
+
+# 箱 1 : Cst(0, 0)
+EZ10      ke  6 0
+EZ1n      ta  EZ10
+EZ1k      sa  KV04 BW
+EZ1ka     ko  EZ1k EZ1n
+EZ1kv     ke  1 0
+.         ti  EZ1ka EZ1kv
+EZ1a      sa  KV06 BW
+EZ1aa     ko  EZ1a EZ1n
+EZ1z0     ke  0 0
+.         ti  EZ1aa EZ1z0
+EZ1d      sa  KV10 BW
+EZ1da     ko  EZ1d EZ1n
+.         ti  EZ1da EZ1z0
+EZ1o      ke  1 0
+EZ1n2     ko  EZ1n EZ1o
+.         ti  EZ10 EZ1n2
+EZ1S      ke  562 0
+.         ti  EZ1S EZ1n
+
+# lt = [a < 0]
+EZ1C      ke  48 0
+.         ti  EZ1C aEZ
+EZ1D      ke  49 0
+.         ti  EZ1D EZ1n
+EZ1E      ke  50 0
+EZ1F      ke  1 0
+.         ti  EZ1E EZ1F
+EZ1G      ke  501 0
+.         ti  EZ1G EZ1F
+.         so  BIT
+
+EZ1R      ke  500 0
+EZ1H      ta  EZ1R
+EZ1I      ke  563 0
+.         ti  EZ1I EZ1H
+
+# gt = [0 < a]
+EZ2C      ke  48 0
+EZ2S      ke  562 0
+EZ2z      ta  EZ2S
+.         ti  EZ2C EZ2z
+EZ2D      ke  49 0
+.         ti  EZ2D aEZ
+EZ2E      ke  50 0
+EZ2F      ke  1 0
+.         ti  EZ2E EZ2F
+EZ2G      ke  501 0
+EZ2H      ke  2 0
+.         ti  EZ2G EZ2H
+.         so  BIT
+
+EZ2R      ke  500 0
+EZ2I      ta  EZ2R
+EZ2J      ke  564 0
+.         ti  EZ2J EZ2I
+
+# 箱 4 : Cst(1, 0)
+EZ40      ke  6 0
+EZ4n      ta  EZ40
+EZ4k      sa  KV04 BW
+EZ4ka     ko  EZ4k EZ4n
+EZ4kv     ke  1 0
+.         ti  EZ4ka EZ4kv
+EZ4a      sa  KV06 BW
+EZ4aa     ko  EZ4a EZ4n
+EZ4one    ke  1 0
+.         ti  EZ4aa EZ4one
+EZ4d      sa  KV10 BW
+EZ4da     ko  EZ4d EZ4n
+EZ4z      ke  0 0
+.         ti  EZ4da EZ4z
+EZ4o      ke  1 0
+EZ4n2     ko  EZ4n EZ4o
+.         ti  EZ40 EZ4n2
+
+# 箱 5 : Neg(lt)
+EZ50      ke  6 0
+EZ5n      ta  EZ50
+EZ5k      sa  KV04 BW
+EZ5ka     ko  EZ5k EZ5n
+EZ5kv     ke  4 0
+.         ti  EZ5ka EZ5kv
+EZ5a      sa  KV06 BW
+EZ5aa     ko  EZ5a EZ5n
+EZ5L      ke  563 0
+EZ5lt     ta  EZ5L
+.         ti  EZ5aa EZ5lt
+EZ5d      sa  KV10 BW
+EZ5da     ko  EZ5d EZ5n
+EZ5z      ke  0 0
+.         ti  EZ5da EZ5z
+EZ5o      ke  1 0
+EZ5n2     ko  EZ5n EZ5o
+.         ti  EZ50 EZ5n2
+
+# 箱 6 : Neg(gt)
+EZ60      ke  6 0
+EZ6n      ta  EZ60
+EZ6k      sa  KV04 BW
+EZ6ka     ko  EZ6k EZ6n
+EZ6kv     ke  4 0
+.         ti  EZ6ka EZ6kv
+EZ6a      sa  KV06 BW
+EZ6aa     ko  EZ6a EZ6n
+EZ6L      ke  564 0
+EZ6gt     ta  EZ6L
+.         ti  EZ6aa EZ6gt
+EZ6d      sa  KV10 BW
+EZ6da     ko  EZ6d EZ6n
+EZ6z      ke  0 0
+.         ti  EZ6da EZ6z
+EZ6o      ke  1 0
+EZ6n2     ko  EZ6n EZ6o
+.         ti  EZ60 EZ6n2
+
+# 箱 7 : Add(one, −lt)
+EZ70      ke  6 0
+EZ7n      ta  EZ70
+EZ7k      sa  KV04 BW
+EZ7ka     ko  EZ7k EZ7n
+EZ7kv     ke  2 0
+.         ti  EZ7ka EZ7kv
+EZ7a      sa  KV06 BW
+EZ7aa     ko  EZ7a EZ7n
+.         ti  EZ7aa EZ4n
+EZ7b      sa  KV08 BW
+EZ7ba     ko  EZ7b EZ7n
+.         ti  EZ7ba EZ5n
+EZ7d      sa  KV10 BW
+EZ7da     ko  EZ7d EZ7n
+EZ7z      ke  0 0
+.         ti  EZ7da EZ7z
+EZ7o      ke  1 0
+EZ7n2     ko  EZ7n EZ7o
+.         ti  EZ70 EZ7n2
+
+# 箱 8 : Add(t, −gt)
+EZ80      ke  6 0
+EZ8n      ta  EZ80
+EZ8k      sa  KV04 BW
+EZ8ka     ko  EZ8k EZ8n
+EZ8kv     ke  2 0
+.         ti  EZ8ka EZ8kv
+EZ8a      sa  KV06 BW
+EZ8aa     ko  EZ8a EZ8n
+.         ti  EZ8aa EZ7n
+EZ8b      sa  KV08 BW
+EZ8ba     ko  EZ8b EZ8n
+.         ti  EZ8ba EZ6n
+EZ8d      sa  KV10 BW
+EZ8da     ko  EZ8d EZ8n
+EZ8z      ke  0 0
+.         ti  EZ8da EZ8z
+EZ8o      ke  1 0
+EZ8n2     ko  EZ8n EZ8o
+.         ti  EZ80 EZ8n2
+
+# 返り
+EZR0      ke  507 0
+.         ti  EZR0 EZ8n
+EZR1      ke  508 0
+gEZ       ta  EZR1
+ez1       ke  1 0
+.         su  gEZ ez1 RB3R
+ez2       ke  2 0
+.         su  gEZ ez2 AR3R
+ez3       ke  3 0
+.         su  gEZ ez3 AR4R
+ez4       ke  4 0
+.         su  gEZ ez4 SJ3R
+.         so  BAD
+# ================= normQ：分母を正へそろえる =================
+#
+#   s = [b < 0]、 a2 = sel(s, −a, a)、 b2 = sel(s, −b, b)
+
+NRQ       ke  513 0
+aNQ       ta  NRQ
+NRQb      ke  514 0
+bNQ       ta  NRQb
+
+# 零
+NQ10      ke  6 0
+NQ1n      ta  NQ10
+NQ1k      sa  KV04 BW
+NQ1ka     ko  NQ1k NQ1n
+NQ1kv     ke  1 0
+.         ti  NQ1ka NQ1kv
+NQ1a      sa  KV06 BW
+NQ1aa     ko  NQ1a NQ1n
+NQ1v      ke  0 0
+.         ti  NQ1aa NQ1v
+NQ1d      sa  KV10 BW
+NQ1da     ko  NQ1d NQ1n
+NQ1z      ke  0 0
+.         ti  NQ1da NQ1z
+NQ1o      ke  1 0
+NQ1n2     ko  NQ1n NQ1o
+.         ti  NQ10 NQ1n2
+
+NQtA      ke  48 0
+.         ti  NQtA bNQ
+NQtB      ke  49 0
+.         ti  NQtB NQ1n
+NQtdv     ke  1 0
+NQtD      ke  50 0
+.         ti  NQtD NQtdv
+NQtrv     ke  3 0
+NQtR      ke  501 0
+.         ti  NQtR NQtrv
+.         so  BIT
+
+NQ1R      ke  500 0
+NQ1Rv     ta  NQ1R
+
+# −a
+NQ20      ke  6 0
+NQ2n      ta  NQ20
+NQ2k      sa  KV04 BW
+NQ2ka     ko  NQ2k NQ2n
+NQ2kv     ke  4 0
+.         ti  NQ2ka NQ2kv
+NQ2a      sa  KV06 BW
+NQ2aa     ko  NQ2a NQ2n
+.         ti  NQ2aa aNQ
+NQ2d      sa  KV10 BW
+NQ2da     ko  NQ2d NQ2n
+NQ2z      ke  0 0
+.         ti  NQ2da NQ2z
+NQ2o      ke  1 0
+NQ2n2     ko  NQ2n NQ2o
+.         ti  NQ20 NQ2n2
+
+# −b
+NQ30      ke  6 0
+NQ3n      ta  NQ30
+NQ3k      sa  KV04 BW
+NQ3ka     ko  NQ3k NQ3n
+NQ3kv     ke  4 0
+.         ti  NQ3ka NQ3kv
+NQ3a      sa  KV06 BW
+NQ3aa     ko  NQ3a NQ3n
+.         ti  NQ3aa bNQ
+NQ3d      sa  KV10 BW
+NQ3da     ko  NQ3d NQ3n
+NQ3z      ke  0 0
+.         ti  NQ3da NQ3z
+NQ3o      ke  1 0
+NQ3n2     ko  NQ3n NQ3o
+.         ti  NQ30 NQ3n2
+
+NQs1g0    ke  504 0
+.         ti  NQs1g0 NQ1Rv
+NQs1g1    ke  505 0
+.         ti  NQs1g1 NQ2n
+NQs1g2    ke  506 0
+.         ti  NQs1g2 aNQ
+NQs1r     ke  1 0
+NQs1rw    ke  503 0
+.         ti  NQs1rw NQs1r
+.         so  SLB
+
+NQ2R      ke  502 0
+NQ2Rv     ta  NQ2R
+
+NQs2g0    ke  504 0
+.         ti  NQs2g0 NQ1Rv
+NQs2g1    ke  505 0
+.         ti  NQs2g1 NQ3n
+NQs2g2    ke  506 0
+.         ti  NQs2g2 bNQ
+NQs2r     ke  2 0
+NQs2rw    ke  503 0
+.         ti  NQs2rw NQs2r
+.         so  SLB
+
+NQ3R      ke  502 0
+NQ3Rv     ta  NQ3R
+
+NQro0     ke  510 0
+.         ti  NQro0 NQ2Rv
+NQro1     ke  511 0
+.         ti  NQro1 NQ3Rv
+NQrg      ke  512 0
+NQrgv     ta  NQrg
+NQrc1     ke  1 0
+.         su  NQrgv NQrc1 DQ1R
+.         so  BAD
+
+# ================= clamp1：min(1, a/b)。分母は正 =================
+#
+#   c = [b < a]、 a2 = sel(c, 1, a)、 b2 = sel(c, 1, b)
+
+CLM       ke  518 0
+aCM       ta  CLM
+CLMb      ke  519 0
+bCM       ta  CLMb
+
+CMtA      ke  48 0
+.         ti  CMtA bCM
+CMtB      ke  49 0
+.         ti  CMtB aCM
+CMtdv     ke  1 0
+CMtD      ke  50 0
+.         ti  CMtD CMtdv
+CMtrv     ke  4 0
+CMtR      ke  501 0
+.         ti  CMtR CMtrv
+.         so  BIT
+
+CL1R      ke  500 0
+CL1Rv     ta  CL1R
+
+# 1
+CM10      ke  6 0
+CM1n      ta  CM10
+CM1k      sa  KV04 BW
+CM1ka     ko  CM1k CM1n
+CM1kv     ke  1 0
+.         ti  CM1ka CM1kv
+CM1a      sa  KV06 BW
+CM1aa     ko  CM1a CM1n
+CM1v      ke  1 0
+.         ti  CM1aa CM1v
+CM1d      sa  KV10 BW
+CM1da     ko  CM1d CM1n
+CM1z      ke  0 0
+.         ti  CM1da CM1z
+CM1o      ke  1 0
+CM1n2     ko  CM1n CM1o
+.         ti  CM10 CM1n2
+
+# 1
+CM20      ke  6 0
+CM2n      ta  CM20
+CM2k      sa  KV04 BW
+CM2ka     ko  CM2k CM2n
+CM2kv     ke  1 0
+.         ti  CM2ka CM2kv
+CM2a      sa  KV06 BW
+CM2aa     ko  CM2a CM2n
+CM2v      ke  1 0
+.         ti  CM2aa CM2v
+CM2d      sa  KV10 BW
+CM2da     ko  CM2d CM2n
+CM2z      ke  0 0
+.         ti  CM2da CM2z
+CM2o      ke  1 0
+CM2n2     ko  CM2n CM2o
+.         ti  CM20 CM2n2
+
+CMs1g0    ke  504 0
+.         ti  CMs1g0 CL1Rv
+CMs1g1    ke  505 0
+.         ti  CMs1g1 CM1n
+CMs1g2    ke  506 0
+.         ti  CMs1g2 aCM
+CMs1r     ke  3 0
+CMs1rw    ke  503 0
+.         ti  CMs1rw CMs1r
+.         so  SLB
+
+CL2R      ke  502 0
+CL2Rv     ta  CL2R
+
+CMs2g0    ke  504 0
+.         ti  CMs2g0 CL1Rv
+CMs2g1    ke  505 0
+.         ti  CMs2g1 CM2n
+CMs2g2    ke  506 0
+.         ti  CMs2g2 bCM
+CMs2r     ke  4 0
+CMs2rw    ke  503 0
+.         ti  CMs2rw CMs2r
+.         so  SLB
+
+CL3R      ke  502 0
+CL3Rv     ta  CL3R
+
+CMro0     ke  515 0
+.         ti  CMro0 CL2Rv
+CMro1     ke  516 0
+.         ti  CMro1 CL3Rv
+CMrg      ke  517 0
+CMrgv     ta  CMrg
+CMrc1     ke  1 0
+.         su  CMrgv CMrc1 RB2R
+CMrc2     ke  2 0
+.         su  CMrgv CMrc2 AR2R
+.         so  BAD
+
+# ================= ltQ：交差乗算で比べる。分母はどちらも正 =================
+
+LTQ       ke  522 0
+a1LQ      ta  LTQ
+LTQb      ke  523 0
+b1LQ      ta  LTQb
+LTQc      ke  524 0
+a2LQ      ta  LTQc
+LTQd      ke  525 0
+b2LQ      ta  LTQd
+
+# a1 ⋆ b2
+LQ10      ke  6 0
+LQ1n      ta  LQ10
+LQ1k      sa  KV04 BW
+LQ1ka     ko  LQ1k LQ1n
+LQ1kv     ke  3 0
+.         ti  LQ1ka LQ1kv
+LQ1a      sa  KV06 BW
+LQ1aa     ko  LQ1a LQ1n
+.         ti  LQ1aa a1LQ
+LQ1b      sa  KV08 BW
+LQ1ba     ko  LQ1b LQ1n
+.         ti  LQ1ba b2LQ
+LQ1d      sa  KV10 BW
+LQ1da     ko  LQ1d LQ1n
+LQ1z      ke  0 0
+.         ti  LQ1da LQ1z
+LQ1o      ke  1 0
+LQ1n2     ko  LQ1n LQ1o
+.         ti  LQ10 LQ1n2
+
+# a2 ⋆ b1
+LQ20      ke  6 0
+LQ2n      ta  LQ20
+LQ2k      sa  KV04 BW
+LQ2ka     ko  LQ2k LQ2n
+LQ2kv     ke  3 0
+.         ti  LQ2ka LQ2kv
+LQ2a      sa  KV06 BW
+LQ2aa     ko  LQ2a LQ2n
+.         ti  LQ2aa a2LQ
+LQ2b      sa  KV08 BW
+LQ2ba     ko  LQ2b LQ2n
+.         ti  LQ2ba b1LQ
+LQ2d      sa  KV10 BW
+LQ2da     ko  LQ2d LQ2n
+LQ2z      ke  0 0
+.         ti  LQ2da LQ2z
+LQ2o      ke  1 0
+LQ2n2     ko  LQ2n LQ2o
+.         ti  LQ20 LQ2n2
+
+LQtA      ke  48 0
+.         ti  LQtA LQ1n
+LQtB      ke  49 0
+.         ti  LQtB LQ2n
+LQtdv     ke  1 0
+LQtD      ke  50 0
+.         ti  LQtD LQtdv
+LQtrv     ke  5 0
+LQtR      ke  501 0
+.         ti  LQtR LQtrv
+.         so  BIT
+
+LQ1R      ke  500 0
+LQ1Rv     ta  LQ1R
+
+LQro0     ke  520 0
+.         ti  LQro0 LQ1Rv
+LQrg      ke  521 0
+LQrgv     ta  LQrg
+LQrc1     ke  1 0
+.         su  LQrgv LQrc1 SJ1R
+LQrc2     ke  2 0
+.         su  LQrgv LQrc2 SJ2R
+.         so  BAD
+
+# ================= divQ：c ⊘ a を正の分母で置く =================
+#
+# a = 0 の側は選択で捨てるので、ここでは商が壊れてよい
+
+DVQ       ke  529 0
+anDQ      ta  DVQ
+DVQb      ke  530 0
+adDQ      ta  DVQb
+DVQc      ke  531 0
+cnDQ      ta  DVQc
+DVQd      ke  532 0
+cdDQ      ta  DVQd
+
+# cn ⋆ ad
+DQ10      ke  6 0
+DQ1n      ta  DQ10
+DQ1k      sa  KV04 BW
+DQ1ka     ko  DQ1k DQ1n
+DQ1kv     ke  3 0
+.         ti  DQ1ka DQ1kv
+DQ1a      sa  KV06 BW
+DQ1aa     ko  DQ1a DQ1n
+.         ti  DQ1aa cnDQ
+DQ1b      sa  KV08 BW
+DQ1ba     ko  DQ1b DQ1n
+.         ti  DQ1ba adDQ
+DQ1d      sa  KV10 BW
+DQ1da     ko  DQ1d DQ1n
+DQ1z      ke  0 0
+.         ti  DQ1da DQ1z
+DQ1o      ke  1 0
+DQ1n2     ko  DQ1n DQ1o
+.         ti  DQ10 DQ1n2
+
+# cd ⋆ an
+DQ20      ke  6 0
+DQ2n      ta  DQ20
+DQ2k      sa  KV04 BW
+DQ2ka     ko  DQ2k DQ2n
+DQ2kv     ke  3 0
+.         ti  DQ2ka DQ2kv
+DQ2a      sa  KV06 BW
+DQ2aa     ko  DQ2a DQ2n
+.         ti  DQ2aa cdDQ
+DQ2b      sa  KV08 BW
+DQ2ba     ko  DQ2b DQ2n
+.         ti  DQ2ba anDQ
+DQ2d      sa  KV10 BW
+DQ2da     ko  DQ2d DQ2n
+DQ2z      ke  0 0
+.         ti  DQ2da DQ2z
+DQ2o      ke  1 0
+DQ2n2     ko  DQ2n DQ2o
+.         ti  DQ20 DQ2n2
+
+DQsg0     ke  513 0
+.         ti  DQsg0 DQ1n
+DQsg1     ke  514 0
+.         ti  DQsg1 DQ2n
+DQsr      ke  1 0
+DQsrw     ke  512 0
+.         ti  DQsrw DQsr
+.         so  NRQ
+
+DQ1R      ke  510 0
+DQ1Rv     ta  DQ1R
+DQ1Rb     ke  511 0
+DQ1Rbv    ta  DQ1Rb
+
+DQro0     ke  526 0
+.         ti  DQro0 DQ1Rv
+DQro1     ke  527 0
+.         ti  DQro1 DQ1Rbv
+DQrg      ke  528 0
+DQrgv     ta  DQrg
+DQrc1     ke  1 0
+.         su  DQrgv DQrc1 RB1R
+DQrc2     ke  2 0
+.         su  DQrgv DQrc2 AR1R
+DQrc3     ke  3 0
+.         su  DQrgv DQrc3 DQ3R
+.         so  BAD
+
+# ================= residB：residualQ a c = 1 (a = 0)、min(1, c ⊘ a) =================
+#
+# 定理 3.3 の残差。a ⋆ b ≤ c ⟺ b ≤ a ↘ c
+
+RSB       ke  536 0
+anRB      ta  RSB
+RSBb      ke  537 0
+adRB      ta  RSBb
+RSBc      ke  538 0
+cnRB      ta  RSBc
+RSBd      ke  539 0
+cdRB      ta  RSBd
+
+RBs1g0    ke  529 0
+.         ti  RBs1g0 anRB
+RBs1g1    ke  530 0
+.         ti  RBs1g1 adRB
+RBs1g2    ke  531 0
+.         ti  RBs1g2 cnRB
+RBs1g3    ke  532 0
+.         ti  RBs1g3 cdRB
+RBs1r     ke  1 0
+RBs1rw    ke  528 0
+.         ti  RBs1rw RBs1r
+.         so  DVQ
+
+RB1R      ke  526 0
+RB1Rv     ta  RB1R
+RB1Rb     ke  527 0
+RB1Rbv    ta  RB1Rb
+
+RBs2g0    ke  518 0
+.         ti  RBs2g0 RB1Rv
+RBs2g1    ke  519 0
+.         ti  RBs2g1 RB1Rbv
+RBs2r     ke  1 0
+RBs2rw    ke  517 0
+.         ti  RBs2rw RBs2r
+.         so  CLM
+
+RB2R      ke  515 0
+RB2Rv     ta  RB2R
+RB2Rb     ke  516 0
+RB2Rbv    ta  RB2Rb
+
+RBs3g0    ke  509 0
+.         ti  RBs3g0 anRB
+RBs3r     ke  1 0
+RBs3rw    ke  508 0
+.         ti  RBs3rw RBs3r
+.         so  EQZ
+
+RB3R      ke  507 0
+RB3Rv     ta  RB3R
+
+# 1
+RB40      ke  6 0
+RB4n      ta  RB40
+RB4k      sa  KV04 BW
+RB4ka     ko  RB4k RB4n
+RB4kv     ke  1 0
+.         ti  RB4ka RB4kv
+RB4a      sa  KV06 BW
+RB4aa     ko  RB4a RB4n
+RB4v      ke  1 0
+.         ti  RB4aa RB4v
+RB4d      sa  KV10 BW
+RB4da     ko  RB4d RB4n
+RB4z      ke  0 0
+.         ti  RB4da RB4z
+RB4o      ke  1 0
+RB4n2     ko  RB4n RB4o
+.         ti  RB40 RB4n2
+
+# 1
+RB50      ke  6 0
+RB5n      ta  RB50
+RB5k      sa  KV04 BW
+RB5ka     ko  RB5k RB5n
+RB5kv     ke  1 0
+.         ti  RB5ka RB5kv
+RB5a      sa  KV06 BW
+RB5aa     ko  RB5a RB5n
+RB5v      ke  1 0
+.         ti  RB5aa RB5v
+RB5d      sa  KV10 BW
+RB5da     ko  RB5d RB5n
+RB5z      ke  0 0
+.         ti  RB5da RB5z
+RB5o      ke  1 0
+RB5n2     ko  RB5n RB5o
+.         ti  RB50 RB5n2
+
+RBs4g0    ke  504 0
+.         ti  RBs4g0 RB3Rv
+RBs4g1    ke  505 0
+.         ti  RBs4g1 RB4n
+RBs4g2    ke  506 0
+.         ti  RBs4g2 RB2Rv
+RBs4r     ke  5 0
+RBs4rw    ke  503 0
+.         ti  RBs4rw RBs4r
+.         so  SLB
+
+RB4R      ke  502 0
+RB4Rv     ta  RB4R
+
+RBs5g0    ke  504 0
+.         ti  RBs5g0 RB3Rv
+RBs5g1    ke  505 0
+.         ti  RBs5g1 RB5n
+RBs5g2    ke  506 0
+.         ti  RBs5g2 RB2Rbv
+RBs5r     ke  6 0
+RBs5rw    ke  503 0
+.         ti  RBs5rw RBs5r
+.         so  SLB
+
+RB5R      ke  502 0
+RB5Rv     ta  RB5R
+
+RBro0     ke  533 0
+.         ti  RBro0 RB4Rv
+RBro1     ke  534 0
+.         ti  RBro1 RB5Rv
+RBrg      ke  535 0
+RBrgv     ta  RBrg
+RBrc1     ke  1 0
+.         su  RBrgv RBrc1 GYE2
+RBrc2     ke  2 0
+.         su  RBrgv RBrc2 GYO2
+RBrc3     ke  3 0
+.         su  RBrgv RBrc3 RB3RB
+.         so  BAD
+
+# ================= agrResB：ar(a,c) = 1 (a = c = 0)、0 (a = 0 ≠ c)、min(1, c ⊘ a) =================
+#
+# 07 §1 の整合残差。零どうしは一致、片方だけ零は不一致になる
+
+AGR       ke  543 0
+anAR      ta  AGR
+AGRb      ke  544 0
+adAR      ta  AGRb
+AGRc      ke  545 0
+cnAR      ta  AGRc
+AGRd      ke  546 0
+cdAR      ta  AGRd
+
+ARs1g0    ke  529 0
+.         ti  ARs1g0 anAR
+ARs1g1    ke  530 0
+.         ti  ARs1g1 adAR
+ARs1g2    ke  531 0
+.         ti  ARs1g2 cnAR
+ARs1g3    ke  532 0
+.         ti  ARs1g3 cdAR
+ARs1r     ke  2 0
+ARs1rw    ke  528 0
+.         ti  ARs1rw ARs1r
+.         so  DVQ
+
+AR1R      ke  526 0
+AR1Rv     ta  AR1R
+AR1Rb     ke  527 0
+AR1Rbv    ta  AR1Rb
+
+ARs2g0    ke  518 0
+.         ti  ARs2g0 AR1Rv
+ARs2g1    ke  519 0
+.         ti  ARs2g1 AR1Rbv
+ARs2r     ke  2 0
+ARs2rw    ke  517 0
+.         ti  ARs2rw ARs2r
+.         so  CLM
+
+AR2R      ke  515 0
+AR2Rv     ta  AR2R
+AR2Rb     ke  516 0
+AR2Rbv    ta  AR2Rb
+
+ARs3g0    ke  509 0
+.         ti  ARs3g0 anAR
+ARs3r     ke  2 0
+ARs3rw    ke  508 0
+.         ti  ARs3rw ARs3r
+.         so  EQZ
+
+AR3R      ke  507 0
+AR3Rv     ta  AR3R
+
+ARs4g0    ke  509 0
+.         ti  ARs4g0 cnAR
+ARs4r     ke  3 0
+ARs4rw    ke  508 0
+.         ti  ARs4rw ARs4r
+.         so  EQZ
+
+AR4R      ke  507 0
+AR4Rv     ta  AR4R
+
+# 1
+AR50      ke  6 0
+AR5n      ta  AR50
+AR5k      sa  KV04 BW
+AR5ka     ko  AR5k AR5n
+AR5kv     ke  1 0
+.         ti  AR5ka AR5kv
+AR5a      sa  KV06 BW
+AR5aa     ko  AR5a AR5n
+AR5v      ke  1 0
+.         ti  AR5aa AR5v
+AR5d      sa  KV10 BW
+AR5da     ko  AR5d AR5n
+AR5z      ke  0 0
+.         ti  AR5da AR5z
+AR5o      ke  1 0
+AR5n2     ko  AR5n AR5o
+.         ti  AR50 AR5n2
+
+# 零
+AR60      ke  6 0
+AR6n      ta  AR60
+AR6k      sa  KV04 BW
+AR6ka     ko  AR6k AR6n
+AR6kv     ke  1 0
+.         ti  AR6ka AR6kv
+AR6a      sa  KV06 BW
+AR6aa     ko  AR6a AR6n
+AR6v      ke  0 0
+.         ti  AR6aa AR6v
+AR6d      sa  KV10 BW
+AR6da     ko  AR6d AR6n
+AR6z      ke  0 0
+.         ti  AR6da AR6z
+AR6o      ke  1 0
+AR6n2     ko  AR6n AR6o
+.         ti  AR60 AR6n2
+
+ARs5g0    ke  504 0
+.         ti  ARs5g0 AR4Rv
+ARs5g1    ke  505 0
+.         ti  ARs5g1 AR5n
+ARs5g2    ke  506 0
+.         ti  ARs5g2 AR6n
+ARs5r     ke  7 0
+ARs5rw    ke  503 0
+.         ti  ARs5rw ARs5r
+.         so  SLB
+
+AR5R      ke  502 0
+AR5Rv     ta  AR5R
+
+# 1
+AR70      ke  6 0
+AR7n      ta  AR70
+AR7k      sa  KV04 BW
+AR7ka     ko  AR7k AR7n
+AR7kv     ke  1 0
+.         ti  AR7ka AR7kv
+AR7a      sa  KV06 BW
+AR7aa     ko  AR7a AR7n
+AR7v      ke  1 0
+.         ti  AR7aa AR7v
+AR7d      sa  KV10 BW
+AR7da     ko  AR7d AR7n
+AR7z      ke  0 0
+.         ti  AR7da AR7z
+AR7o      ke  1 0
+AR7n2     ko  AR7n AR7o
+.         ti  AR70 AR7n2
+
+ARs6g0    ke  504 0
+.         ti  ARs6g0 AR3Rv
+ARs6g1    ke  505 0
+.         ti  ARs6g1 AR5Rv
+ARs6g2    ke  506 0
+.         ti  ARs6g2 AR2Rv
+ARs6r     ke  8 0
+ARs6rw    ke  503 0
+.         ti  ARs6rw ARs6r
+.         so  SLB
+
+AR6R      ke  502 0
+AR6Rv     ta  AR6R
+
+ARs7g0    ke  504 0
+.         ti  ARs7g0 AR3Rv
+ARs7g1    ke  505 0
+.         ti  ARs7g1 AR7n
+ARs7g2    ke  506 0
+.         ti  ARs7g2 AR2Rbv
+ARs7r     ke  9 0
+ARs7rw    ke  503 0
+.         ti  ARs7rw ARs7r
+.         so  SLB
+
+AR7R      ke  502 0
+AR7Rv     ta  AR7R
+
+ARro0     ke  540 0
+.         ti  ARro0 AR6Rv
+ARro1     ke  541 0
+.         ti  ARro1 AR7Rv
+ARrg      ke  542 0
+ARrgv     ta  ARrg
+ARrc1     ke  1 0
+.         su  ARrgv ARrc1 AE1R
+ARrc2     ke  2 0
+.         su  ARrgv ARrc2 AE2R
+.         so  BAD
+
+# ================= agreeB：(q ⇔ p) = ar(q,p) ⋆ ar(p,q) =================
+#
+# 07 §6.2 の整合対。両方向に差し引くので、近いほど大きい値になる
+
+AGE       ke  550 0
+qnAE      ta  AGE
+AGEb      ke  551 0
+qdAE      ta  AGEb
+AGEc      ke  552 0
+rnAE      ta  AGEc
+AGEd      ke  553 0
+rdAE      ta  AGEd
+
+AEs1g0    ke  543 0
+.         ti  AEs1g0 qnAE
+AEs1g1    ke  544 0
+.         ti  AEs1g1 qdAE
+AEs1g2    ke  545 0
+.         ti  AEs1g2 rnAE
+AEs1g3    ke  546 0
+.         ti  AEs1g3 rdAE
+AEs1r     ke  1 0
+AEs1rw    ke  542 0
+.         ti  AEs1rw AEs1r
+.         so  AGR
+
+AE1R      ke  540 0
+AE1Rv     ta  AE1R
+AE1Rb     ke  541 0
+AE1Rbv    ta  AE1Rb
+
+AEs2g0    ke  543 0
+.         ti  AEs2g0 rnAE
+AEs2g1    ke  544 0
+.         ti  AEs2g1 rdAE
+AEs2g2    ke  545 0
+.         ti  AEs2g2 qnAE
+AEs2g3    ke  546 0
+.         ti  AEs2g3 qdAE
+AEs2r     ke  2 0
+AEs2rw    ke  542 0
+.         ti  AEs2rw AEs2r
+.         so  AGR
+
+AE2R      ke  540 0
+AE2Rv     ta  AE2R
+AE2Rb     ke  541 0
+AE2Rbv    ta  AE2Rb
+
+# 分子の積
+AE30      ke  6 0
+AE3n      ta  AE30
+AE3k      sa  KV04 BW
+AE3ka     ko  AE3k AE3n
+AE3kv     ke  3 0
+.         ti  AE3ka AE3kv
+AE3a      sa  KV06 BW
+AE3aa     ko  AE3a AE3n
+.         ti  AE3aa AE1Rv
+AE3b      sa  KV08 BW
+AE3ba     ko  AE3b AE3n
+.         ti  AE3ba AE2Rv
+AE3d      sa  KV10 BW
+AE3da     ko  AE3d AE3n
+AE3z      ke  0 0
+.         ti  AE3da AE3z
+AE3o      ke  1 0
+AE3n2     ko  AE3n AE3o
+.         ti  AE30 AE3n2
+
+# 分母の積
+AE40      ke  6 0
+AE4n      ta  AE40
+AE4k      sa  KV04 BW
+AE4ka     ko  AE4k AE4n
+AE4kv     ke  3 0
+.         ti  AE4ka AE4kv
+AE4a      sa  KV06 BW
+AE4aa     ko  AE4a AE4n
+.         ti  AE4aa AE1Rbv
+AE4b      sa  KV08 BW
+AE4ba     ko  AE4b AE4n
+.         ti  AE4ba AE2Rbv
+AE4d      sa  KV10 BW
+AE4da     ko  AE4d AE4n
+AE4z      ke  0 0
+.         ti  AE4da AE4z
+AE4o      ke  1 0
+AE4n2     ko  AE4n AE4o
+.         ti  AE40 AE4n2
+
+AEro0     ke  547 0
+.         ti  AEro0 AE3n
+AEro1     ke  548 0
+.         ti  AEro1 AE4n
+AErg      ke  549 0
+AErgv     ta  AErg
+AErc1     ke  1 0
+.         su  AErgv AErc1 GTO2
+AErc2     ke  2 0
+.         su  AErgv AErc2 GNA2
+AErc3     ke  3 0
+.         su  AErgv AErc3 GNI2
+.         so  BAD
+
+# ================= RD0：入口 frontier から実行時の語を一つ読む =================
+#
+# 返りは語 570、戻り符号は語 571 が持つ
+
+RD0       ke  10 0
+cR0       ta  RD0
+w9R0      ke  9 0
+fR0       ta  w9R0
+.         se  cR0 fR0 RD0B
+.         so  BAD
+
+RD0B      sa  KV02 BW
+aR0       ko  RD0B cR0
+vR0       ta  aR0
+zR0       ke  0 0
+.         se  vR0 zR0 BAD
+w570R     ke  570 0
+.         ti  w570R vR0
+w10R0     ke  10 0
+o1R0      ke  1 0
+cR02      ko  cR0 o1R0
+.         ti  w10R0 cR02
+
+R0g       ke  571 0
+R0gv      ta  R0g
+R0c1      ke  1 0
+.         su  R0gv R0c1 D01R
+R0c2      ke  2 0
+.         su  R0gv R0c2 D02R
+R0c3      ke  3 0
+.         su  R0gv R0c3 D03R
+R0c4      ke  4 0
+.         su  R0gv R0c4 D04R
+R0c5      ke  5 0
+.         su  R0gv R0c5 D05R
+R0c6      ke  6 0
+.         su  R0gv R0c6 D06R
+.         so  BAD
+
+# ================= to：整合対 (q ⇔ p)。Dyad 二本 → 𝒬 =================
+
+GTO       ke  0 0
+TO1r      ke  1 0
+TO1rw     ke  571 0
+.         ti  TO1rw TO1r
+.         so  RD0
+
+D01R      ke  570 0
+D01Rv     ta  D01R
+
+TO2r      ke  2 0
+TO2rw     ke  571 0
+.         ti  TO2rw TO2r
+.         so  RD0
+
+D02R      ke  570 0
+D02Rv     ta  D02R
+
+TOl1g0    ke  557 0
+.         ti  TOl1g0 D01Rv
+TOl1r     ke  1 0
+TOl1rw    ke  556 0
+.         ti  TOl1rw TOl1r
+.         so  LFQ
+
+LF1R      ke  554 0
+LF1Rv     ta  LF1R
+LF1Rb     ke  555 0
+LF1Rbv    ta  LF1Rb
+
+TOl2g0    ke  557 0
+.         ti  TOl2g0 D02Rv
+TOl2r     ke  2 0
+TOl2rw    ke  556 0
+.         ti  TOl2rw TOl2r
+.         so  LFQ
+
+LF2R      ke  554 0
+LF2Rv     ta  LF2R
+LF2Rb     ke  555 0
+LF2Rbv    ta  LF2Rb
+
+TOag0     ke  550 0
+.         ti  TOag0 LF1Rv
+TOag1     ke  551 0
+.         ti  TOag1 LF1Rbv
+TOag2     ke  552 0
+.         ti  TOag2 LF2Rv
+TOag3     ke  553 0
+.         ti  TOag3 LF2Rbv
+TOar      ke  1 0
+TOarw     ke  549 0
+.         ti  TOarw TOar
+.         so  AGE
+
+GTO2      ke  547 0
+GTO2v     ta  GTO2
+GTO2b     ke  548 0
+GTO2bv    ta  GTO2b
+
+TOwone    ke  1 0
+TOwg0     ke  6 0
+TOwgn     ta  TOwg0
+TOwgk     sa  KV04 BW
+TOwgka    ko  TOwgk TOwgn
+TOwgkv    ke  1 0
+.         ti  TOwgka TOwgkv
+TOwgaw    sa  KV06 BW
+TOwgaa    ko  TOwgaw TOwgn
+.         ti  TOwgaa TOwone
+TOwgdw    sa  KV10 BW
+TOwgda    ko  TOwgdw TOwgn
+TOwgz     ke  0 0
+.         ti  TOwgda TOwgz
+TOwgo1    ke  1 0
+TOwgn2    ko  TOwgn TOwgo1
+.         ti  TOwg0 TOwgn2
+TOwz      ke  0 0
+TOwo2     ke  1 0
+TOwen     ke  97 0
+TOwenv    ta  TOwen
+TOweo     ke  1 0
+TOwen2    ko  TOwenv TOweo
+TOwes     ke  97 0
+.         ti  TOwes TOwen2
+TOweg     sa  KV44 BW
+TOwega    ko  TOweg TOwenv
+.         ti  TOwega TOwgn
+TOwem     sa  KV46 BW
+TOwema    ko  TOwem TOwenv
+.         ti  TOwema TOwz
+TOwee     sa  KV48 BW
+TOweea    ko  TOwee TOwenv
+.         ti  TOweea TOwz
+TOwex     sa  KV50 BW
+TOwexa    ko  TOwex TOwenv
+.         ti  TOwexa TOwo2
+TOc1      ke  1 0
+TOpkf     ke  4 0
+TOpka     ke  62 0
+.         ti  TOpka TOpkf
+TOpb      ke  63 0
+.         ti  TOpb GTO2v
+TOpc      ke  64 0
+.         ti  TOpc GTO2bv
+TOpd      ke  65 0
+.         ti  TOpd TOwenv
+TOpe      ke  66 0
+.         ti  TOpe TOc1
+.         so  PSC
+
+# ================= na：原型を 1 に固定した整合対。Dyad → 𝒬 =================
+
+GNA       ke  0 0
+NA1r      ke  3 0
+NA1rw     ke  571 0
+.         ti  NA1rw NA1r
+.         so  RD0
+
+D03R      ke  570 0
+D03Rv     ta  D03R
+
+NAlg0     ke  557 0
+.         ti  NAlg0 D03Rv
+NAlr      ke  3 0
+NAlrw     ke  556 0
+.         ti  NAlrw NAlr
+.         so  LFQ
+
+LF3R      ke  554 0
+LF3Rv     ta  LF3R
+LF3Rb     ke  555 0
+LF3Rbv    ta  LF3Rb
+
+NAv1      ke  1 0
+NAo10     ke  6 0
+NAo1n     ta  NAo10
+NAo1k     sa  KV04 BW
+NAo1ka    ko  NAo1k NAo1n
+NAo1kv    ke  1 0
+.         ti  NAo1ka NAo1kv
+NAo1aw    sa  KV06 BW
+NAo1aa    ko  NAo1aw NAo1n
+.         ti  NAo1aa NAv1
+NAo1dw    sa  KV10 BW
+NAo1da    ko  NAo1dw NAo1n
+NAo1z     ke  0 0
+.         ti  NAo1da NAo1z
+NAo1o1    ke  1 0
+NAo1n2    ko  NAo1n NAo1o1
+.         ti  NAo10 NAo1n2
+NAv2      ke  1 0
+NAo20     ke  6 0
+NAo2n     ta  NAo20
+NAo2k     sa  KV04 BW
+NAo2ka    ko  NAo2k NAo2n
+NAo2kv    ke  1 0
+.         ti  NAo2ka NAo2kv
+NAo2aw    sa  KV06 BW
+NAo2aa    ko  NAo2aw NAo2n
+.         ti  NAo2aa NAv2
+NAo2dw    sa  KV10 BW
+NAo2da    ko  NAo2dw NAo2n
+NAo2z     ke  0 0
+.         ti  NAo2da NAo2z
+NAo2o1    ke  1 0
+NAo2n2    ko  NAo2n NAo2o1
+.         ti  NAo20 NAo2n2
+NAag0     ke  550 0
+.         ti  NAag0 LF3Rv
+NAag1     ke  551 0
+.         ti  NAag1 LF3Rbv
+NAag2     ke  552 0
+.         ti  NAag2 NAo1n
+NAag3     ke  553 0
+.         ti  NAag3 NAo2n
+NAar      ke  2 0
+NAarw     ke  549 0
+.         ti  NAarw NAar
+.         so  AGE
+
+GNA2      ke  547 0
+GNA2v     ta  GNA2
+GNA2b     ke  548 0
+GNA2bv    ta  GNA2b
+
+NAwone    ke  1 0
+NAwg0     ke  6 0
+NAwgn     ta  NAwg0
+NAwgk     sa  KV04 BW
+NAwgka    ko  NAwgk NAwgn
+NAwgkv    ke  1 0
+.         ti  NAwgka NAwgkv
+NAwgaw    sa  KV06 BW
+NAwgaa    ko  NAwgaw NAwgn
+.         ti  NAwgaa NAwone
+NAwgdw    sa  KV10 BW
+NAwgda    ko  NAwgdw NAwgn
+NAwgz     ke  0 0
+.         ti  NAwgda NAwgz
+NAwgo1    ke  1 0
+NAwgn2    ko  NAwgn NAwgo1
+.         ti  NAwg0 NAwgn2
+NAwz      ke  0 0
+NAwo2     ke  1 0
+NAwen     ke  97 0
+NAwenv    ta  NAwen
+NAweo     ke  1 0
+NAwen2    ko  NAwenv NAweo
+NAwes     ke  97 0
+.         ti  NAwes NAwen2
+NAweg     sa  KV44 BW
+NAwega    ko  NAweg NAwenv
+.         ti  NAwega NAwgn
+NAwem     sa  KV46 BW
+NAwema    ko  NAwem NAwenv
+.         ti  NAwema NAwz
+NAwee     sa  KV48 BW
+NAweea    ko  NAwee NAwenv
+.         ti  NAweea NAwz
+NAwex     sa  KV50 BW
+NAwexa    ko  NAwex NAwenv
+.         ti  NAwexa NAwo2
+NAc1      ke  1 0
+NApkf     ke  4 0
+NApka     ke  62 0
+.         ti  NApka NApkf
+NApb      ke  63 0
+.         ti  NApb GNA2v
+NApc      ke  64 0
+.         ti  NApc GNA2bv
+NApd      ke  65 0
+.         ti  NApd NAwenv
+NApe      ke  66 0
+.         ti  NApe NAc1
+.         so  PSC
+
+# ================= ni：原型を 0 に固定した整合対。Dyad → 𝒬 =================
+
+GNI       ke  0 0
+NI1r      ke  4 0
+NI1rw     ke  571 0
+.         ti  NI1rw NI1r
+.         so  RD0
+
+D04R      ke  570 0
+D04Rv     ta  D04R
+
+NIlg0     ke  557 0
+.         ti  NIlg0 D04Rv
+NIlr      ke  4 0
+NIlrw     ke  556 0
+.         ti  NIlrw NIlr
+.         so  LFQ
+
+LF4R      ke  554 0
+LF4Rv     ta  LF4R
+LF4Rb     ke  555 0
+LF4Rbv    ta  LF4Rb
+
+NIv1      ke  0 0
+NIo10     ke  6 0
+NIo1n     ta  NIo10
+NIo1k     sa  KV04 BW
+NIo1ka    ko  NIo1k NIo1n
+NIo1kv    ke  1 0
+.         ti  NIo1ka NIo1kv
+NIo1aw    sa  KV06 BW
+NIo1aa    ko  NIo1aw NIo1n
+.         ti  NIo1aa NIv1
+NIo1dw    sa  KV10 BW
+NIo1da    ko  NIo1dw NIo1n
+NIo1z     ke  0 0
+.         ti  NIo1da NIo1z
+NIo1o1    ke  1 0
+NIo1n2    ko  NIo1n NIo1o1
+.         ti  NIo10 NIo1n2
+NIv2      ke  1 0
+NIo20     ke  6 0
+NIo2n     ta  NIo20
+NIo2k     sa  KV04 BW
+NIo2ka    ko  NIo2k NIo2n
+NIo2kv    ke  1 0
+.         ti  NIo2ka NIo2kv
+NIo2aw    sa  KV06 BW
+NIo2aa    ko  NIo2aw NIo2n
+.         ti  NIo2aa NIv2
+NIo2dw    sa  KV10 BW
+NIo2da    ko  NIo2dw NIo2n
+NIo2z     ke  0 0
+.         ti  NIo2da NIo2z
+NIo2o1    ke  1 0
+NIo2n2    ko  NIo2n NIo2o1
+.         ti  NIo20 NIo2n2
+NIag0     ke  550 0
+.         ti  NIag0 LF4Rv
+NIag1     ke  551 0
+.         ti  NIag1 LF4Rbv
+NIag2     ke  552 0
+.         ti  NIag2 NIo1n
+NIag3     ke  553 0
+.         ti  NIag3 NIo2n
+NIar      ke  3 0
+NIarw     ke  549 0
+.         ti  NIarw NIar
+.         so  AGE
+
+GNI2      ke  547 0
+GNI2v     ta  GNI2
+GNI2b     ke  548 0
+GNI2bv    ta  GNI2b
+
+NIwone    ke  1 0
+NIwg0     ke  6 0
+NIwgn     ta  NIwg0
+NIwgk     sa  KV04 BW
+NIwgka    ko  NIwgk NIwgn
+NIwgkv    ke  1 0
+.         ti  NIwgka NIwgkv
+NIwgaw    sa  KV06 BW
+NIwgaa    ko  NIwgaw NIwgn
+.         ti  NIwgaa NIwone
+NIwgdw    sa  KV10 BW
+NIwgda    ko  NIwgdw NIwgn
+NIwgz     ke  0 0
+.         ti  NIwgda NIwgz
+NIwgo1    ke  1 0
+NIwgn2    ko  NIwgn NIwgo1
+.         ti  NIwg0 NIwgn2
+NIwz      ke  0 0
+NIwo2     ke  1 0
+NIwen     ke  97 0
+NIwenv    ta  NIwen
+NIweo     ke  1 0
+NIwen2    ko  NIwenv NIweo
+NIwes     ke  97 0
+.         ti  NIwes NIwen2
+NIweg     sa  KV44 BW
+NIwega    ko  NIweg NIwenv
+.         ti  NIwega NIwgn
+NIwem     sa  KV46 BW
+NIwema    ko  NIwem NIwenv
+.         ti  NIwema NIwz
+NIwee     sa  KV48 BW
+NIweea    ko  NIwee NIwenv
+.         ti  NIweea NIwz
+NIwex     sa  KV50 BW
+NIwexa    ko  NIwex NIwenv
+.         ti  NIwexa NIwo2
+NIc1      ke  1 0
+NIpkf     ke  4 0
+NIpka     ke  62 0
+.         ti  NIpka NIpkf
+NIpb      ke  63 0
+.         ti  NIpb GNI2v
+NIpc      ke  64 0
+.         ti  NIpc GNI2bv
+NIpd      ke  65 0
+.         ti  NIpd NIwenv
+NIpe      ke  66 0
+.         ti  NIpe NIc1
+.         so  PSC
+
+# ================= nu：判定値の ⋆ 統合。C_identify の中身（07 §6.5）=================
+
+GNU       ke  0 0
+NU1r      ke  9 0
+NU1rw     ke  69 0
+.         ti  NU1rw NU1r
+.         so  RD1
+
+QN1R      ke  0 0
+NUq1k     ke  62 0
+NUq1kv    ta  NUq1k
+NUq1q     ke  4 0
+.         su  NUq1kv NUq1q NUq1ok
+.         so  BAD
+NUq1ok    ke  0 0
+
+NUsf0     ke  63 0
+NUsf0v    ta  NUsf0
+NUss0     ke  830 0
+.         ti  NUss0 NUsf0v
+NUsf1     ke  64 0
+NUsf1v    ta  NUsf1
+NUss1     ke  831 0
+.         ti  NUss1 NUsf1v
+NUsf2     ke  65 0
+NUsf2v    ta  NUsf2
+NUss2     ke  832 0
+.         ti  NUss2 NUsf2v
+NUsf3     ke  66 0
+NUsf3v    ta  NUsf3
+NUss3     ke  833 0
+.         ti  NUss3 NUsf3v
+
+NU2r      ke  10 0
+NU2rw     ke  69 0
+.         ti  NU2rw NU2r
+.         so  RD1
+
+QN2R      ke  0 0
+NUq2k     ke  62 0
+NUq2kv    ta  NUq2k
+NUq2q     ke  4 0
+.         su  NUq2kv NUq2q NUq2ok
+.         so  BAD
+NUq2ok    ke  0 0
+
+NUtf0     ke  63 0
+NUtf0v    ta  NUtf0
+NUts0     ke  834 0
+.         ti  NUts0 NUtf0v
+NUtf1     ke  64 0
+NUtf1v    ta  NUtf1
+NUts1     ke  835 0
+.         ti  NUts1 NUtf1v
+NUtf2     ke  65 0
+NUtf2v    ta  NUtf2
+NUts2     ke  836 0
+.         ti  NUts2 NUtf2v
+NUtf3     ke  66 0
+NUtf3v    ta  NUtf3
+NUts3     ke  837 0
+.         ti  NUts3 NUtf3v
+
+NUa1      ke  830 0
+NUa1v     ta  NUa1
+NUb1      ke  831 0
+NUb1v     ta  NUb1
+NUa2      ke  834 0
+NUa2v     ta  NUa2
+NUb2      ke  835 0
+NUb2v     ta  NUb2
+
+NU30      ke  6 0
+NU3n      ta  NU30
+NU3k      sa  KV04 BW
+NU3ka     ko  NU3k NU3n
+NU3kv     ke  3 0
+.         ti  NU3ka NU3kv
+NU3aw     sa  KV06 BW
+NU3aa     ko  NU3aw NU3n
+.         ti  NU3aa NUa1v
+NU3bw     sa  KV08 BW
+NU3ba     ko  NU3bw NU3n
+.         ti  NU3ba NUa2v
+NU3dw     sa  KV10 BW
+NU3da     ko  NU3dw NU3n
+NU3z      ke  0 0
+.         ti  NU3da NU3z
+NU3o1     ke  1 0
+NU3n2     ko  NU3n NU3o1
+.         ti  NU30 NU3n2
+NU40      ke  6 0
+NU4n      ta  NU40
+NU4k      sa  KV04 BW
+NU4ka     ko  NU4k NU4n
+NU4kv     ke  3 0
+.         ti  NU4ka NU4kv
+NU4aw     sa  KV06 BW
+NU4aa     ko  NU4aw NU4n
+.         ti  NU4aa NUb1v
+NU4bw     sa  KV08 BW
+NU4ba     ko  NU4bw NU4n
+.         ti  NU4ba NUb2v
+NU4dw     sa  KV10 BW
+NU4da     ko  NU4dw NU4n
+NU4z      ke  0 0
+.         ti  NU4da NU4z
+NU4o1     ke  1 0
+NU4n2     ko  NU4n NU4o1
+.         ti  NU40 NU4n2
+NUw1      ke  832 0
+NUw1v     ta  NUw1
+NUc1      ke  833 0
+NUc1v     ta  NUc1
+NUw2      ke  836 0
+NUw2v     ta  NUw2
+NUc2      ke  837 0
+NUc2v     ta  NUc2
+NUmz      ke  0 0
+NUcbg0    ke  740 0
+.         ti  NUcbg0 NUw1v
+NUcbg1    ke  741 0
+.         ti  NUcbg1 NUc1v
+NUcbg2    ke  742 0
+.         ti  NUcbg2 NUw2v
+NUcbg3    ke  743 0
+.         ti  NUcbg3 NUc2v
+NUcbg4    ke  744 0
+.         ti  NUcbg4 NUmz
+NUcbr     ke  1 0
+NUcbrw    ke  747 0
+.         ti  NUcbrw NUcbr
+.         so  WCOMB
+
+WK1R      ke  0 0
+NUrs      ke  745 0
+NUrsv     ta  NUrs
+NUrc      ke  746 0
+NUrcv     ta  NUrc
+NUpkf     ke  4 0
+NUpka     ke  62 0
+.         ti  NUpka NUpkf
+NUpb      ke  63 0
+.         ti  NUpb NU3n
+NUpc      ke  64 0
+.         ti  NUpc NU4n
+NUpd      ke  65 0
+.         ti  NUpd NUrsv
+NUpe      ke  66 0
+.         ti  NUpe NUrcv
+.         so  PSC
+
+# ================= ru：π。語を落とす。大きさは動かない（定義 3.4）=================
+
+GRU       ke  0 0
+RU1r      ke  19 0
+RU1rw     ke  69 0
+.         ti  RU1rw RU1r
+.         so  RD1
+
+QP1R      ke  0 0
+RUqk      ke  62 0
+RUqkv     ta  RUqk
+RUqq      ke  4 0
+.         su  RUqkv RUqq RUqok
+.         so  BAD
+RUqok     ke  0 0
+
+RUa       ke  63 0
+RUav      ta  RUa
+RUb       ke  64 0
+RUbv      ta  RUb
+
+RUwone    ke  1 0
+RUwg0     ke  6 0
+RUwgn     ta  RUwg0
+RUwgk     sa  KV04 BW
+RUwgka    ko  RUwgk RUwgn
+RUwgkv    ke  1 0
+.         ti  RUwgka RUwgkv
+RUwgaw    sa  KV06 BW
+RUwgaa    ko  RUwgaw RUwgn
+.         ti  RUwgaa RUwone
+RUwgdw    sa  KV10 BW
+RUwgda    ko  RUwgdw RUwgn
+RUwgz     ke  0 0
+.         ti  RUwgda RUwgz
+RUwgo1    ke  1 0
+RUwgn2    ko  RUwgn RUwgo1
+.         ti  RUwg0 RUwgn2
+RUwz      ke  0 0
+RUwo2     ke  1 0
+RUwen     ke  97 0
+RUwenv    ta  RUwen
+RUweo     ke  1 0
+RUwen2    ko  RUwenv RUweo
+RUwes     ke  97 0
+.         ti  RUwes RUwen2
+RUweg     sa  KV44 BW
+RUwega    ko  RUweg RUwenv
+.         ti  RUwega RUwgn
+RUwem     sa  KV46 BW
+RUwema    ko  RUwem RUwenv
+.         ti  RUwema RUwz
+RUwee     sa  KV48 BW
+RUweea    ko  RUwee RUwenv
+.         ti  RUweea RUwz
+RUwex     sa  KV50 BW
+RUwexa    ko  RUwex RUwenv
+.         ti  RUwexa RUwo2
+RUc1      ke  1 0
+RUpkf     ke  4 0
+RUpka     ke  62 0
+.         ti  RUpka RUpkf
+RUpb      ke  63 0
+.         ti  RUpb RUav
+RUpc      ke  64 0
+.         ti  RUpc RUbv
+RUpd      ke  65 0
+.         ti  RUpd RUwenv
+RUpe      ke  66 0
+.         ti  RUpe RUc1
+.         so  PSC
+
+# ================= ne：所属 φ∂∘π。go：Θ。どちらも [0 < 分子] を読む =================
+#
+# 07 §6.3 の「所属は最後に二値へ落とす」。閾値は現れない
+#
+# 三つとも二値のワイヤを出す。出口 frontier へは印 2^20 を付けて積む
+# （front.cam の PSBIT と同じ印）。印が無いと後段の mo が Ko で止まる
+
+GNE       ke  0 0
+NE1r      ke  20 0
+NE1rw     ke  69 0
+.         ti  NE1rw NE1r
+.         so  RD1
+
+QH1R      ke  0 0
+NEqk      ke  62 0
+NEqkv     ta  NEqk
+NEqq      ke  4 0
+.         su  NEqkv NEqq NEqok
+.         so  BAD
+NEqok     ke  0 0
+
+NEa       ke  63 0
+NEav      ta  NEa
+
+# 八箱の A を負にすると自分の零箱を使う（φ∂ の道）
+NEm       ke  -1 0
+NEsA      ke  48 0
+.         ti  NEsA NEm
+NEsB      ke  49 0
+.         ti  NEsB NEav
+NEd       ke  1 0
+NEsD      ke  50 0
+.         ti  NEsD NEd
+NEr       ke  6 0
+NEsR      ke  501 0
+.         ti  NEsR NEr
+.         so  BIT
+
+QB1R      ke  500 0
+QB1Rv     ta  QB1R
+QB1kb     ke  1048576 0
+QB1Rm     ko  QB1Rv QB1kb
+
+NEpo      ke  11 0
+NEpov     ta  NEpo
+NEpb      sa  KV03 BW
+NEpba     ko  NEpb NEpov
+.         ti  NEpba QB1Rm
+NEpi      ke  1 0
+NEpo2     ko  NEpov NEpi
+.         ti  NEpo NEpo2
+.         so  CNTW1
+
+GGO       ke  0 0
+GO1r      ke  21 0
+GO1rw     ke  69 0
+.         ti  GO1rw GO1r
+.         so  RD1
+
+QG1R      ke  0 0
+GOqk      ke  62 0
+GOqkv     ta  GOqk
+GOqq      ke  4 0
+.         su  GOqkv GOqq GOqok
+.         so  BAD
+GOqok     ke  0 0
+
+GOa       ke  63 0
+GOav      ta  GOa
+
+GOm       ke  -1 0
+GOsA      ke  48 0
+.         ti  GOsA GOm
+GOsB      ke  49 0
+.         ti  GOsB GOav
+GOd       ke  1 0
+GOsD      ke  50 0
+.         ti  GOsD GOd
+GOr       ke  7 0
+GOsR      ke  501 0
+.         ti  GOsR GOr
+.         so  BIT
+
+QB2R      ke  500 0
+QB2Rv     ta  QB2R
+QB2kb     ke  1048576 0
+QB2Rm     ko  QB2Rv QB2kb
+
+GOpo      ke  11 0
+GOpov     ta  GOpo
+GOpb      sa  KV03 BW
+GOpba     ko  GOpb GOpov
+.         ti  GOpba QB2Rm
+GOpi      ke  1 0
+GOpo2     ko  GOpov GOpi
+.         ti  GOpo GOpo2
+.         so  CNTW1
+
+# ================= ra：≤。豊穣圏の 2-胞はこの不等式へ吸収される（定理 3.4）=================
+
+GRA       ke  0 0
+RA1r      ke  17 0
+RA1rw     ke  69 0
+.         ti  RA1rw RA1r
+.         so  RD1
+
+QR1R      ke  0 0
+RAq1k     ke  62 0
+RAq1kv    ta  RAq1k
+RAq1q     ke  4 0
+.         su  RAq1kv RAq1q RAq1ok
+.         so  BAD
+RAq1ok    ke  0 0
+
+RAsf0     ke  63 0
+RAsf0v    ta  RAsf0
+RAss0     ke  830 0
+.         ti  RAss0 RAsf0v
+RAsf1     ke  64 0
+RAsf1v    ta  RAsf1
+RAss1     ke  831 0
+.         ti  RAss1 RAsf1v
+RAsf2     ke  65 0
+RAsf2v    ta  RAsf2
+RAss2     ke  832 0
+.         ti  RAss2 RAsf2v
+RAsf3     ke  66 0
+RAsf3v    ta  RAsf3
+RAss3     ke  833 0
+.         ti  RAss3 RAsf3v
+
+RA2r      ke  18 0
+RA2rw     ke  69 0
+.         ti  RA2rw RA2r
+.         so  RD1
+
+QR2R      ke  0 0
+RAq2k     ke  62 0
+RAq2kv    ta  RAq2k
+RAq2q     ke  4 0
+.         su  RAq2kv RAq2q RAq2ok
+.         so  BAD
+RAq2ok    ke  0 0
+
+RAa1      ke  830 0
+RAa1v     ta  RAa1
+RAb1      ke  831 0
+RAb1v     ta  RAb1
+RAa2      ke  63 0
+RAa2v     ta  RAa2
+RAb2      ke  64 0
+RAb2v     ta  RAb2
+
+RA30      ke  6 0
+RA3n      ta  RA30
+RA3k      sa  KV04 BW
+RA3ka     ko  RA3k RA3n
+RA3kv     ke  3 0
+.         ti  RA3ka RA3kv
+RA3aw     sa  KV06 BW
+RA3aa     ko  RA3aw RA3n
+.         ti  RA3aa RAa1v
+RA3bw     sa  KV08 BW
+RA3ba     ko  RA3bw RA3n
+.         ti  RA3ba RAb2v
+RA3dw     sa  KV10 BW
+RA3da     ko  RA3dw RA3n
+RA3z      ke  0 0
+.         ti  RA3da RA3z
+RA3o1     ke  1 0
+RA3n2     ko  RA3n RA3o1
+.         ti  RA30 RA3n2
+RA40      ke  6 0
+RA4n      ta  RA40
+RA4k      sa  KV04 BW
+RA4ka     ko  RA4k RA4n
+RA4kv     ke  3 0
+.         ti  RA4ka RA4kv
+RA4aw     sa  KV06 BW
+RA4aa     ko  RA4aw RA4n
+.         ti  RA4aa RAa2v
+RA4bw     sa  KV08 BW
+RA4ba     ko  RA4bw RA4n
+.         ti  RA4ba RAb1v
+RA4dw     sa  KV10 BW
+RA4da     ko  RA4dw RA4n
+RA4z      ke  0 0
+.         ti  RA4da RA4z
+RA4o1     ke  1 0
+RA4n2     ko  RA4n RA4o1
+.         ti  RA40 RA4n2
+RAsA      ke  48 0
+.         ti  RAsA RA4n
+RAsB      ke  49 0
+.         ti  RAsB RA3n
+RAd       ke  0 0
+RAsD      ke  50 0
+.         ti  RAsD RAd
+RAr       ke  8 0
+RAsR      ke  501 0
+.         ti  RAsR RAr
+.         so  BIT
+
+QB3R      ke  500 0
+QB3Rv     ta  QB3R
+QB3kb     ke  1048576 0
+QB3Rm     ko  QB3Rv QB3kb
+
+RApo      ke  11 0
+RApov     ta  RApo
+RApb      sa  KV03 BW
+RApba     ko  RApb RApov
+.         ti  RApba QB3Rm
+RApi      ke  1 0
+RApo2     ko  RApov RApi
+.         ti  RApo RApo2
+.         so  CNTW1
+
+# ================= ye：右残差 ↘。yo：左残差 ↙（定理 3.3）=================
+#
+#   a ⋆ b ≤ c ⟺ b ≤ a ↘ c ⟺ a ≤ c ↙ b
+#
+# ⋆ が非可換なので ↘ と ↙ は一致しない
+
+GYE       ke  0 0
+YE1r      ke  11 0
+YE1rw     ke  69 0
+.         ti  YE1rw YE1r
+.         so  RD1
+
+QE1R      ke  0 0
+YEq1k     ke  62 0
+YEq1kv    ta  YEq1k
+YEq1q     ke  4 0
+.         su  YEq1kv YEq1q YEq1ok
+.         so  BAD
+YEq1ok    ke  0 0
+
+YEsf0     ke  63 0
+YEsf0v    ta  YEsf0
+YEss0     ke  830 0
+.         ti  YEss0 YEsf0v
+YEsf1     ke  64 0
+YEsf1v    ta  YEsf1
+YEss1     ke  831 0
+.         ti  YEss1 YEsf1v
+YEsf2     ke  65 0
+YEsf2v    ta  YEsf2
+YEss2     ke  832 0
+.         ti  YEss2 YEsf2v
+YEsf3     ke  66 0
+YEsf3v    ta  YEsf3
+YEss3     ke  833 0
+.         ti  YEss3 YEsf3v
+
+YE2r      ke  12 0
+YE2rw     ke  69 0
+.         ti  YE2rw YE2r
+.         so  RD1
+
+QE2R      ke  0 0
+YEq2k     ke  62 0
+YEq2kv    ta  YEq2k
+YEq2q     ke  4 0
+.         su  YEq2kv YEq2q YEq2ok
+.         so  BAD
+YEq2ok    ke  0 0
+
+YEtf0     ke  63 0
+YEtf0v    ta  YEtf0
+YEts0     ke  834 0
+.         ti  YEts0 YEtf0v
+YEtf1     ke  64 0
+YEtf1v    ta  YEtf1
+YEts1     ke  835 0
+.         ti  YEts1 YEtf1v
+YEtf2     ke  65 0
+YEtf2v    ta  YEtf2
+YEts2     ke  836 0
+.         ti  YEts2 YEtf2v
+YEtf3     ke  66 0
+YEtf3v    ta  YEtf3
+YEts3     ke  837 0
+.         ti  YEts3 YEtf3v
+
+YEa1      ke  830 0
+YEa1v     ta  YEa1
+YEb1      ke  831 0
+YEb1v     ta  YEb1
+YEa2      ke  834 0
+YEa2v     ta  YEa2
+YEb2      ke  835 0
+YEb2v     ta  YEb2
+
+YErg0     ke  536 0
+.         ti  YErg0 YEa1v
+YErg1     ke  537 0
+.         ti  YErg1 YEb1v
+YErg2     ke  538 0
+.         ti  YErg2 YEa2v
+YErg3     ke  539 0
+.         ti  YErg3 YEb2v
+YErr      ke  1 0
+YErrw     ke  535 0
+.         ti  YErrw YErr
+.         so  RSB
+
+GYE2      ke  533 0
+GYE2v     ta  GYE2
+GYE2b     ke  534 0
+GYE2bv    ta  GYE2b
+
+YEw1      ke  832 0
+YEw1v     ta  YEw1
+YEc1      ke  833 0
+YEc1v     ta  YEc1
+YEw2      ke  836 0
+YEw2v     ta  YEw2
+YEc2      ke  837 0
+YEc2v     ta  YEc2
+YEm1      ke  1 0
+YEcbg0    ke  740 0
+.         ti  YEcbg0 YEw1v
+YEcbg1    ke  741 0
+.         ti  YEcbg1 YEc1v
+YEcbg2    ke  742 0
+.         ti  YEcbg2 YEw2v
+YEcbg3    ke  743 0
+.         ti  YEcbg3 YEc2v
+YEcbg4    ke  744 0
+.         ti  YEcbg4 YEm1
+YEcbr     ke  2 0
+YEcbrw    ke  747 0
+.         ti  YEcbrw YEcbr
+.         so  WCOMB
+
+WK2R      ke  0 0
+YErs      ke  745 0
+YErsv     ta  YErs
+YErc      ke  746 0
+YErcv     ta  YErc
+YEpkf     ke  4 0
+YEpka     ke  62 0
+.         ti  YEpka YEpkf
+YEpb      ke  63 0
+.         ti  YEpb GYE2v
+YEpc      ke  64 0
+.         ti  YEpc GYE2bv
+YEpd      ke  65 0
+.         ti  YEpd YErsv
+YEpe      ke  66 0
+.         ti  YEpe YErcv
+.         so  PSC
+
+GYO       ke  0 0
+YO1r      ke  13 0
+YO1rw     ke  69 0
+.         ti  YO1rw YO1r
+.         so  RD1
+
+QO1R      ke  0 0
+YOq1k     ke  62 0
+YOq1kv    ta  YOq1k
+YOq1q     ke  4 0
+.         su  YOq1kv YOq1q YOq1ok
+.         so  BAD
+YOq1ok    ke  0 0
+
+YOsf0     ke  63 0
+YOsf0v    ta  YOsf0
+YOss0     ke  830 0
+.         ti  YOss0 YOsf0v
+YOsf1     ke  64 0
+YOsf1v    ta  YOsf1
+YOss1     ke  831 0
+.         ti  YOss1 YOsf1v
+YOsf2     ke  65 0
+YOsf2v    ta  YOsf2
+YOss2     ke  832 0
+.         ti  YOss2 YOsf2v
+YOsf3     ke  66 0
+YOsf3v    ta  YOsf3
+YOss3     ke  833 0
+.         ti  YOss3 YOsf3v
+
+YO2r      ke  14 0
+YO2rw     ke  69 0
+.         ti  YO2rw YO2r
+.         so  RD1
+
+QO2R      ke  0 0
+YOq2k     ke  62 0
+YOq2kv    ta  YOq2k
+YOq2q     ke  4 0
+.         su  YOq2kv YOq2q YOq2ok
+.         so  BAD
+YOq2ok    ke  0 0
+
+YOtf0     ke  63 0
+YOtf0v    ta  YOtf0
+YOts0     ke  834 0
+.         ti  YOts0 YOtf0v
+YOtf1     ke  64 0
+YOtf1v    ta  YOtf1
+YOts1     ke  835 0
+.         ti  YOts1 YOtf1v
+YOtf2     ke  65 0
+YOtf2v    ta  YOtf2
+YOts2     ke  836 0
+.         ti  YOts2 YOtf2v
+YOtf3     ke  66 0
+YOtf3v    ta  YOtf3
+YOts3     ke  837 0
+.         ti  YOts3 YOtf3v
+
+YOa1      ke  830 0
+YOa1v     ta  YOa1
+YOb1      ke  831 0
+YOb1v     ta  YOb1
+YOa2      ke  834 0
+YOa2v     ta  YOa2
+YOb2      ke  835 0
+YOb2v     ta  YOb2
+
+# ↙ は第二入力を residualQ の左に取る
+YOrg0     ke  536 0
+.         ti  YOrg0 YOa2v
+YOrg1     ke  537 0
+.         ti  YOrg1 YOb2v
+YOrg2     ke  538 0
+.         ti  YOrg2 YOa1v
+YOrg3     ke  539 0
+.         ti  YOrg3 YOb1v
+YOrr      ke  2 0
+YOrrw     ke  535 0
+.         ti  YOrrw YOrr
+.         so  RSB
+
+GYO2      ke  533 0
+GYO2v     ta  GYO2
+GYO2b     ke  534 0
+GYO2bv    ta  GYO2b
+
+YOw1      ke  832 0
+YOw1v     ta  YOw1
+YOc1      ke  833 0
+YOc1v     ta  YOc1
+YOw2      ke  836 0
+YOw2v     ta  YOw2
+YOc2      ke  837 0
+YOc2v     ta  YOc2
+YOm2      ke  2 0
+YOcbg0    ke  740 0
+.         ti  YOcbg0 YOw1v
+YOcbg1    ke  741 0
+.         ti  YOcbg1 YOc1v
+YOcbg2    ke  742 0
+.         ti  YOcbg2 YOw2v
+YOcbg3    ke  743 0
+.         ti  YOcbg3 YOc2v
+YOcbg4    ke  744 0
+.         ti  YOcbg4 YOm2
+YOcbr     ke  3 0
+YOcbrw    ke  747 0
+.         ti  YOcbrw YOcbr
+.         so  WCOMB
+
+WK3R      ke  0 0
+YOrs      ke  745 0
+YOrsv     ta  YOrs
+YOrc      ke  746 0
+YOrcv     ta  YOrc
+YOpkf     ke  4 0
+YOpka     ke  62 0
+.         ti  YOpka YOpkf
+YOpb      ke  63 0
+.         ti  YOpb GYO2v
+YOpc      ke  64 0
+.         ti  YOpc GYO2bv
+YOpd      ke  65 0
+.         ti  YOpd YOrsv
+YOpe      ke  66 0
+.         ti  YOpe YOrcv
+.         so  PSC
+
+# ================= selectJudge：上限と下限（Descend.selectJudge）=================
+#
+#   引数  語 800-807 = (a1 b1 w1 c1 a2 b2 w2 c2)、808 = 1 なら上限
+#   返り  語 809-812 = (分子 分母 語の先頭 語の数)。戻り符号は語 813
+#
+# 大きさは max または min、語は勝った側が運ぶ。並んで語が割れたら型を落とす
+
+SELJ      ke  0 0
+SJa1      ke  800 0
+SJa1v     ta  SJa1
+SJb1      ke  801 0
+SJb1v     ta  SJb1
+SJa2      ke  804 0
+SJa2v     ta  SJa2
+SJb2      ke  805 0
+SJb2v     ta  SJb2
+SJq1g0    ke  522 0
+.         ti  SJq1g0 SJa1v
+SJq1g1    ke  523 0
+.         ti  SJq1g1 SJb1v
+SJq1g2    ke  524 0
+.         ti  SJq1g2 SJa2v
+SJq1g3    ke  525 0
+.         ti  SJq1g3 SJb2v
+SJq1r     ke  1 0
+SJq1rw    ke  521 0
+.         ti  SJq1rw SJq1r
+.         so  LTQ
+
+SJ1R      ke  0 0
+SJls      ke  520 0
+SJlsv     ta  SJls
+SJsl      ke  814 0
+.         ti  SJsl SJlsv
+SJa2b     ke  804 0
+SJa2bv    ta  SJa2b
+SJb2b     ke  805 0
+SJb2bv    ta  SJb2b
+SJa1b     ke  800 0
+SJa1bv    ta  SJa1b
+SJb1b     ke  801 0
+SJb1bv    ta  SJb1b
+SJq2g0    ke  522 0
+.         ti  SJq2g0 SJa2bv
+SJq2g1    ke  523 0
+.         ti  SJq2g1 SJb2bv
+SJq2g2    ke  524 0
+.         ti  SJq2g2 SJa1bv
+SJq2g3    ke  525 0
+.         ti  SJq2g3 SJb1bv
+SJq2r     ke  2 0
+SJq2rw    ke  521 0
+.         ti  SJq2rw SJq2r
+.         so  LTQ
+
+SJ2R      ke  0 0
+SJbk      ke  520 0
+SJbkv     ta  SJbk
+SJsb      ke  815 0
+.         ti  SJsb SJbkv
+
+# 上限なら勝ちの門は less、下限なら back になる
+SJup      ke  808 0
+SJupv     ta  SJup
+SJone     ke  1 0
+.         su  SJupv SJone SJUP
+SJDN      ke  0 0
+SJdrr     ke  815 0
+SJdrrv    ta  SJdrr
+SJdrw     ke  816 0
+.         ti  SJdrw SJdrrv
+SJdlr     ke  814 0
+SJdlrv    ta  SJdlr
+SJdlw     ke  817 0
+.         ti  SJdlw SJdlrv
+.         so  SJGO
+SJUP      ke  0 0
+SJurr     ke  814 0
+SJurrv    ta  SJurr
+SJurw     ke  816 0
+.         ti  SJurw SJurrv
+SJulr     ke  815 0
+SJulrv    ta  SJulr
+SJulw     ke  817 0
+.         ti  SJulw SJulrv
+.         so  SJGO
+
+SJGO      ke  0 0
+SJrg      ke  816 0
+SJrgv     ta  SJrg
+SJa2c     ke  804 0
+SJa2cv    ta  SJa2c
+SJa1c     ke  800 0
+SJa1cv    ta  SJa1c
+SJs1g0    ke  504 0
+.         ti  SJs1g0 SJrgv
+SJs1g1    ke  505 0
+.         ti  SJs1g1 SJa2cv
+SJs1g2    ke  506 0
+.         ti  SJs1g2 SJa1cv
+SJs1r     ke  10 0
+SJs1rw    ke  503 0
+.         ti  SJs1rw SJs1r
+.         so  SLB
+
+SJ4R      ke  0 0
+SJn       ke  502 0
+SJnv      ta  SJn
+SJsn      ke  818 0
+.         ti  SJsn SJnv
+SJrg2     ke  816 0
+SJrg2v    ta  SJrg2
+SJb2c     ke  805 0
+SJb2cv    ta  SJb2c
+SJb1c     ke  801 0
+SJb1cv    ta  SJb1c
+SJs2g0    ke  504 0
+.         ti  SJs2g0 SJrg2v
+SJs2g1    ke  505 0
+.         ti  SJs2g1 SJb2cv
+SJs2g2    ke  506 0
+.         ti  SJs2g2 SJb1cv
+SJs2r     ke  11 0
+SJs2rw    ke  503 0
+.         ti  SJs2rw SJs2r
+.         so  SLB
+
+SJ5R      ke  0 0
+SJd       ke  502 0
+SJdv      ta  SJd
+SJsd      ke  819 0
+.         ti  SJsd SJdv
+
+SJlsb     ke  814 0
+SJlsbv    ta  SJlsb
+SJbkb     ke  815 0
+SJbkbv    ta  SJbkb
+SJea0     ke  6 0
+SJean     ta  SJea0
+SJeak     sa  KV04 BW
+SJeaka    ko  SJeak SJean
+SJeakv    ke  2 0
+.         ti  SJeaka SJeakv
+SJeaaw    sa  KV06 BW
+SJeaaa    ko  SJeaaw SJean
+.         ti  SJeaaa SJlsbv
+SJeabw    sa  KV08 BW
+SJeaba    ko  SJeabw SJean
+.         ti  SJeaba SJbkbv
+SJeadw    sa  KV10 BW
+SJeada    ko  SJeadw SJean
+SJeaz     ke  0 0
+.         ti  SJeada SJeaz
+SJeao1    ke  1 0
+SJean2    ko  SJean SJeao1
+.         ti  SJea0 SJean2
+SJezg0    ke  509 0
+.         ti  SJezg0 SJean
+SJezr     ke  4 0
+SJezrw    ke  508 0
+.         ti  SJezrw SJezr
+.         so  EQZ
+
+SJ3R      ke  0 0
+SJtie     ke  507 0
+SJtiev    ta  SJtie
+SJst      ke  820 0
+.         ti  SJst SJtiev
+
+# 負けた側の門と勝った側の門を、それぞれの語へ掛ける
+SJw1      ke  802 0
+SJw1v     ta  SJw1
+SJc1      ke  803 0
+SJc1v     ta  SJc1
+SJlg      ke  817 0
+SJlgv     ta  SJlg
+SJg1g0    ke  730 0
+.         ti  SJg1g0 SJw1v
+SJg1g1    ke  731 0
+.         ti  SJg1g1 SJc1v
+SJg1g2    ke  732 0
+.         ti  SJg1g2 SJlgv
+SJg1r     ke  1 0
+SJg1rw    ke  734 0
+.         ti  SJg1rw SJg1r
+.         so  WGATE
+
+WG1R      ke  0 0
+SJlf      ke  733 0
+SJlfv     ta  SJlf
+SJslf     ke  821 0
+.         ti  SJslf SJlfv
+SJw2      ke  806 0
+SJw2v     ta  SJw2
+SJc2      ke  807 0
+SJc2v     ta  SJc2
+SJrg3     ke  816 0
+SJrg3v    ta  SJrg3
+SJg2g0    ke  730 0
+.         ti  SJg2g0 SJw2v
+SJg2g1    ke  731 0
+.         ti  SJg2g1 SJc2v
+SJg2g2    ke  732 0
+.         ti  SJg2g2 SJrg3v
+SJg2r     ke  2 0
+SJg2rw    ke  734 0
+.         ti  SJg2rw SJg2r
+.         so  WGATE
+
+WG2R      ke  0 0
+SJrt      ke  733 0
+SJrtv     ta  SJrt
+SJsrt     ke  822 0
+.         ti  SJsrt SJrtv
+
+# 並んだときの語。同じなら残し、違えば空語へ落とす
+SJw1b     ke  802 0
+SJw1bv    ta  SJw1b
+SJc1b     ke  803 0
+SJc1bv    ta  SJc1b
+SJw2b     ke  806 0
+SJw2bv    ta  SJw2b
+SJc2b     ke  807 0
+SJc2bv    ta  SJc2b
+SJm3      ke  3 0
+SJcbg0    ke  740 0
+.         ti  SJcbg0 SJw1bv
+SJcbg1    ke  741 0
+.         ti  SJcbg1 SJc1bv
+SJcbg2    ke  742 0
+.         ti  SJcbg2 SJw2bv
+SJcbg3    ke  743 0
+.         ti  SJcbg3 SJc2bv
+SJcbg4    ke  744 0
+.         ti  SJcbg4 SJm3
+SJcbr     ke  4 0
+SJcbrw    ke  747 0
+.         ti  SJcbrw SJcbr
+.         so  WCOMB
+
+WK4R      ke  0 0
+SJes      ke  745 0
+SJesv     ta  SJes
+SJses     ke  823 0
+.         ti  SJses SJesv
+SJec      ke  746 0
+SJecv     ta  SJec
+SJsec     ke  824 0
+.         ti  SJsec SJecv
+SJtb      ke  820 0
+SJtbv     ta  SJtb
+SJesb     ke  823 0
+SJesbv    ta  SJesb
+SJecb     ke  824 0
+SJecbv    ta  SJecb
+SJg3g0    ke  730 0
+.         ti  SJg3g0 SJesbv
+SJg3g1    ke  731 0
+.         ti  SJg3g1 SJecbv
+SJg3g2    ke  732 0
+.         ti  SJg3g2 SJtbv
+SJg3r     ke  3 0
+SJg3rw    ke  734 0
+.         ti  SJg3rw SJg3r
+.         so  WGATE
+
+WG3R      ke  0 0
+SJtd      ke  733 0
+SJtdv     ta  SJtd
+SJstd     ke  825 0
+.         ti  SJstd SJtdv
+
+# 三つを続きの枠へ写してから畳む
+SJCP      ke  826 0
+SJCPn     ke  97 0
+SJCPnv    ta  SJCPn
+.         ti  SJCP SJCPnv
+SJcli     ke  828 0
+SJcliz    ke  0 0
+.         ti  SJcli SJcliz
+
+SJclLP    ke  828 0
+SJclLPi   ta  SJclLP
+SJclLPn   ke  803 0
+SJclLPnv  ta  SJclLPn
+.         se  SJclLPi SJclLPnv SJclLB
+.         so  SJclDN
+
+SJclLB    ke  821 0
+SJclLBs   ta  SJclLB
+SJclLBi0  ke  828 0
+SJclLBi   ta  SJclLBi0
+SJclLBk   ko  SJclLBs SJclLBi
+SJclg     sa  KV44 BW
+SJclga    ko  SJclg SJclLBk
+SJclgv    ta  SJclga
+SJclm     sa  KV46 BW
+SJclma    ko  SJclm SJclLBk
+SJclmv    ta  SJclma
+SJcle     sa  KV48 BW
+SJclea    ko  SJcle SJclLBk
+SJclev    ta  SJclea
+SJcls     sa  KV50 BW
+SJclsa    ko  SJcls SJclLBk
+SJclsv    ta  SJclsa
+SJclal    ke  97 0
+SJclalv   ta  SJclal
+SJclo     ke  1 0
+SJclal2   ko  SJclalv SJclo
+SJclas    ke  97 0
+.         ti  SJclas SJclal2
+SJclpg    sa  KV44 BW
+SJclpga   ko  SJclpg SJclalv
+.         ti  SJclpga SJclgv
+SJclpm    sa  KV46 BW
+SJclpma   ko  SJclpm SJclalv
+.         ti  SJclpma SJclmv
+SJclpe    sa  KV48 BW
+SJclpea   ko  SJclpe SJclalv
+.         ti  SJclpea SJclev
+SJclps    sa  KV50 BW
+SJclpsa   ko  SJclps SJclalv
+.         ti  SJclpsa SJclsv
+SJclnx    ke  828 0
+SJclnxv   ta  SJclnx
+SJclnxo   ke  1 0
+SJclnx2   ko  SJclnxv SJclnxo
+.         ti  SJclnx SJclnx2
+.         so  SJclLP
+
+SJclDN    ke  0 0
+
+SJcri     ke  828 0
+SJcriz    ke  0 0
+.         ti  SJcri SJcriz
+
+SJcrLP    ke  828 0
+SJcrLPi   ta  SJcrLP
+SJcrLPn   ke  807 0
+SJcrLPnv  ta  SJcrLPn
+.         se  SJcrLPi SJcrLPnv SJcrLB
+.         so  SJcrDN
+
+SJcrLB    ke  822 0
+SJcrLBs   ta  SJcrLB
+SJcrLBi0  ke  828 0
+SJcrLBi   ta  SJcrLBi0
+SJcrLBk   ko  SJcrLBs SJcrLBi
+SJcrg     sa  KV44 BW
+SJcrga    ko  SJcrg SJcrLBk
+SJcrgv    ta  SJcrga
+SJcrm     sa  KV46 BW
+SJcrma    ko  SJcrm SJcrLBk
+SJcrmv    ta  SJcrma
+SJcre     sa  KV48 BW
+SJcrea    ko  SJcre SJcrLBk
+SJcrev    ta  SJcrea
+SJcrs     sa  KV50 BW
+SJcrsa    ko  SJcrs SJcrLBk
+SJcrsv    ta  SJcrsa
+SJcral    ke  97 0
+SJcralv   ta  SJcral
+SJcro     ke  1 0
+SJcral2   ko  SJcralv SJcro
+SJcras    ke  97 0
+.         ti  SJcras SJcral2
+SJcrpg    sa  KV44 BW
+SJcrpga   ko  SJcrpg SJcralv
+.         ti  SJcrpga SJcrgv
+SJcrpm    sa  KV46 BW
+SJcrpma   ko  SJcrpm SJcralv
+.         ti  SJcrpma SJcrmv
+SJcrpe    sa  KV48 BW
+SJcrpea   ko  SJcrpe SJcralv
+.         ti  SJcrpea SJcrev
+SJcrps    sa  KV50 BW
+SJcrpsa   ko  SJcrps SJcralv
+.         ti  SJcrpsa SJcrsv
+SJcrnx    ke  828 0
+SJcrnxv   ta  SJcrnx
+SJcrnxo   ke  1 0
+SJcrnx2   ko  SJcrnxv SJcrnxo
+.         ti  SJcrnx SJcrnx2
+.         so  SJcrLP
+
+SJcrDN    ke  0 0
+
+SJcti     ke  828 0
+SJctiz    ke  0 0
+.         ti  SJcti SJctiz
+
+SJctLP    ke  828 0
+SJctLPi   ta  SJctLP
+SJctLPn   ke  824 0
+SJctLPnv  ta  SJctLPn
+.         se  SJctLPi SJctLPnv SJctLB
+.         so  SJctDN
+
+SJctLB    ke  825 0
+SJctLBs   ta  SJctLB
+SJctLBi0  ke  828 0
+SJctLBi   ta  SJctLBi0
+SJctLBk   ko  SJctLBs SJctLBi
+SJctg     sa  KV44 BW
+SJctga    ko  SJctg SJctLBk
+SJctgv    ta  SJctga
+SJctm     sa  KV46 BW
+SJctma    ko  SJctm SJctLBk
+SJctmv    ta  SJctma
+SJcte     sa  KV48 BW
+SJctea    ko  SJcte SJctLBk
+SJctev    ta  SJctea
+SJcts     sa  KV50 BW
+SJctsa    ko  SJcts SJctLBk
+SJctsv    ta  SJctsa
+SJctal    ke  97 0
+SJctalv   ta  SJctal
+SJcto     ke  1 0
+SJctal2   ko  SJctalv SJcto
+SJctas    ke  97 0
+.         ti  SJctas SJctal2
+SJctpg    sa  KV44 BW
+SJctpga   ko  SJctpg SJctalv
+.         ti  SJctpga SJctgv
+SJctpm    sa  KV46 BW
+SJctpma   ko  SJctpm SJctalv
+.         ti  SJctpma SJctmv
+SJctpe    sa  KV48 BW
+SJctpea   ko  SJctpe SJctalv
+.         ti  SJctpea SJctev
+SJctps    sa  KV50 BW
+SJctpsa   ko  SJctps SJctalv
+.         ti  SJctpsa SJctsv
+SJctnx    ke  828 0
+SJctnxv   ta  SJctnx
+SJctnxo   ke  1 0
+SJctnx2   ko  SJctnxv SJctnxo
+.         ti  SJctnx SJctnx2
+.         so  SJctLP
+
+SJctDN    ke  0 0
+
+SJt1      ke  803 0
+SJt1v     ta  SJt1
+SJt2      ke  807 0
+SJt2v     ta  SJt2
+SJt3      ke  824 0
+SJt3v     ta  SJt3
+SJsum1    ko  SJt1v SJt2v
+SJsum2    ko  SJsum1 SJt3v
+SJstot    ke  827 0
+.         ti  SJstot SJsum2
+
+SJmS      ke  826 0
+SJmSv     ta  SJmS
+SJmN      ke  827 0
+SJmNv     ta  SJmN
+SJmgg0    ke  755 0
+.         ti  SJmgg0 SJmSv
+SJmgg1    ke  756 0
+.         ti  SJmgg1 SJmNv
+SJmgr     ke  2 0
+SJmgrw    ke  758 0
+.         ti  SJmgrw SJmgr
+.         so  WMRG
+
+WR2R      ke  0 0
+
+SJr0r     ke  818 0
+SJr0rv    ta  SJr0r
+SJr0w     ke  809 0
+.         ti  SJr0w SJr0rv
+SJr1r     ke  819 0
+SJr1rv    ta  SJr1r
+SJr1w     ke  810 0
+.         ti  SJr1w SJr1rv
+SJr2r     ke  757 0
+SJr2rv    ta  SJr2r
+SJr2w     ke  811 0
+.         ti  SJr2w SJr2rv
+SJr3r     ke  759 0
+SJr3rv    ta  SJr3r
+SJr3w     ke  812 0
+.         ti  SJr3w SJr3rv
+SJgg      ke  813 0
+SJggv     ta  SJgg
+SJcc1     ke  1 0
+.         su  SJggv SJcc1 SJY1
+SJcc2     ke  2 0
+.         su  SJggv SJcc2 SJR1
+.         so  BAD
+
+# ================= yu：⋁。𝒬 は完備束なので任意族の上限を持つ（定理 3.3）=================
+#
+# 上限は結合的かつ可換なので、畳む順序は値を変えない。だから探索順が
+# 平文に現れない
+
+GYU       ke  0 0
+YU1r      ke  15 0
+YU1w      ke  69 0
+.         ti  YU1w YU1r
+.         so  RD1
+
+QU1R      ke  0 0
+YUq1k     ke  62 0
+YUq1kv    ta  YUq1k
+YUq1q     ke  4 0
+.         su  YUq1kv YUq1q YUq1ok
+.         so  BAD
+YUq1ok    ke  0 0
+YUs0      ke  63 0
+YUs0v     ta  YUs0
+YUw0      ke  800 0
+.         ti  YUw0 YUs0v
+YUs1      ke  64 0
+YUs1v     ta  YUs1
+YUw1      ke  801 0
+.         ti  YUw1 YUs1v
+YUs2      ke  65 0
+YUs2v     ta  YUs2
+YUw2      ke  802 0
+.         ti  YUw2 YUs2v
+YUs3      ke  66 0
+YUs3v     ta  YUs3
+YUw3      ke  803 0
+.         ti  YUw3 YUs3v
+YU2r      ke  16 0
+YU2w      ke  69 0
+.         ti  YU2w YU2r
+.         so  RD1
+
+QU2R      ke  0 0
+YUq2k     ke  62 0
+YUq2kv    ta  YUq2k
+YUq2q     ke  4 0
+.         su  YUq2kv YUq2q YUq2ok
+.         so  BAD
+YUq2ok    ke  0 0
+YUt0      ke  63 0
+YUt0v     ta  YUt0
+YUv0      ke  804 0
+.         ti  YUv0 YUt0v
+YUt1      ke  64 0
+YUt1v     ta  YUt1
+YUv1      ke  805 0
+.         ti  YUv1 YUt1v
+YUt2      ke  65 0
+YUt2v     ta  YUt2
+YUv2      ke  806 0
+.         ti  YUv2 YUt2v
+YUt3      ke  66 0
+YUt3v     ta  YUt3
+YUv3      ke  807 0
+.         ti  YUv3 YUt3v
+YUup      ke  808 0
+YUup1     ke  1 0
+.         ti  YUup YUup1
+YUrc      ke  813 0
+YUrc1     ke  1 0
+.         ti  YUrc YUrc1
+.         so  SELJ
+
+SJY1      ke  0 0
+YUn       ke  809 0
+YUnv      ta  YUn
+YUd       ke  810 0
+YUdv      ta  YUd
+YUs       ke  811 0
+YUsv      ta  YUs
+YUc       ke  812 0
+YUcv      ta  YUc
+YUkf      ke  4 0
+YUka      ke  62 0
+.         ti  YUka YUkf
+YUp0      ke  63 0
+.         ti  YUp0 YUnv
+YUp1      ke  64 0
+.         ti  YUp1 YUdv
+YUp2      ke  65 0
+.         ti  YUp2 YUsv
+YUp3      ke  66 0
+.         ti  YUp3 YUcv
+.         so  PSC
+
+# ================= ri：ホム対象 𝔾(−,−)。名詞 二つ → 𝒬（定理 3.4）=================
+#
+# 目印ごとの右残差を ⋀ で束ねた到達度になる。有向なので入れ替えると
+# 値が変わる（系 3.5 の距離の向き）。
+#
+# 成分を持たないノードは、番地そのものを一成分のプロファイルとして読む
+
+GRI       ke  0 0
+RI1r      ke  32 0
+RI1w      ke  69 0
+.         ti  RI1w RI1r
+.         so  RD1
+
+QI1R      ke  0 0
+RIq1k     ke  62 0
+RIq1kv    ta  RIq1k
+RIq1q     ke  5 0
+.         su  RIq1kv RIq1q RIq1ok
+.         so  BAD
+RIq1ok    ke  0 0
+RIs0      ke  63 0
+RIs0v     ta  RIs0
+RIw0      ke  840 0
+.         ti  RIw0 RIs0v
+RIs1      ke  64 0
+RIs1v     ta  RIs1
+RIw1      ke  841 0
+.         ti  RIw1 RIs1v
+RIs2      ke  65 0
+RIs2v     ta  RIs2
+RIw2      ke  842 0
+.         ti  RIw2 RIs2v
+RI2r      ke  33 0
+RI2w      ke  69 0
+.         ti  RI2w RI2r
+.         so  RD1
+
+QI2R      ke  0 0
+RIq2k     ke  62 0
+RIq2kv    ta  RIq2k
+RIq2q     ke  5 0
+.         su  RIq2kv RIq2q RIq2ok
+.         so  BAD
+RIq2ok    ke  0 0
+RIt0      ke  63 0
+RIt0v     ta  RIt0
+RIu0      ke  843 0
+.         ti  RIu0 RIt0v
+RIt1      ke  64 0
+RIt1v     ta  RIt1
+RIu1      ke  844 0
+.         ti  RIu1 RIt1v
+RIt2      ke  65 0
+RIt2v     ta  RIt2
+RIu2      ke  845 0
+.         ti  RIu2 RIt2v
+
+# profileJudges：大きさは 1/1、語はノードが運ぶ
+RIo1      ke  1 0
+RIxa0     ke  6 0
+RIxan     ta  RIxa0
+RIxak     sa  KV04 BW
+RIxaka    ko  RIxak RIxan
+RIxakv    ke  1 0
+.         ti  RIxaka RIxakv
+RIxaaw    sa  KV06 BW
+RIxaaa    ko  RIxaaw RIxan
+.         ti  RIxaaa RIo1
+RIxadw    sa  KV10 BW
+RIxada    ko  RIxadw RIxan
+RIxaz     ke  0 0
+.         ti  RIxada RIxaz
+RIxao1    ke  1 0
+RIxan2    ko  RIxan RIxao1
+.         ti  RIxa0 RIxan2
+RIo2      ke  1 0
+RIxb0     ke  6 0
+RIxbn     ta  RIxb0
+RIxbk     sa  KV04 BW
+RIxbka    ko  RIxbk RIxbn
+RIxbkv    ke  1 0
+.         ti  RIxbka RIxbkv
+RIxbaw    sa  KV06 BW
+RIxbaa    ko  RIxbaw RIxbn
+.         ti  RIxbaa RIo2
+RIxbdw    sa  KV10 BW
+RIxbda    ko  RIxbdw RIxbn
+RIxbz     ke  0 0
+.         ti  RIxbda RIxbz
+RIxbo1    ke  1 0
+RIxbn2    ko  RIxbn RIxbo1
+.         ti  RIxb0 RIxbn2
+RIo3      ke  1 0
+RIxg0     ke  6 0
+RIxgn     ta  RIxg0
+RIxgk     sa  KV04 BW
+RIxgka    ko  RIxgk RIxgn
+RIxgkv    ke  1 0
+.         ti  RIxgka RIxgkv
+RIxgaw    sa  KV06 BW
+RIxgaa    ko  RIxgaw RIxgn
+.         ti  RIxgaa RIo3
+RIxgdw    sa  KV10 BW
+RIxgda    ko  RIxgdw RIxgn
+RIxgz     ke  0 0
+.         ti  RIxgda RIxgz
+RIxgo1    ke  1 0
+RIxgn2    ko  RIxgn RIxgo1
+.         ti  RIxg0 RIxgn2
+RIxm      ke  840 0
+RIxmv     ta  RIxm
+RIxe      ke  841 0
+RIxev     ta  RIxe
+RIxs      ke  842 0
+RIxsv     ta  RIxs
+RIxn      ke  97 0
+RIxnv     ta  RIxn
+RIxo      ke  1 0
+RIxn2     ko  RIxnv RIxo
+RIxst     ke  97 0
+.         ti  RIxst RIxn2
+RIxpg     sa  KV44 BW
+RIxpga    ko  RIxpg RIxnv
+.         ti  RIxpga RIxgn
+RIxpm     sa  KV46 BW
+RIxpma    ko  RIxpm RIxnv
+.         ti  RIxpma RIxmv
+RIxpe     sa  KV48 BW
+RIxpea    ko  RIxpe RIxnv
+.         ti  RIxpea RIxev
+RIxps     sa  KV50 BW
+RIxpsa    ko  RIxps RIxnv
+.         ti  RIxpsa RIxsv
+RIxsw     ke  830 0
+.         ti  RIxsw RIxnv
+
+RIp1      ke  1 0
+RIya0     ke  6 0
+RIyan     ta  RIya0
+RIyak     sa  KV04 BW
+RIyaka    ko  RIyak RIyan
+RIyakv    ke  1 0
+.         ti  RIyaka RIyakv
+RIyaaw    sa  KV06 BW
+RIyaaa    ko  RIyaaw RIyan
+.         ti  RIyaaa RIp1
+RIyadw    sa  KV10 BW
+RIyada    ko  RIyadw RIyan
+RIyaz     ke  0 0
+.         ti  RIyada RIyaz
+RIyao1    ke  1 0
+RIyan2    ko  RIyan RIyao1
+.         ti  RIya0 RIyan2
+RIp2      ke  1 0
+RIyb0     ke  6 0
+RIybn     ta  RIyb0
+RIybk     sa  KV04 BW
+RIybka    ko  RIybk RIybn
+RIybkv    ke  1 0
+.         ti  RIybka RIybkv
+RIybaw    sa  KV06 BW
+RIybaa    ko  RIybaw RIybn
+.         ti  RIybaa RIp2
+RIybdw    sa  KV10 BW
+RIybda    ko  RIybdw RIybn
+RIybz     ke  0 0
+.         ti  RIybda RIybz
+RIybo1    ke  1 0
+RIybn2    ko  RIybn RIybo1
+.         ti  RIyb0 RIybn2
+RIp3      ke  1 0
+RIyg0     ke  6 0
+RIygn     ta  RIyg0
+RIygk     sa  KV04 BW
+RIygka    ko  RIygk RIygn
+RIygkv    ke  1 0
+.         ti  RIygka RIygkv
+RIygaw    sa  KV06 BW
+RIygaa    ko  RIygaw RIygn
+.         ti  RIygaa RIp3
+RIygdw    sa  KV10 BW
+RIygda    ko  RIygdw RIygn
+RIygz     ke  0 0
+.         ti  RIygda RIygz
+RIygo1    ke  1 0
+RIygn2    ko  RIygn RIygo1
+.         ti  RIyg0 RIygn2
+RIym      ke  843 0
+RIymv     ta  RIym
+RIye      ke  844 0
+RIyev     ta  RIye
+RIys      ke  845 0
+RIysv     ta  RIys
+RIyn      ke  97 0
+RIynv     ta  RIyn
+RIyo      ke  1 0
+RIyn2     ko  RIynv RIyo
+RIyst     ke  97 0
+.         ti  RIyst RIyn2
+RIypg     sa  KV44 BW
+RIypga    ko  RIypg RIynv
+.         ti  RIypga RIygn
+RIypm     sa  KV46 BW
+RIypma    ko  RIypm RIynv
+.         ti  RIypma RIymv
+RIype     sa  KV48 BW
+RIypea    ko  RIype RIynv
+.         ti  RIypea RIyev
+RIyps     sa  KV50 BW
+RIypsa    ko  RIyps RIynv
+.         ti  RIypsa RIysv
+RIysw     ke  831 0
+.         ti  RIysw RIynv
+
+# 単位。大きさ 1/1、語は空語
+RIq1      ke  1 0
+RIua0     ke  6 0
+RIuan     ta  RIua0
+RIuak     sa  KV04 BW
+RIuaka    ko  RIuak RIuan
+RIuakv    ke  1 0
+.         ti  RIuaka RIuakv
+RIuaaw    sa  KV06 BW
+RIuaaa    ko  RIuaaw RIuan
+.         ti  RIuaaa RIq1
+RIuadw    sa  KV10 BW
+RIuada    ko  RIuadw RIuan
+RIuaz     ke  0 0
+.         ti  RIuada RIuaz
+RIuao1    ke  1 0
+RIuan2    ko  RIuan RIuao1
+.         ti  RIua0 RIuan2
+RIq2      ke  1 0
+RIub0     ke  6 0
+RIubn     ta  RIub0
+RIubk     sa  KV04 BW
+RIubka    ko  RIubk RIubn
+RIubkv    ke  1 0
+.         ti  RIubka RIubkv
+RIubaw    sa  KV06 BW
+RIubaa    ko  RIubaw RIubn
+.         ti  RIubaa RIq2
+RIubdw    sa  KV10 BW
+RIubda    ko  RIubdw RIubn
+RIubz     ke  0 0
+.         ti  RIubda RIubz
+RIubo1    ke  1 0
+RIubn2    ko  RIubn RIubo1
+.         ti  RIub0 RIubn2
+RIq3      ke  1 0
+RIug0     ke  6 0
+RIugn     ta  RIug0
+RIugk     sa  KV04 BW
+RIugka    ko  RIugk RIugn
+RIugkv    ke  1 0
+.         ti  RIugka RIugkv
+RIugaw    sa  KV06 BW
+RIugaa    ko  RIugaw RIugn
+.         ti  RIugaa RIq3
+RIugdw    sa  KV10 BW
+RIugda    ko  RIugdw RIugn
+RIugz     ke  0 0
+.         ti  RIugda RIugz
+RIugo1    ke  1 0
+RIugn2    ko  RIugn RIugo1
+.         ti  RIug0 RIugn2
+RIz0      ke  0 0
+RIwone    ke  1 0
+RIun      ke  97 0
+RIunv     ta  RIun
+RIuo      ke  1 0
+RIun2     ko  RIunv RIuo
+RIust     ke  97 0
+.         ti  RIust RIun2
+RIupg     sa  KV44 BW
+RIupga    ko  RIupg RIunv
+.         ti  RIupga RIugn
+RIupm     sa  KV46 BW
+RIupma    ko  RIupm RIunv
+.         ti  RIupma RIz0
+RIupe     sa  KV48 BW
+RIupea    ko  RIupe RIunv
+.         ti  RIupea RIz0
+RIups     sa  KV50 BW
+RIupsa    ko  RIups RIunv
+.         ti  RIupsa RIwone
+RIusw     ke  832 0
+.         ti  RIusw RIunv
+
+# 右残差。大きさは residB、語は u の逆元を左に取る
+RIrsg0    ke  536 0
+.         ti  RIrsg0 RIxan
+RIrsg1    ke  537 0
+.         ti  RIrsg1 RIxbn
+RIrsg2    ke  538 0
+.         ti  RIrsg2 RIyan
+RIrsg3    ke  539 0
+.         ti  RIrsg3 RIybn
+RIrsr     ke  3 0
+RIrsrw    ke  535 0
+.         ti  RIrsrw RIrsr
+.         so  RSB
+
+RB3RB     ke  0 0
+RIrn      ke  533 0
+RIrnv     ta  RIrn
+RIrd      ke  534 0
+RIrdv     ta  RIrd
+RIxw      ke  830 0
+RIxwv     ta  RIxw
+RIyw      ke  831 0
+RIywv     ta  RIyw
+RIc1      ke  1 0
+RIc2      ke  1 0
+RImd      ke  1 0
+RIcbg0    ke  740 0
+.         ti  RIcbg0 RIxwv
+RIcbg1    ke  741 0
+.         ti  RIcbg1 RIc1
+RIcbg2    ke  742 0
+.         ti  RIcbg2 RIywv
+RIcbg3    ke  743 0
+.         ti  RIcbg3 RIc2
+RIcbg4    ke  744 0
+.         ti  RIcbg4 RImd
+RIcbr     ke  5 0
+RIcbrw    ke  747 0
+.         ti  RIcbrw RIcbr
+.         so  WCOMB
+
+WK5R      ke  0 0
+RIrs2     ke  745 0
+RIrs2v    ta  RIrs2
+RIrc2     ke  746 0
+RIrc2v    ta  RIrc2
+
+# 単位と残差の下限を取る
+RIuw      ke  832 0
+RIuwv     ta  RIuw
+RIuone    ke  1 0
+RIa1      ke  800 0
+.         ti  RIa1 RIuan
+RIb1      ke  801 0
+.         ti  RIb1 RIubn
+RIw1s     ke  802 0
+.         ti  RIw1s RIuwv
+RIc1s     ke  803 0
+.         ti  RIc1s RIuone
+RIa2      ke  804 0
+.         ti  RIa2 RIrnv
+RIb2      ke  805 0
+.         ti  RIb2 RIrdv
+RIw2s     ke  806 0
+.         ti  RIw2s RIrs2v
+RIc2s     ke  807 0
+.         ti  RIc2s RIrc2v
+RIup      ke  808 0
+RIupz     ke  0 0
+.         ti  RIup RIupz
+RIrc3     ke  813 0
+RIrc3v    ke  2 0
+.         ti  RIrc3 RIrc3v
+.         so  SELJ
+
+SJR1      ke  0 0
+RIn       ke  809 0
+RInv      ta  RIn
+RId       ke  810 0
+RIdv      ta  RId
+RIs       ke  811 0
+RIsv      ta  RIs
+RIc       ke  812 0
+RIcv      ta  RIc
+RIkf      ke  4 0
+RIka      ke  62 0
+.         ti  RIka RIkf
+RIq0      ke  63 0
+.         ti  RIq0 RInv
+RIq1p     ke  64 0
+.         ti  RIq1p RIdv
+RIq2p     ke  65 0
+.         ti  RIq2p RIsv
+RIq3p     ke  66 0
+.         ti  RIq3p RIcv
+.         so  PSC
+
+# ================= 𝒬 の値を五語へ開く =================
+#
+# Descend.matSlot の JW と同じ並びになる。
+#
+#   語 0  分子    語 1  分母    語 2  構成語の m    語 3  e    語 4  符号
+#
+# 後ろの三つは projectWords。零から始めて、門と場の積を足し込む
+
+QMAT      sa  KV28 BW
+QMAa      ko  QMAT idCV
+QMAn      ta  QMAa
+QMAb      sa  KV30 BW
+QMAba     ko  QMAb idCV
+QMAd      ta  QMAba
+QMAw      sa  KV32 BW
+QMAwa     ko  QMAw idCV
+QMAws     ta  QMAwa
+QMAc      sa  KV34 BW
+QMAca     ko  QMAc idCV
+QMAcn     ta  QMAca
+QMAsw     ke  850 0
+.         ti  QMAsw QMAws
+QMAsc     ke  851 0
+.         ti  QMAsc QMAcn
+
+QM0w      ke  61 0
+QM0wv     ta  QM0w
+QM0b      sa  KV03 BW
+QM0ba     ko  QM0b QM0wv
+.         ti  QM0ba QMAn
+QM0i      ke  1 0
+QM0o2     ko  QM0wv QM0i
+QM0ww     ke  61 0
+.         ti  QM0ww QM0o2
+
+QM1w      ke  61 0
+QM1wv     ta  QM1w
+QM1b      sa  KV03 BW
+QM1ba     ko  QM1b QM1wv
+.         ti  QM1ba QMAd
+QM1i      ke  1 0
+QM1o2     ko  QM1wv QM1i
+QM1ww     ke  61 0
+.         ti  QM1ww QM1o2
+
+# projectWords：m
+QJmz      ke  0 0
+QJmc0     ke  6 0
+QJmcn     ta  QJmc0
+QJmck     sa  KV04 BW
+QJmcka    ko  QJmck QJmcn
+QJmckv    ke  1 0
+.         ti  QJmcka QJmckv
+QJmcaw    sa  KV06 BW
+QJmcaa    ko  QJmcaw QJmcn
+.         ti  QJmcaa QJmz
+QJmcdw    sa  KV10 BW
+QJmcda    ko  QJmcdw QJmcn
+QJmcz     ke  0 0
+.         ti  QJmcda QJmcz
+QJmco1    ke  1 0
+QJmcn2    ko  QJmcn QJmco1
+.         ti  QJmc0 QJmcn2
+QJmsa     ke  852 0
+.         ti  QJmsa QJmcn
+QJmi     ke  853 0
+QJmiz    ke  0 0
+.         ti  QJmi QJmiz
+
+QJmLP    ke  853 0
+QJmLPi   ta  QJmLP
+QJmLPn   ke  851 0
+QJmLPnv  ta  QJmLPn
+.         se  QJmLPi QJmLPnv QJmLB
+.         so  QJmDN
+
+QJmLB    ke  850 0
+QJmLBs   ta  QJmLB
+QJmLBi0  ke  853 0
+QJmLBi   ta  QJmLBi0
+QJmLBk   ko  QJmLBs QJmLBi
+QJmf      sa  KV46 BW
+QJmfa     ko  QJmf QJmLBk
+QJmfv     ta  QJmfa
+QJmv0     ke  6 0
+QJmvn     ta  QJmv0
+QJmvk     sa  KV04 BW
+QJmvka    ko  QJmvk QJmvn
+QJmvkv    ke  1 0
+.         ti  QJmvka QJmvkv
+QJmvaw    sa  KV06 BW
+QJmvaa    ko  QJmvaw QJmvn
+.         ti  QJmvaa QJmfv
+QJmvdw    sa  KV10 BW
+QJmvda    ko  QJmvdw QJmvn
+QJmvz     ke  0 0
+.         ti  QJmvda QJmvz
+QJmvo1    ke  1 0
+QJmvn2    ko  QJmvn QJmvo1
+.         ti  QJmv0 QJmvn2
+QJmg      sa  KV44 BW
+QJmga     ko  QJmg QJmLBk
+QJmgv     ta  QJmga
+QJmt0     ke  6 0
+QJmtn     ta  QJmt0
+QJmtk     sa  KV04 BW
+QJmtka    ko  QJmtk QJmtn
+QJmtkv    ke  3 0
+.         ti  QJmtka QJmtkv
+QJmtaw    sa  KV06 BW
+QJmtaa    ko  QJmtaw QJmtn
+.         ti  QJmtaa QJmgv
+QJmtbw    sa  KV08 BW
+QJmtba    ko  QJmtbw QJmtn
+.         ti  QJmtba QJmvn
+QJmtdw    sa  KV10 BW
+QJmtda    ko  QJmtdw QJmtn
+QJmtz     ke  0 0
+.         ti  QJmtda QJmtz
+QJmto1    ke  1 0
+QJmtn2    ko  QJmtn QJmto1
+.         ti  QJmt0 QJmtn2
+QJmac    ke  852 0
+QJmacv   ta  QJmac
+QJma0     ke  6 0
+QJman     ta  QJma0
+QJmak     sa  KV04 BW
+QJmaka    ko  QJmak QJman
+QJmakv    ke  2 0
+.         ti  QJmaka QJmakv
+QJmaaw    sa  KV06 BW
+QJmaaa    ko  QJmaaw QJman
+.         ti  QJmaaa QJmacv
+QJmabw    sa  KV08 BW
+QJmaba    ko  QJmabw QJman
+.         ti  QJmaba QJmtn
+QJmadw    sa  KV10 BW
+QJmada    ko  QJmadw QJman
+QJmaz     ke  0 0
+.         ti  QJmada QJmaz
+QJmao1    ke  1 0
+QJman2    ko  QJman QJmao1
+.         ti  QJma0 QJman2
+.         ti  QJmac QJman
+QJmnx    ke  853 0
+QJmnxv   ta  QJmnx
+QJmnxo   ke  1 0
+QJmnx2   ko  QJmnxv QJmnxo
+.         ti  QJmnx QJmnx2
+.         so  QJmLP
+
+QJmDN    ke  852 0
+QJmDNv   ta  QJmDN
+QJmrw     ke  61 0
+QJmrwv    ta  QJmrw
+QJmrb     sa  KV03 BW
+QJmrba    ko  QJmrb QJmrwv
+.         ti  QJmrba QJmDNv
+QJmri     ke  1 0
+QJmro2    ko  QJmrwv QJmri
+QJmrww    ke  61 0
+.         ti  QJmrww QJmro2
+
+# projectWords：e
+QJez      ke  0 0
+QJec0     ke  6 0
+QJecn     ta  QJec0
+QJeck     sa  KV04 BW
+QJecka    ko  QJeck QJecn
+QJeckv    ke  1 0
+.         ti  QJecka QJeckv
+QJecaw    sa  KV06 BW
+QJecaa    ko  QJecaw QJecn
+.         ti  QJecaa QJez
+QJecdw    sa  KV10 BW
+QJecda    ko  QJecdw QJecn
+QJecz     ke  0 0
+.         ti  QJecda QJecz
+QJeco1    ke  1 0
+QJecn2    ko  QJecn QJeco1
+.         ti  QJec0 QJecn2
+QJesa     ke  852 0
+.         ti  QJesa QJecn
+QJei     ke  853 0
+QJeiz    ke  0 0
+.         ti  QJei QJeiz
+
+QJeLP    ke  853 0
+QJeLPi   ta  QJeLP
+QJeLPn   ke  851 0
+QJeLPnv  ta  QJeLPn
+.         se  QJeLPi QJeLPnv QJeLB
+.         so  QJeDN
+
+QJeLB    ke  850 0
+QJeLBs   ta  QJeLB
+QJeLBi0  ke  853 0
+QJeLBi   ta  QJeLBi0
+QJeLBk   ko  QJeLBs QJeLBi
+QJef      sa  KV48 BW
+QJefa     ko  QJef QJeLBk
+QJefv     ta  QJefa
+QJev0     ke  6 0
+QJevn     ta  QJev0
+QJevk     sa  KV04 BW
+QJevka    ko  QJevk QJevn
+QJevkv    ke  1 0
+.         ti  QJevka QJevkv
+QJevaw    sa  KV06 BW
+QJevaa    ko  QJevaw QJevn
+.         ti  QJevaa QJefv
+QJevdw    sa  KV10 BW
+QJevda    ko  QJevdw QJevn
+QJevz     ke  0 0
+.         ti  QJevda QJevz
+QJevo1    ke  1 0
+QJevn2    ko  QJevn QJevo1
+.         ti  QJev0 QJevn2
+QJeg      sa  KV44 BW
+QJega     ko  QJeg QJeLBk
+QJegv     ta  QJega
+QJet0     ke  6 0
+QJetn     ta  QJet0
+QJetk     sa  KV04 BW
+QJetka    ko  QJetk QJetn
+QJetkv    ke  3 0
+.         ti  QJetka QJetkv
+QJetaw    sa  KV06 BW
+QJetaa    ko  QJetaw QJetn
+.         ti  QJetaa QJegv
+QJetbw    sa  KV08 BW
+QJetba    ko  QJetbw QJetn
+.         ti  QJetba QJevn
+QJetdw    sa  KV10 BW
+QJetda    ko  QJetdw QJetn
+QJetz     ke  0 0
+.         ti  QJetda QJetz
+QJeto1    ke  1 0
+QJetn2    ko  QJetn QJeto1
+.         ti  QJet0 QJetn2
+QJeac    ke  852 0
+QJeacv   ta  QJeac
+QJea0     ke  6 0
+QJean     ta  QJea0
+QJeak     sa  KV04 BW
+QJeaka    ko  QJeak QJean
+QJeakv    ke  2 0
+.         ti  QJeaka QJeakv
+QJeaaw    sa  KV06 BW
+QJeaaa    ko  QJeaaw QJean
+.         ti  QJeaaa QJeacv
+QJeabw    sa  KV08 BW
+QJeaba    ko  QJeabw QJean
+.         ti  QJeaba QJetn
+QJeadw    sa  KV10 BW
+QJeada    ko  QJeadw QJean
+QJeaz     ke  0 0
+.         ti  QJeada QJeaz
+QJeao1    ke  1 0
+QJean2    ko  QJean QJeao1
+.         ti  QJea0 QJean2
+.         ti  QJeac QJean
+QJenx    ke  853 0
+QJenxv   ta  QJenx
+QJenxo   ke  1 0
+QJenx2   ko  QJenxv QJenxo
+.         ti  QJenx QJenx2
+.         so  QJeLP
+
+QJeDN    ke  852 0
+QJeDNv   ta  QJeDN
+QJerw     ke  61 0
+QJerwv    ta  QJerw
+QJerb     sa  KV03 BW
+QJerba    ko  QJerb QJerwv
+.         ti  QJerba QJeDNv
+QJeri     ke  1 0
+QJero2    ko  QJerwv QJeri
+QJerww    ke  61 0
+.         ti  QJerww QJero2
+
+# projectWords：s
+QJsz      ke  0 0
+QJsc0     ke  6 0
+QJscn     ta  QJsc0
+QJsck     sa  KV04 BW
+QJscka    ko  QJsck QJscn
+QJsckv    ke  1 0
+.         ti  QJscka QJsckv
+QJscaw    sa  KV06 BW
+QJscaa    ko  QJscaw QJscn
+.         ti  QJscaa QJsz
+QJscdw    sa  KV10 BW
+QJscda    ko  QJscdw QJscn
+QJscz     ke  0 0
+.         ti  QJscda QJscz
+QJsco1    ke  1 0
+QJscn2    ko  QJscn QJsco1
+.         ti  QJsc0 QJscn2
+QJssa     ke  852 0
+.         ti  QJssa QJscn
+QJsi     ke  853 0
+QJsiz    ke  0 0
+.         ti  QJsi QJsiz
+
+QJsLP    ke  853 0
+QJsLPi   ta  QJsLP
+QJsLPn   ke  851 0
+QJsLPnv  ta  QJsLPn
+.         se  QJsLPi QJsLPnv QJsLB
+.         so  QJsDN
+
+QJsLB    ke  850 0
+QJsLBs   ta  QJsLB
+QJsLBi0  ke  853 0
+QJsLBi   ta  QJsLBi0
+QJsLBk   ko  QJsLBs QJsLBi
+QJsf      sa  KV50 BW
+QJsfa     ko  QJsf QJsLBk
+QJsfv     ta  QJsfa
+QJsv0     ke  6 0
+QJsvn     ta  QJsv0
+QJsvk     sa  KV04 BW
+QJsvka    ko  QJsvk QJsvn
+QJsvkv    ke  1 0
+.         ti  QJsvka QJsvkv
+QJsvaw    sa  KV06 BW
+QJsvaa    ko  QJsvaw QJsvn
+.         ti  QJsvaa QJsfv
+QJsvdw    sa  KV10 BW
+QJsvda    ko  QJsvdw QJsvn
+QJsvz     ke  0 0
+.         ti  QJsvda QJsvz
+QJsvo1    ke  1 0
+QJsvn2    ko  QJsvn QJsvo1
+.         ti  QJsv0 QJsvn2
+QJsg      sa  KV44 BW
+QJsga     ko  QJsg QJsLBk
+QJsgv     ta  QJsga
+QJst0     ke  6 0
+QJstn     ta  QJst0
+QJstk     sa  KV04 BW
+QJstka    ko  QJstk QJstn
+QJstkv    ke  3 0
+.         ti  QJstka QJstkv
+QJstaw    sa  KV06 BW
+QJstaa    ko  QJstaw QJstn
+.         ti  QJstaa QJsgv
+QJstbw    sa  KV08 BW
+QJstba    ko  QJstbw QJstn
+.         ti  QJstba QJsvn
+QJstdw    sa  KV10 BW
+QJstda    ko  QJstdw QJstn
+QJstz     ke  0 0
+.         ti  QJstda QJstz
+QJsto1    ke  1 0
+QJstn2    ko  QJstn QJsto1
+.         ti  QJst0 QJstn2
+QJsac    ke  852 0
+QJsacv   ta  QJsac
+QJsa0     ke  6 0
+QJsan     ta  QJsa0
+QJsak     sa  KV04 BW
+QJsaka    ko  QJsak QJsan
+QJsakv    ke  2 0
+.         ti  QJsaka QJsakv
+QJsaaw    sa  KV06 BW
+QJsaaa    ko  QJsaaw QJsan
+.         ti  QJsaaa QJsacv
+QJsabw    sa  KV08 BW
+QJsaba    ko  QJsabw QJsan
+.         ti  QJsaba QJstn
+QJsadw    sa  KV10 BW
+QJsada    ko  QJsadw QJsan
+QJsaz     ke  0 0
+.         ti  QJsada QJsaz
+QJsao1    ke  1 0
+QJsan2    ko  QJsan QJsao1
+.         ti  QJsa0 QJsan2
+.         ti  QJsac QJsan
+QJsnx    ke  853 0
+QJsnxv   ta  QJsnx
+QJsnxo   ke  1 0
+QJsnx2   ko  QJsnxv QJsnxo
+.         ti  QJsnx QJsnx2
+.         so  QJsLP
+
+QJsDN    ke  852 0
+QJsDNv   ta  QJsDN
+QJsrw     ke  61 0
+QJsrwv    ta  QJsrw
+QJsrb     sa  KV03 BW
+QJsrba    ko  QJsrb QJsrwv
+.         ti  QJsrba QJsDNv
+QJsri     ke  1 0
+QJsro2    ko  QJsrwv QJsri
+QJsrww    ke  61 0
+.         ti  QJsrww QJsro2
+
+.         so  L3NX
+
+# ---- ge：fix。Ω_a[β_a; x₀] = a を一箱で読む（16 式 5.7、5.8）----
+#
+# 実装の β は a = 1 なので、集積点は初期値に依らず 1 になる。
+# 反復を回さないので、入力のワイヤは落ちる
+
+GGE       ke  10 0
+GGEc      ta  GGE
+GGEf      ke  9 0
+GGEfv     ta  GGEf
+.         se  GGEc GGEfv GGEok
+.         so  BAD
+GGEok     sa  KV02 BW
+GGEaa     ko  GGEok GGEc
+GGEu      ta  GGEaa
+GGEz      ke  0 0
+.         se  GGEu GGEz BAD
+GGEi      ke  1 0
+GGEc2     ko  GGEc GGEi
+.         ti  GGE GGEc2
+
+GGEzz     ke  0 0
+GGEone    ke  1 0
+
+# 箱 : Cst(1,0)
+GGEc0     ke  6 0
+GGEcn     ta  GGEc0
+GGEck     sa  KV04 BW
+GGEcka    ko  GGEck GGEcn
+GGEckv    ke  1 0
+.         ti  GGEcka GGEckv
+GGEca     sa  KV06 BW
+GGEcaa    ko  GGEca GGEcn
+.         ti  GGEcaa GGEone
+GGEcd     sa  KV10 BW
+GGEcda    ko  GGEcd GGEcn
+.         ti  GGEcda GGEzz
+GGEco     ke  1 0
+GGEcn2    ko  GGEcn GGEco
+.         ti  GGEc0 GGEcn2
+
+GGEpo     ke  11 0
+GGEpov    ta  GGEpo
+GGEpb     sa  KV03 BW
+GGEpba    ko  GGEpb GGEpov
+.         ti  GGEpba GGEcn
+GGEpi     ke  1 0
+GGEpo2    ko  GGEpov GGEpi
+.         ti  GGEpo GGEpo2
+.         so  CNTW1
+
+# ---- gu：β⁻¹(x) = 2x − 1。像は深度 1 以上に限る（構成語 §4）----
+#
+#   s = Cst(退避語,0)   Store(s,u)   n0 = Load(s)   k = Cst(1, d−1)
+#   t = Mul(n0,k)   o = Cst(1,0)   no = Neg(o)   w = Add(t,no)
+#
+# 深度を一段下げる道は Load しかない。分子を語へ落としてから置き直す
+
+GGU       ke  10 0
+GGUc      ta  GGU
+GGUf      ke  9 0
+GGUfv     ta  GGUf
+.         se  GGUc GGUfv GGUok
+.         so  BAD
+GGUok     sa  KV02 BW
+GGUaa     ko  GGUok GGUc
+GGUu      ta  GGUaa
+GGUz      ke  0 0
+.         se  GGUu GGUz BAD
+GGUi      ke  1 0
+GGUc2     ko  GGUc GGUi
+.         ti  GGU GGUc2
+
+GGUd      sa  KV10 BW
+GGUda     ko  GGUd GGUu
+GGUdv     ta  GGUda
+GGUone    ke  1 0
+.         se  GGUdv GGUone BAD
+GGUm      ke  -1 0
+GGUd1     ko  GGUdv GGUm
+GGUzz     ke  0 0
+GGUsw     ke  31 0
+
+# 箱 : Cst(退避語, 0)
+GGUs0     ke  6 0
+GGUsn     ta  GGUs0
+GGUsk     sa  KV04 BW
+GGUska    ko  GGUsk GGUsn
+GGUskv    ke  1 0
+.         ti  GGUska GGUskv
+GGUsa     sa  KV06 BW
+GGUsaa    ko  GGUsa GGUsn
+.         ti  GGUsaa GGUsw
+GGUsd     sa  KV10 BW
+GGUsda    ko  GGUsd GGUsn
+.         ti  GGUsda GGUzz
+GGUso     ke  1 0
+GGUsn2    ko  GGUsn GGUso
+.         ti  GGUs0 GGUsn2
+
+# 退避語の箱を控える（22 式 22.3）
+SCUw      ke  94 0
+SCUc      ta  SCUw
+SCUb      sa  KV40 BW
+SCUa      ko  SCUb SCUc
+.         ti  SCUa GGUsn
+SCUo      ke  1 0
+SCUc2     ko  SCUc SCUo
+.         ti  SCUw SCUc2
+
+# 箱 : Store(s, u)
+GGUst0    ke  6 0
+GGUstn    ta  GGUst0
+GGUstk    sa  KV04 BW
+GGUstka   ko  GGUstk GGUstn
+GGUstkv   ke  5 0
+.         ti  GGUstka GGUstkv
+GGUsta    sa  KV06 BW
+GGUstaa   ko  GGUsta GGUstn
+.         ti  GGUstaa GGUsn
+GGUstb    sa  KV08 BW
+GGUstba   ko  GGUstb GGUstn
+.         ti  GGUstba GGUu
+GGUstd    sa  KV10 BW
+GGUstda   ko  GGUstd GGUstn
+.         ti  GGUstda GGUzz
+GGUsto    ke  1 0
+GGUstn2   ko  GGUstn GGUsto
+.         ti  GGUst0 GGUstn2
+
+# 箱 : Load(s)
+GGUld0    ke  6 0
+GGUldn    ta  GGUld0
+GGUldk    sa  KV04 BW
+GGUldka   ko  GGUldk GGUldn
+GGUldkv   ke  7 0
+.         ti  GGUldka GGUldkv
+GGUlda    sa  KV06 BW
+GGUldaa   ko  GGUlda GGUldn
+.         ti  GGUldaa GGUsn
+GGUldd    sa  KV10 BW
+GGUldda   ko  GGUldd GGUldn
+.         ti  GGUldda GGUzz
+GGUldo    ke  1 0
+GGUldn2   ko  GGUldn GGUldo
+.         ti  GGUld0 GGUldn2
+
+# 箱 : Cst(1, d−1)
+GGUk0     ke  6 0
+GGUkn     ta  GGUk0
+GGUkk     sa  KV04 BW
+GGUkka    ko  GGUkk GGUkn
+GGUkkv    ke  1 0
+.         ti  GGUkka GGUkkv
+GGUka     sa  KV06 BW
+GGUkaa    ko  GGUka GGUkn
+.         ti  GGUkaa GGUone
+GGUkd     sa  KV10 BW
+GGUkda    ko  GGUkd GGUkn
+.         ti  GGUkda GGUd1
+GGUko     ke  1 0
+GGUkn2    ko  GGUkn GGUko
+.         ti  GGUk0 GGUkn2
+
+# 箱 : Mul(n0, k)
+GGUt0     ke  6 0
+GGUtn     ta  GGUt0
+GGUtk     sa  KV04 BW
+GGUtka    ko  GGUtk GGUtn
+GGUtkv    ke  3 0
+.         ti  GGUtka GGUtkv
+GGUta     sa  KV06 BW
+GGUtaa    ko  GGUta GGUtn
+.         ti  GGUtaa GGUldn
+GGUtb     sa  KV08 BW
+GGUtba    ko  GGUtb GGUtn
+.         ti  GGUtba GGUkn
+GGUtd     sa  KV10 BW
+GGUtda    ko  GGUtd GGUtn
+.         ti  GGUtda GGUd1
+GGUto     ke  1 0
+GGUtn2    ko  GGUtn GGUto
+.         ti  GGUt0 GGUtn2
+
+# 箱 : Cst(1, 0)
+GGUq0     ke  6 0
+GGUqn     ta  GGUq0
+GGUqk     sa  KV04 BW
+GGUqka    ko  GGUqk GGUqn
+GGUqkv    ke  1 0
+.         ti  GGUqka GGUqkv
+GGUqa     sa  KV06 BW
+GGUqaa    ko  GGUqa GGUqn
+.         ti  GGUqaa GGUone
+GGUqd     sa  KV10 BW
+GGUqda    ko  GGUqd GGUqn
+.         ti  GGUqda GGUzz
+GGUqo     ke  1 0
+GGUqn2    ko  GGUqn GGUqo
+.         ti  GGUq0 GGUqn2
+
+# 箱 : Neg(o)
+GGUn0     ke  6 0
+GGUnn     ta  GGUn0
+GGUnk     sa  KV04 BW
+GGUnka    ko  GGUnk GGUnn
+GGUnkv    ke  4 0
+.         ti  GGUnka GGUnkv
+GGUna     sa  KV06 BW
+GGUnaa    ko  GGUna GGUnn
+.         ti  GGUnaa GGUqn
+GGUnd     sa  KV10 BW
+GGUnda    ko  GGUnd GGUnn
+.         ti  GGUnda GGUzz
+GGUno     ke  1 0
+GGUnn2    ko  GGUnn GGUno
+.         ti  GGUn0 GGUnn2
+
+# 箱 : Add(t, −1)
+GGUw0     ke  6 0
+GGUwn     ta  GGUw0
+GGUwk     sa  KV04 BW
+GGUwka    ko  GGUwk GGUwn
+GGUwkv    ke  2 0
+.         ti  GGUwka GGUwkv
+GGUwa     sa  KV06 BW
+GGUwaa    ko  GGUwa GGUwn
+.         ti  GGUwaa GGUtn
+GGUwb     sa  KV08 BW
+GGUwba    ko  GGUwb GGUwn
+.         ti  GGUwba GGUnn
+GGUwd     sa  KV10 BW
+GGUwda    ko  GGUwd GGUwn
+.         ti  GGUwda GGUd1
+GGUwo     ke  1 0
+GGUwn2    ko  GGUwn GGUwo
+.         ti  GGUw0 GGUwn2
+
+GGUpo     ke  11 0
+GGUpov    ta  GGUpo
+GGUpb     sa  KV03 BW
+GGUpba    ko  GGUpb GGUpov
+.         ti  GGUpba GGUwn
+GGUpi     ke  1 0
+GGUpo2    ko  GGUpov GGUpi
+.         ti  GGUpo GGUpo2
+.         so  CNTW1
+
+# ================= 名詞ノードを五語へ開く =================
+#
+# Descend.matCoeff ＋ 成分の数と同じ並びになる。
+#
+#   語 0  分子      語 1  構成語の m    語 2  構成語の e
+#   語 3  符号      語 4  成分の数
+#
+# ma から i と j で伸ばす限り分子は 1、深度は 0 のままになる。
+# 成分はまだ持たないので数は 0 になる
+
+NMAT      ke  0 0
+NMone     ke  1 0
+NMzero    ke  0 0
+
+# 語 0 : 分子は 1
+NM00      ke  6 0
+NM0n      ta  NM00
+NM0k      sa  KV04 BW
+NM0ka     ko  NM0k NM0n
+NM0kv     ke  1 0
+.         ti  NM0ka NM0kv
+NM0a      sa  KV06 BW
+NM0aa     ko  NM0a NM0n
+.         ti  NM0aa NMone
+NM0d      sa  KV10 BW
+NM0da     ko  NM0d NM0n
+NM0z      ke  0 0
+.         ti  NM0da NM0z
+NM0o      ke  1 0
+NM0n2     ko  NM0n NM0o
+.         ti  NM00 NM0n2
+
+NMr0w     ke  61 0
+NMr0wv    ta  NMr0w
+NMr0b     sa  KV03 BW
+NMr0ba    ko  NMr0b NMr0wv
+.         ti  NMr0ba NM0n
+NMr0i     ke  1 0
+NMr0o2    ko  NMr0wv NMr0i
+NMr0ww    ke  61 0
+.         ti  NMr0ww NMr0o2
+
+NMfm      sa  KV28 BW
+NMfma     ko  NMfm idCV
+NMfmv     ta  NMfma
+# 語 1 : 構成語の m
+NM10      ke  6 0
+NM1n      ta  NM10
+NM1k      sa  KV04 BW
+NM1ka     ko  NM1k NM1n
+NM1kv     ke  1 0
+.         ti  NM1ka NM1kv
+NM1a      sa  KV06 BW
+NM1aa     ko  NM1a NM1n
+.         ti  NM1aa NMfmv
+NM1d      sa  KV10 BW
+NM1da     ko  NM1d NM1n
+NM1z      ke  0 0
+.         ti  NM1da NM1z
+NM1o      ke  1 0
+NM1n2     ko  NM1n NM1o
+.         ti  NM10 NM1n2
+
+NMr1w     ke  61 0
+NMr1wv    ta  NMr1w
+NMr1b     sa  KV03 BW
+NMr1ba    ko  NMr1b NMr1wv
+.         ti  NMr1ba NM1n
+NMr1i     ke  1 0
+NMr1o2    ko  NMr1wv NMr1i
+NMr1ww    ke  61 0
+.         ti  NMr1ww NMr1o2
+
+NMfe      sa  KV30 BW
+NMfea     ko  NMfe idCV
+NMfev     ta  NMfea
+# 語 2 : 構成語の e
+NM20      ke  6 0
+NM2n      ta  NM20
+NM2k      sa  KV04 BW
+NM2ka     ko  NM2k NM2n
+NM2kv     ke  1 0
+.         ti  NM2ka NM2kv
+NM2a      sa  KV06 BW
+NM2aa     ko  NM2a NM2n
+.         ti  NM2aa NMfev
+NM2d      sa  KV10 BW
+NM2da     ko  NM2d NM2n
+NM2z      ke  0 0
+.         ti  NM2da NM2z
+NM2o      ke  1 0
+NM2n2     ko  NM2n NM2o
+.         ti  NM20 NM2n2
+
+NMr2w     ke  61 0
+NMr2wv    ta  NMr2w
+NMr2b     sa  KV03 BW
+NMr2ba    ko  NMr2b NMr2wv
+.         ti  NMr2ba NM2n
+NMr2i     ke  1 0
+NMr2o2    ko  NMr2wv NMr2i
+NMr2ww    ke  61 0
+.         ti  NMr2ww NMr2o2
+
+NMfs      sa  KV32 BW
+NMfsa     ko  NMfs idCV
+NMfsv     ta  NMfsa
+# 語 3 : 符号
+NM30      ke  6 0
+NM3n      ta  NM30
+NM3k      sa  KV04 BW
+NM3ka     ko  NM3k NM3n
+NM3kv     ke  1 0
+.         ti  NM3ka NM3kv
+NM3a      sa  KV06 BW
+NM3aa     ko  NM3a NM3n
+.         ti  NM3aa NMfsv
+NM3d      sa  KV10 BW
+NM3da     ko  NM3d NM3n
+NM3z      ke  0 0
+.         ti  NM3da NM3z
+NM3o      ke  1 0
+NM3n2     ko  NM3n NM3o
+.         ti  NM30 NM3n2
+
+NMr3w     ke  61 0
+NMr3wv    ta  NMr3w
+NMr3b     sa  KV03 BW
+NMr3ba    ko  NMr3b NMr3wv
+.         ti  NMr3ba NM3n
+NMr3i     ke  1 0
+NMr3o2    ko  NMr3wv NMr3i
+NMr3ww    ke  61 0
+.         ti  NMr3ww NMr3o2
+
+# 語 4 : 成分の数は 0
+NM40      ke  6 0
+NM4n      ta  NM40
+NM4k      sa  KV04 BW
+NM4ka     ko  NM4k NM4n
+NM4kv     ke  1 0
+.         ti  NM4ka NM4kv
+NM4a      sa  KV06 BW
+NM4aa     ko  NM4a NM4n
+.         ti  NM4aa NMzero
+NM4d      sa  KV10 BW
+NM4da     ko  NM4d NM4n
+NM4z      ke  0 0
+.         ti  NM4da NM4z
+NM4o      ke  1 0
+NM4n2     ko  NM4n NM4o
+.         ti  NM40 NM4n2
+
+NMr4w     ke  61 0
+NMr4wv    ta  NMr4w
+NMr4b     sa  KV03 BW
+NMr4ba    ko  NMr4b NMr4wv
+.         ti  NMr4ba NM4n
+NMr4i     ke  1 0
+NMr4o2    ko  NMr4wv NMr4i
+NMr4ww    ke  61 0
+.         ti  NMr4ww NMr4o2
+
+.         so  L3NX
+
+# ================= ba：除算。Dyad 二本 → 有理数（01 §6）=================
+#
+# 二進比へ正規化できる商は Cst が直接持つが、runtime 値どうしの商は
+# この atlas で実現できない。だから有理数の型を出口に置く。
+#
+#   (a, b) を持ち上げ、a ⊘ b を正の分母で置く。分母が零なら Ko で止める
+
+GBA       ke  0 0
+BA1r      ke  5 0
+BA1rw     ke  571 0
+.         ti  BA1rw BA1r
+.         so  RD0
+
+D05R      ke  570 0
+D05Rv     ta  D05R
+
+BA2r      ke  6 0
+BA2rw     ke  571 0
+.         ti  BA2rw BA2r
+.         so  RD0
+
+D06R      ke  570 0
+D06Rv     ta  D06R
+
+BAl1g0    ke  557 0
+.         ti  BAl1g0 D05Rv
+BAl1r     ke  5 0
+BAl1rw    ke  556 0
+.         ti  BAl1rw BAl1r
+.         so  LFQ
+
+LF5R      ke  554 0
+LF5Rv     ta  LF5R
+LF5Rb     ke  555 0
+LF5Rbv    ta  LF5Rb
+
+BAl2g0    ke  557 0
+.         ti  BAl2g0 D06Rv
+BAl2r     ke  6 0
+BAl2rw    ke  556 0
+.         ti  BAl2rw BAl2r
+.         so  LFQ
+
+LF6R      ke  554 0
+LF6Rv     ta  LF6R
+LF6Rb     ke  555 0
+LF6Rbv    ta  LF6Rb
+
+# divQ(an = 割る側, c = 割られる側) が c ⊘ a を返す
+BAdg0     ke  529 0
+.         ti  BAdg0 LF6Rv
+BAdg1     ke  530 0
+.         ti  BAdg1 LF6Rbv
+BAdg2     ke  531 0
+.         ti  BAdg2 LF5Rv
+BAdg3     ke  532 0
+.         ti  BAdg3 LF5Rbv
+BAdr      ke  3 0
+BAdrw     ke  528 0
+.         ti  BAdrw BAdr
+.         so  DVQ
+
+DQ3R      ke  526 0
+DQ3Rv     ta  DQ3R
+DQ3Rb     ke  527 0
+DQ3Rbv    ta  DQ3Rb
+
+# 分母が零なら止める。二本の分離のどちらも通らなければ Ko へ落ちる
+# 零
+BAz0      ke  6 0
+BAzn      ta  BAz0
+BAzk      sa  KV04 BW
+BAzka     ko  BAzk BAzn
+BAzkv     ke  1 0
+.         ti  BAzka BAzkv
+BAza      sa  KV06 BW
+BAzaa     ko  BAza BAzn
+BAzv      ke  0 0
+.         ti  BAzaa BAzv
+BAzd      sa  KV10 BW
+BAzda     ko  BAzd BAzn
+BAzz      ke  0 0
+.         ti  BAzda BAzz
+BAzo      ke  1 0
+BAzn2     ko  BAzn BAzo
+.         ti  BAz0 BAzn2
+
+# 分離の行き先は Ko の次の箱になる
+BAsk      ke  6 0
+BAskn     ta  BAsk
+BAsk3     ke  3 0
+BAskv     ko  BAskn BAsk3
+
+# 零 < 分母なら飛ぶ
+BAe10     ke  6 0
+BAe1n     ta  BAe10
+BAe1k     sa  KV04 BW
+BAe1ka    ko  BAe1k BAe1n
+BAe1kv    ke  9 0
+.         ti  BAe1ka BAe1kv
+BAe1a     sa  KV06 BW
+BAe1aa    ko  BAe1a BAe1n
+.         ti  BAe1aa BAzn
+BAe1b     sa  KV08 BW
+BAe1ba    ko  BAe1b BAe1n
+.         ti  BAe1ba LF6Rv
+BAe1l     sa  KV12 BW
+BAe1la    ko  BAe1l BAe1n
+.         ti  BAe1la BAskv
+BAe1d     sa  KV10 BW
+BAe1da    ko  BAe1d BAe1n
+BAe1z     ke  0 0
+.         ti  BAe1da BAe1z
+BAe1o     ke  1 0
+BAe1n2    ko  BAe1n BAe1o
+.         ti  BAe10 BAe1n2
+
+# 分母 < 零なら飛ぶ
+BAe20     ke  6 0
+BAe2n     ta  BAe20
+BAe2k     sa  KV04 BW
+BAe2ka    ko  BAe2k BAe2n
+BAe2kv    ke  9 0
+.         ti  BAe2ka BAe2kv
+BAe2a     sa  KV06 BW
+BAe2aa    ko  BAe2a BAe2n
+.         ti  BAe2aa LF6Rv
+BAe2b     sa  KV08 BW
+BAe2ba    ko  BAe2b BAe2n
+.         ti  BAe2ba BAzn
+BAe2l     sa  KV12 BW
+BAe2la    ko  BAe2l BAe2n
+.         ti  BAe2la BAskv
+BAe2d     sa  KV10 BW
+BAe2da    ko  BAe2d BAe2n
+BAe2z     ke  0 0
+.         ti  BAe2da BAe2z
+BAe2o     ke  1 0
+BAe2n2    ko  BAe2n BAe2o
+.         ti  BAe20 BAe2n2
+
+# 零で割った。失敗を報告する
+BAko0     ke  6 0
+BAkon     ta  BAko0
+BAkok     sa  KV04 BW
+BAkoka    ko  BAkok BAkon
+BAkokv    ke  10 0
+.         ti  BAkoka BAkokv
+BAkod     sa  KV10 BW
+BAkoda    ko  BAkod BAkon
+BAkoz     ke  0 0
+.         ti  BAkoda BAkoz
+BAkoo     ke  1 0
+BAkon2    ko  BAkon BAkoo
+.         ti  BAko0 BAkon2
+
+# 出口 frontier へ有理数を積む。種類 6
+BAk       ke  62 0
+BAk6      ke  6 0
+.         ti  BAk BAk6
+BAr0      ke  63 0
+.         ti  BAr0 DQ3Rv
+BAr1      ke  64 0
+.         ti  BAr1 DQ3Rbv
+.         so  PSC
+
+# ================= 有理数を二語へ開く =================
+#
+# 分子も分母も既に箱なので、控えるだけになる
+
+RMAT      sa  KV28 BW
+RMAa      ko  RMAT idCV
+RMAn      ta  RMAa
+RMAb      sa  KV30 BW
+RMAba     ko  RMAb idCV
+RMAd      ta  RMAba
+
+RM0w      ke  61 0
+RM0wv     ta  RM0w
+RM0b      sa  KV03 BW
+RM0ba     ko  RM0b RM0wv
+.         ti  RM0ba RMAn
+RM0i      ke  1 0
+RM0o2     ko  RM0wv RM0i
+RM0ww     ke  61 0
+.         ti  RM0ww RM0o2
+
+RM1w      ke  61 0
+RM1wv     ta  RM1w
+RM1b      sa  KV03 BW
+RM1ba     ko  RM1b RM1wv
+.         ti  RM1ba RMAd
+RM1i      ke  1 0
+RM1o2     ko  RM1wv RM1i
+RM1ww     ke  61 0
+.         ti  RM1ww RM1o2
+
+.         so  L3NX
+

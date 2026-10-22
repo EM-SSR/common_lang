@@ -1,0 +1,42 @@
+{
+ "id": "reset_history/after_reset",
+ "section": "式 12.15〜12.18",
+ "level": 9,
+ "note": "リセットの後の測定は常に 0。リセットを越えて h と u の領域が残る（後続の応答は α、R_C の同定対象）",
+ "initial_u0": [
+  "1/3"
+ ],
+ "world": null,
+ "result": {
+  "h": [
+   [
+    0,
+    0,
+    null
+   ],
+   [
+    "M",
+    0
+   ],
+   [
+    "R",
+    0
+   ],
+   [
+    "M",
+    0
+   ]
+  ],
+  "zj": [
+   "1",
+   "0"
+  ],
+  "d": 0,
+  "probes": [],
+  "chi": null,
+  "omega": null,
+  "memory": [
+   "00"
+  ]
+ }
+}

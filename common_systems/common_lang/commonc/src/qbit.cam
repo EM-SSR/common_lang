@@ -1,0 +1,419 @@
+# commonc 量子層 — Counter 量子情報論の量子の語（lane-qbit だけが受ける）
+# doc: casm.lane64.isa casm.lane64.layer chamber.def
+#
+# 三音節の名前 ku + [σ_3, σ_b] のうち、g = 63 + (b − 3) = 72 以降を量子の語に割り当てる。
+# region.cam の最後の分岐が GKUQ へ来る。どの語も、compile 時の作図（qstate.cam）を通してから箱を置く。
+# 量子ビットの番号と、角・割合・倍率は frontier の定数の箱（Cst）でなければならない。
+#
+# ---- 語の一覧（g、名前、ワイヤ、作図）----
+#   72〜80  kuketu kukete kuketo kukena kukeni kukenu kukene kukeno kukeha
+#           h x y z s sdg t tdg sx。ワイヤは量子ビット
+#   81〜83  kukehi kukehu kukehe   cx cz swap。ワイヤは二つの量子ビット（位置 0 が制御）
+#   84      kukeho  測定。ワイヤは量子ビット、出力は結果 x。境界の表を置き、枝を分ける（論文 3.6、3.7）
+#   85      kukema  リセット。候補（語 1061）が「u を使う」なら、測定と同じく枝を分けて子 1 に X
+#   86      kukemi  移送 B_x。ワイヤは量子ビットと x（論文 6.2）
+#   87〜89  kukemu kukeme kukemo   rx ry rz。ワイヤは量子ビットと角の番号（host の角の表）
+#   90      kukeya  状態の保存。ワイヤは種類。全部の枝の状態を host へ書き出す
+#   91      kukeyi  量子ビットの名詞。名詞ノードの cell 番号 2·zz(m) + ε を定数の箱にする
+#   92      kukeyu  メビウス作用 u → f u/(1 − u + f u)。ワイヤは fn、fd（論文 16.5）
+#   93      kukeye  β。作図深度を一つ進める（論文 13.1）
+#   94      kukeyo  次の移送の割合 ε = en/ed（論文 15.11）
+#   95、97  kukera kukeru   古典ビットを読む、書く
+#   96、98〜101            条件、delay、多量子ビットの表、状態の設定は作図がまだ無い（BAD か記録だけ）
+#
+# 箱の種類（後段 back_lane_qbit.cam が命令へ落とす）
+#   12 ゲート（OPD にゲートの番号 0〜14）  13 測定  14 リセット  15 移送  18 保存  19 メビウス  20 β  21 割合
+#   測定とリセットの箱の第二のワイヤは、境界の表の基底の定数の箱
+
+GKUQ      ke  72 0
+.         su  gKU GKUQ QXG72
+QXc73      ke  73 0
+.         su  gKU QXc73 QXG73
+QXc74      ke  74 0
+.         su  gKU QXc74 QXG74
+QXc75      ke  75 0
+.         su  gKU QXc75 QXG75
+QXc76      ke  76 0
+.         su  gKU QXc76 QXG76
+QXc77      ke  77 0
+.         su  gKU QXc77 QXG77
+QXc78      ke  78 0
+.         su  gKU QXc78 QXG78
+QXc79      ke  79 0
+.         su  gKU QXc79 QXG79
+QXc80      ke  80 0
+.         su  gKU QXc80 QXG80
+QXc81      ke  81 0
+.         su  gKU QXc81 QXG81
+QXc82      ke  82 0
+.         su  gKU QXc82 QXG82
+QXc83      ke  83 0
+.         su  gKU QXc83 QXG83
+QXc84      ke  84 0
+.         su  gKU QXc84 QXG84
+QXc85      ke  85 0
+.         su  gKU QXc85 QXG85
+QXc86      ke  86 0
+.         su  gKU QXc86 QXG86
+QXc87      ke  87 0
+.         su  gKU QXc87 QXG87
+QXc88      ke  88 0
+.         su  gKU QXc88 QXG88
+QXc89      ke  89 0
+.         su  gKU QXc89 QXG89
+QXc90      ke  90 0
+.         su  gKU QXc90 QXG90
+QXc91      ke  91 0
+.         su  gKU QXc91 QXG91
+QXc92      ke  92 0
+.         su  gKU QXc92 QXG92
+QXc93      ke  93 0
+.         su  gKU QXc93 QXG93
+QXc94      ke  94 0
+.         su  gKU QXc94 QXG94
+QXc95      ke  95 0
+.         su  gKU QXc95 QXG95
+QXc96      ke  96 0
+.         su  gKU QXc96 QXG96
+QXc97      ke  97 0
+.         su  gKU QXc97 QXG97
+QXc98      ke  98 0
+.         su  gKU QXc98 QXG98
+QXc99      ke  99 0
+.         su  gKU QXc99 QXG99
+QXc100      ke  100 0
+.         su  gKU QXc100 QXG100
+QXc101      ke  101 0
+.         su  gKU QXc101 QXG101
+.         so  BAD
+
+# ---- ゲート。番号を語 1011 へ置き、作図（qstate.cam）を通してから箱を置く ----
+#
+# 箱は種類 12、OPD にゲートの番号（後段が imm へ写す）。一量子ビットは QXONE、二量子ビットは QXTWO
+
+QXG72     ke  0 0
+QXg72     ke  1011 0
+.         ti  QXg72 QXG72
+.         so  QXONE
+
+QXG73     ke  1 0
+QXg73     ke  1011 0
+.         ti  QXg73 QXG73
+.         so  QXONE
+
+QXG74     ke  2 0
+QXg74     ke  1011 0
+.         ti  QXg74 QXG74
+.         so  QXONE
+
+QXG75     ke  3 0
+QXg75     ke  1011 0
+.         ti  QXg75 QXG75
+.         so  QXONE
+
+QXG76     ke  4 0
+QXg76     ke  1011 0
+.         ti  QXg76 QXG76
+.         so  QXONE
+
+QXG77     ke  5 0
+QXg77     ke  1011 0
+.         ti  QXg77 QXG77
+.         so  QXONE
+
+QXG78     ke  6 0
+QXg78     ke  1011 0
+.         ti  QXg78 QXG78
+.         so  QXONE
+
+QXG79     ke  7 0
+QXg79     ke  1011 0
+.         ti  QXg79 QXG79
+.         so  QXONE
+
+QXG80     ke  8 0
+QXg80     ke  1011 0
+.         ti  QXg80 QXG80
+.         so  QXONE
+
+QXG81     ke  9 0
+QXg81     ke  1011 0
+.         ti  QXg81 QXG81
+.         so  QXTWO
+
+QXG82     ke  10 0
+QXg82     ke  1011 0
+.         ti  QXg82 QXG82
+.         so  QXTWO
+
+QXG83     ke  11 0
+QXg83     ke  1011 0
+.         ti  QXg83 QXG83
+.         so  QXTWO
+
+QXONE     ke  52 0
+QXONEn    ke  1 0
+.         ti  QXONE QXONEn
+QXONEk    ke  53 0
+QXONEv    ke  12 0
+.         ti  QXONEk QXONEv
+QXONEp    ke  54 0
+QXONEz    ke  0 0
+.         ti  QXONEp QXONEz
+QXONEd    ke  55 0
+QXONEg    ke  1011 0
+QXONEG    ta  QXONEg
+.         ti  QXONEd QXONEG
+QXONEe    ke  1060 0
+QXONEf    ke  1 0
+.         ti  QXONEe QXONEf
+.         so  QSPRE
+
+QXTWO     ke  52 0
+QXTWOn    ke  2 0
+.         ti  QXTWO QXTWOn
+QXTWOk    ke  53 0
+QXTWOv    ke  12 0
+.         ti  QXTWOk QXTWOv
+QXTWOp    ke  54 0
+QXTWOz    ke  0 0
+.         ti  QXTWOp QXTWOz
+QXTWOd    ke  55 0
+QXTWOg    ke  1011 0
+QXTWOG    ta  QXTWOg
+.         ti  QXTWOd QXTWOG
+QXTWOe    ke  1060 0
+QXTWOf    ke  2 0
+.         ti  QXTWOe QXTWOf
+.         so  QSPRE
+
+# ---- 測定、リセット。作図が境界の表と箱を置く（qstate.cam の QSSX）----
+QXG84     ke  1060 0
+QXG84a    ke  3 0
+.         ti  QXG84 QXG84a
+.         so  QSPRE
+
+QXG85     ke  1060 0
+QXG85a    ke  4 0
+.         ti  QXG85 QXG85a
+.         so  QSPRE
+
+# ---- 移送。作図が写像を更新した後、二本のワイヤを取る箱（種類 15）を置く ----
+QXG86     ke  52 0
+QXG86n    ke  2 0
+.         ti  QXG86 QXG86n
+QXG86k    ke  53 0
+QXG86v    ke  15 0
+.         ti  QXG86k QXG86v
+QXG86p    ke  54 0
+QXG86z    ke  0 0
+.         ti  QXG86p QXG86z
+QXG86d    ke  55 0
+.         ti  QXG86d QXG86z
+QXG86e    ke  1060 0
+QXG86f    ke  5 0
+.         ti  QXG86e QXG86f
+.         so  QSPRE
+
+# ---- 回転 rx、ry、rz（87〜89）。ワイヤは量子ビットと角の番号（host の角の表の添字）----
+#
+# 作図は qstate.cam の QSROT（角の閉包から点を作る）。箱は種類 12、OPD にゲートの番号 12〜14
+QXG87     ke  12 0
+QXg87     ke  1011 0
+.         ti  QXg87 QXG87
+.         so  QXROT
+
+QXG88     ke  13 0
+QXg88     ke  1011 0
+.         ti  QXg88 QXG88
+.         so  QXROT
+
+QXG89     ke  14 0
+QXg89     ke  1011 0
+.         ti  QXg89 QXG89
+.         so  QXROT
+
+QXROT     ke  52 0
+QXROTn    ke  2 0
+.         ti  QXROT QXROTn
+QXROTk    ke  53 0
+QXROTv    ke  12 0
+.         ti  QXROTk QXROTv
+QXROTp    ke  54 0
+QXROTz    ke  0 0
+.         ti  QXROTp QXROTz
+QXROTd    ke  55 0
+QXROTg    ke  1011 0
+QXROTG    ta  QXROTg
+.         ti  QXROTd QXROTG
+QXROTe    ke  1060 0
+QXROTf    ke  6 0
+.         ti  QXROTe QXROTf
+.         so  QSPRE
+
+QXG90     ke  52 0
+QXn90      ke  1 0
+.         ti  QXG90 QXn90
+QXk90      ke  53 0
+QXv90      ke  18 0
+.         ti  QXk90 QXv90
+QXp90      ke  54 0
+QXq90      ke  0 0
+.         ti  QXp90 QXq90
+QXd90      ke  55 0
+QXe90      ke  0 0
+.         ti  QXd90 QXe90
+.         so  QSSAV
+
+# ---- kukeyi：名詞 → 量子ビットの番号 ----
+#
+# 入口 frontier の名詞（compile 時の値）を RD1 で読み、cell = 2 zz(m) + ε を定数の箱として積む。
+# 戻り符号は語 69 = 50。zz(m) は m >= 0 で 2m、m < 0 で −2m−1（region.cam の kukeke と同じ式）。
+# 作業語 790 に zz を置く。
+
+QXG91     ke  69 0
+QXn91      ke  50 0
+.         ti  QXG91 QXn91
+.         so  RD1
+
+QXN1      ke  62 0
+QXNa      ta  QXN1
+QXNb      ke  5 0
+.         su  QXNa QXNb QXN2
+.         so  BAD
+
+QXN2      ke  63 0
+QXNc      ta  QXN2
+QXNd      ke  0 0
+.         se  QXNc QXNd QXN3
+QXNe      ke  2 0
+QXNf      sa  QXNe QXNc
+QXNg      ke  790 0
+.         ti  QXNg QXNf
+.         so  QXN4
+
+QXN3      ke  63 0
+QXNh      ta  QXN3
+QXNi      ke  2 0
+QXNj      sa  QXNi QXNh
+QXNk      si  QXNj
+QXNl      ke  1 0
+QXNm      si  QXNl
+QXNn      ko  QXNk QXNm
+QXNo      ke  790 0
+.         ti  QXNo QXNn
+
+QXN4      ke  790 0
+QXNp      ta  QXN4
+QXNq      ke  2 0
+QXNr      sa  QXNq QXNp
+QXNs      ke  64 0
+QXNt      ta  QXNs
+QXNu      ko  QXNr QXNt
+
+QXNv      ke  6 0
+QXNw      ta  QXNv
+QXNx      sa  KV04 BW
+QXNy      ko  QXNx QXNw
+QXNz      ke  1 0
+.         ti  QXNy QXNz
+QXNA      sa  KV06 BW
+QXNB      ko  QXNA QXNw
+.         ti  QXNB QXNu
+QXNC      sa  KV10 BW
+QXND      ko  QXNC QXNw
+QXNE      ke  0 0
+.         ti  QXND QXNE
+.         so  PSB
+
+QXG92     ke  52 0
+QXn92      ke  2 0
+.         ti  QXG92 QXn92
+QXk92      ke  53 0
+QXv92      ke  19 0
+.         ti  QXk92 QXv92
+QXp92      ke  54 0
+QXq92      ke  0 0
+.         ti  QXp92 QXq92
+QXd92      ke  55 0
+QXe92      ke  0 0
+.         ti  QXd92 QXe92
+.         so  QSMOB
+
+QXG93     ke  52 0
+QXn93      ke  0 0
+.         ti  QXG93 QXn93
+QXk93      ke  53 0
+QXv93      ke  20 0
+.         ti  QXk93 QXv93
+QXp93      ke  54 0
+QXq93      ke  0 0
+.         ti  QXp93 QXq93
+QXd93      ke  55 0
+QXe93      ke  0 0
+.         ti  QXd93 QXe93
+.         so  GEN
+
+QXG94     ke  52 0
+QXn94      ke  2 0
+.         ti  QXG94 QXn94
+QXk94      ke  53 0
+QXv94      ke  21 0
+.         ti  QXk94 QXv94
+QXp94      ke  54 0
+QXq94      ke  0 0
+.         ti  QXp94 QXq94
+QXd94      ke  55 0
+QXe94      ke  0 0
+.         ti  QXd94 QXe94
+.         so  QSEPS
+
+QXG95     ke  52 0
+QXn95      ke  1 0
+.         ti  QXG95 QXn95
+QXk95      ke  53 0
+QXv95      ke  22 0
+.         ti  QXk95 QXv95
+QXp95      ke  54 0
+QXq95      ke  1 0
+.         ti  QXp95 QXq95
+QXd95      ke  55 0
+QXe95      ke  0 0
+.         ti  QXd95 QXe95
+.         so  GEN
+
+QXG96     so  BAD
+
+QXG97     ke  52 0
+QXn97      ke  2 0
+.         ti  QXG97 QXn97
+QXk97      ke  53 0
+QXv97      ke  24 0
+.         ti  QXk97 QXv97
+QXp97      ke  54 0
+QXq97      ke  0 0
+.         ti  QXp97 QXq97
+QXd97      ke  55 0
+QXe97      ke  0 0
+.         ti  QXd97 QXe97
+.         so  GEN
+
+QXG98     ke  52 0
+QXn98      ke  2 0
+.         ti  QXG98 QXn98
+QXk98      ke  53 0
+QXv98      ke  25 0
+.         ti  QXk98 QXv98
+QXp98      ke  54 0
+QXq98      ke  0 0
+.         ti  QXp98 QXq98
+QXd98      ke  55 0
+QXe98      ke  0 0
+.         ti  QXd98 QXe98
+.         so  GEN
+
+QXG99     so  BAD
+
+QXG100     so  BAD
+
+QXG101     so  BAD

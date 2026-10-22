@@ -1,0 +1,15 @@
+# commonc — Common 言語の compiler、x86-64 hosted 版
+#
+#   .cmn  --commonc-->  X_x86h                                      19 (19.1)
+#
+# 意味レジストリの 11 原子だけで書く。mnemonic も register 名も現れない。
+
+mu i
+d  0
+
+use front.cam
+use back_x86h.cam
+use qlayer.cam
+use region.cam
+use qword.cam
+use noqbit.cam

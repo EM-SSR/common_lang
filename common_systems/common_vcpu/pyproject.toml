@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "common-vcpu"
+version = "0.1.0"
+description = "Common 言語の lane64 image を python から走らせる実行環境"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+# cupy は GPU ごとに版が違うので縛らない。GPU を使うときだけ入れる。
+[project.optional-dependencies]
+gpu = ["cupy-cuda12x>=13"]
+
+[tool.setuptools]
+packages = ["common_vcpu"]

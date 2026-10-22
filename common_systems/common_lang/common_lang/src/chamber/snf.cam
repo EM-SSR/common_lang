@@ -1,0 +1,687 @@
+# 構成語の意味的正規形 snf
+# doc: snf.word snf.rewrite snf.terminate snf.confluent snf.product cml.verify
+#
+#   Common-Lang/Common言語のチェンバー構文と構成語の意味的正規形 §6
+#   13 章 §5（突き合わせの形）
+#
+# 定理 6.1: 任意の有限構成語 w ∈ {i,j}* は、ただ一つの
+#
+#     snf(w) = σ^ε a,   ε ∈ {0,1}
+#
+# へ簡約される。a は i,j が交互に現れる語になる。
+#
+# 書換え系（§6.3）は
+#
+#     ii ⇒ σ    jj ⇒ e    iσ ⇒ σi    jσ ⇒ σj    σσ ⇒ e
+#
+# であり、停止性は測度 M(w) = (N1, N2, |w|, N3) の辞書式減少、
+# 合流性は §6.5 の八つの臨界対で示されている。
+# したがって、語を左から一文字ずつ読み、先頭が同じ文字なら消し、
+# 消したのが i なら符号を反転する走査で、既約語がそのまま得られる。
+#
+#     out が空、または out の末尾 ≠ c   →  c を押す
+#     out の末尾 = c                    →  一つ消す。c = i なら ε ← 1-ε
+#
+# ij ⇒ ji の規則は無い。二つが別の意味を持つので交換規則が存在しない。
+#
+# 作業領域
+#   語 0    p    CASE の走査位置
+#   語 1    L    交互語の長さ
+#   語 2    E    符号 ε
+#   語 3    n    その語の残り文字数
+#   語 4    o    OUT の書き込み位置
+#   語 5    k    突き合わせ位置
+#   語 32   BUF  交互語
+#   語 64   OUT  ε, m, 交互語 の繰り返し
+#   語 128  CASE 入力
+#   語 256  EXP  期待値
+#
+# 文字の符号は i = 1、j = 2。
+
+mu i
+d  0
+
+# ---- 入力表 CASE: 語 n と n 文字。終端は -1 ----
+#   ii => -1
+c000a     ke  128 0
+c000v     ke  2 0
+.         ti  c000a c000v
+c001a     ke  129 0
+c001v     ke  1 0
+.         ti  c001a c001v
+c002a     ke  130 0
+c002v     ke  1 0
+.         ti  c002a c002v
+#   jj => +1
+c003a     ke  131 0
+c003v     ke  2 0
+.         ti  c003a c003v
+c004a     ke  132 0
+c004v     ke  2 0
+.         ti  c004a c004v
+c005a     ke  133 0
+c005v     ke  2 0
+.         ti  c005a c005v
+#   iii => -i
+c006a     ke  134 0
+c006v     ke  3 0
+.         ti  c006a c006v
+c007a     ke  135 0
+c007v     ke  1 0
+.         ti  c007a c007v
+c008a     ke  136 0
+c008v     ke  1 0
+.         ti  c008a c008v
+c009a     ke  137 0
+c009v     ke  1 0
+.         ti  c009a c009v
+#   iiii => +1
+c010a     ke  138 0
+c010v     ke  4 0
+.         ti  c010a c010v
+c011a     ke  139 0
+c011v     ke  1 0
+.         ti  c011a c011v
+c012a     ke  140 0
+c012v     ke  1 0
+.         ti  c012a c012v
+c013a     ke  141 0
+c013v     ke  1 0
+.         ti  c013a c013v
+c014a     ke  142 0
+c014v     ke  1 0
+.         ti  c014a c014v
+#   jjj => +j
+c015a     ke  143 0
+c015v     ke  3 0
+.         ti  c015a c015v
+c016a     ke  144 0
+c016v     ke  2 0
+.         ti  c016a c016v
+c017a     ke  145 0
+c017v     ke  2 0
+.         ti  c017a c017v
+c018a     ke  146 0
+c018v     ke  2 0
+.         ti  c018a c018v
+#   jjjj => +1
+c019a     ke  147 0
+c019v     ke  4 0
+.         ti  c019a c019v
+c020a     ke  148 0
+c020v     ke  2 0
+.         ti  c020a c020v
+c021a     ke  149 0
+c021v     ke  2 0
+.         ti  c021a c021v
+c022a     ke  150 0
+c022v     ke  2 0
+.         ti  c022a c022v
+c023a     ke  151 0
+c023v     ke  2 0
+.         ti  c023a c023v
+#   iij => -j
+c024a     ke  152 0
+c024v     ke  3 0
+.         ti  c024a c024v
+c025a     ke  153 0
+c025v     ke  1 0
+.         ti  c025a c025v
+c026a     ke  154 0
+c026v     ke  1 0
+.         ti  c026a c026v
+c027a     ke  155 0
+c027v     ke  2 0
+.         ti  c027a c027v
+#   jii => -j
+c028a     ke  156 0
+c028v     ke  3 0
+.         ti  c028a c028v
+c029a     ke  157 0
+c029v     ke  2 0
+.         ti  c029a c029v
+c030a     ke  158 0
+c030v     ke  1 0
+.         ti  c030a c030v
+c031a     ke  159 0
+c031v     ke  1 0
+.         ti  c031a c031v
+#   ijj => +i
+c032a     ke  160 0
+c032v     ke  3 0
+.         ti  c032a c032v
+c033a     ke  161 0
+c033v     ke  1 0
+.         ti  c033a c033v
+c034a     ke  162 0
+c034v     ke  2 0
+.         ti  c034a c034v
+c035a     ke  163 0
+c035v     ke  2 0
+.         ti  c035a c035v
+#   jji => +i
+c036a     ke  164 0
+c036v     ke  3 0
+.         ti  c036a c036v
+c037a     ke  165 0
+c037v     ke  2 0
+.         ti  c037a c037v
+c038a     ke  166 0
+c038v     ke  2 0
+.         ti  c038a c038v
+c039a     ke  167 0
+c039v     ke  1 0
+.         ti  c039a c039v
+#   iijj => -1
+c040a     ke  168 0
+c040v     ke  4 0
+.         ti  c040a c040v
+c041a     ke  169 0
+c041v     ke  1 0
+.         ti  c041a c041v
+c042a     ke  170 0
+c042v     ke  1 0
+.         ti  c042a c042v
+c043a     ke  171 0
+c043v     ke  2 0
+.         ti  c043a c043v
+c044a     ke  172 0
+c044v     ke  2 0
+.         ti  c044a c044v
+#   ijji => -1
+c045a     ke  173 0
+c045v     ke  4 0
+.         ti  c045a c045v
+c046a     ke  174 0
+c046v     ke  1 0
+.         ti  c046a c046v
+c047a     ke  175 0
+c047v     ke  2 0
+.         ti  c047a c047v
+c048a     ke  176 0
+c048v     ke  2 0
+.         ti  c048a c048v
+c049a     ke  177 0
+c049v     ke  1 0
+.         ti  c049a c049v
+#   jiij => -1
+c050a     ke  178 0
+c050v     ke  4 0
+.         ti  c050a c050v
+c051a     ke  179 0
+c051v     ke  2 0
+.         ti  c051a c051v
+c052a     ke  180 0
+c052v     ke  1 0
+.         ti  c052a c052v
+c053a     ke  181 0
+c053v     ke  1 0
+.         ti  c053a c053v
+c054a     ke  182 0
+c054v     ke  2 0
+.         ti  c054a c054v
+#   ijij => +ijij
+c055a     ke  183 0
+c055v     ke  4 0
+.         ti  c055a c055v
+c056a     ke  184 0
+c056v     ke  1 0
+.         ti  c056a c056v
+c057a     ke  185 0
+c057v     ke  2 0
+.         ti  c057a c057v
+c058a     ke  186 0
+c058v     ke  1 0
+.         ti  c058a c058v
+c059a     ke  187 0
+c059v     ke  2 0
+.         ti  c059a c059v
+#   jiji => +jiji
+c060a     ke  188 0
+c060v     ke  4 0
+.         ti  c060a c060v
+c061a     ke  189 0
+c061v     ke  2 0
+.         ti  c061a c061v
+c062a     ke  190 0
+c062v     ke  1 0
+.         ti  c062a c062v
+c063a     ke  191 0
+c063v     ke  2 0
+.         ti  c063a c063v
+c064a     ke  192 0
+c064v     ke  1 0
+.         ti  c064a c064v
+#   iji => +iji
+c065a     ke  193 0
+c065v     ke  3 0
+.         ti  c065a c065v
+c066a     ke  194 0
+c066v     ke  1 0
+.         ti  c066a c066v
+c067a     ke  195 0
+c067v     ke  2 0
+.         ti  c067a c067v
+c068a     ke  196 0
+c068v     ke  1 0
+.         ti  c068a c068v
+#   jij => +jij
+c069a     ke  197 0
+c069v     ke  3 0
+.         ti  c069a c069v
+c070a     ke  198 0
+c070v     ke  2 0
+.         ti  c070a c070v
+c071a     ke  199 0
+c071v     ke  1 0
+.         ti  c071a c071v
+c072a     ke  200 0
+c072v     ke  2 0
+.         ti  c072a c072v
+#   ijiij => -i
+c073a     ke  201 0
+c073v     ke  5 0
+.         ti  c073a c073v
+c074a     ke  202 0
+c074v     ke  1 0
+.         ti  c074a c074v
+c075a     ke  203 0
+c075v     ke  2 0
+.         ti  c075a c075v
+c076a     ke  204 0
+c076v     ke  1 0
+.         ti  c076a c076v
+c077a     ke  205 0
+c077v     ke  1 0
+.         ti  c077a c077v
+c078a     ke  206 0
+c078v     ke  2 0
+.         ti  c078a c078v
+#   終端
+c079a     ke  207 0
+c079v     ke  -1 0
+.         ti  c079a c079v
+
+# ---- 期待表 EXP: 語ごとに ε、長さ m、交互語 ----
+#   ii => -1
+e000a     ke  256 0
+e000v     ke  1 0
+.         ti  e000a e000v
+e001a     ke  257 0
+e001v     ke  0 0
+.         ti  e001a e001v
+#   jj => +1
+e002a     ke  258 0
+e002v     ke  0 0
+.         ti  e002a e002v
+e003a     ke  259 0
+e003v     ke  0 0
+.         ti  e003a e003v
+#   iii => -i
+e004a     ke  260 0
+e004v     ke  1 0
+.         ti  e004a e004v
+e005a     ke  261 0
+e005v     ke  1 0
+.         ti  e005a e005v
+e006a     ke  262 0
+e006v     ke  1 0
+.         ti  e006a e006v
+#   iiii => +1
+e007a     ke  263 0
+e007v     ke  0 0
+.         ti  e007a e007v
+e008a     ke  264 0
+e008v     ke  0 0
+.         ti  e008a e008v
+#   jjj => +j
+e009a     ke  265 0
+e009v     ke  0 0
+.         ti  e009a e009v
+e010a     ke  266 0
+e010v     ke  1 0
+.         ti  e010a e010v
+e011a     ke  267 0
+e011v     ke  2 0
+.         ti  e011a e011v
+#   jjjj => +1
+e012a     ke  268 0
+e012v     ke  0 0
+.         ti  e012a e012v
+e013a     ke  269 0
+e013v     ke  0 0
+.         ti  e013a e013v
+#   iij => -j
+e014a     ke  270 0
+e014v     ke  1 0
+.         ti  e014a e014v
+e015a     ke  271 0
+e015v     ke  1 0
+.         ti  e015a e015v
+e016a     ke  272 0
+e016v     ke  2 0
+.         ti  e016a e016v
+#   jii => -j
+e017a     ke  273 0
+e017v     ke  1 0
+.         ti  e017a e017v
+e018a     ke  274 0
+e018v     ke  1 0
+.         ti  e018a e018v
+e019a     ke  275 0
+e019v     ke  2 0
+.         ti  e019a e019v
+#   ijj => +i
+e020a     ke  276 0
+e020v     ke  0 0
+.         ti  e020a e020v
+e021a     ke  277 0
+e021v     ke  1 0
+.         ti  e021a e021v
+e022a     ke  278 0
+e022v     ke  1 0
+.         ti  e022a e022v
+#   jji => +i
+e023a     ke  279 0
+e023v     ke  0 0
+.         ti  e023a e023v
+e024a     ke  280 0
+e024v     ke  1 0
+.         ti  e024a e024v
+e025a     ke  281 0
+e025v     ke  1 0
+.         ti  e025a e025v
+#   iijj => -1
+e026a     ke  282 0
+e026v     ke  1 0
+.         ti  e026a e026v
+e027a     ke  283 0
+e027v     ke  0 0
+.         ti  e027a e027v
+#   ijji => -1
+e028a     ke  284 0
+e028v     ke  1 0
+.         ti  e028a e028v
+e029a     ke  285 0
+e029v     ke  0 0
+.         ti  e029a e029v
+#   jiij => -1
+e030a     ke  286 0
+e030v     ke  1 0
+.         ti  e030a e030v
+e031a     ke  287 0
+e031v     ke  0 0
+.         ti  e031a e031v
+#   ijij => +ijij
+e032a     ke  288 0
+e032v     ke  0 0
+.         ti  e032a e032v
+e033a     ke  289 0
+e033v     ke  4 0
+.         ti  e033a e033v
+e034a     ke  290 0
+e034v     ke  1 0
+.         ti  e034a e034v
+e035a     ke  291 0
+e035v     ke  2 0
+.         ti  e035a e035v
+e036a     ke  292 0
+e036v     ke  1 0
+.         ti  e036a e036v
+e037a     ke  293 0
+e037v     ke  2 0
+.         ti  e037a e037v
+#   jiji => +jiji
+e038a     ke  294 0
+e038v     ke  0 0
+.         ti  e038a e038v
+e039a     ke  295 0
+e039v     ke  4 0
+.         ti  e039a e039v
+e040a     ke  296 0
+e040v     ke  2 0
+.         ti  e040a e040v
+e041a     ke  297 0
+e041v     ke  1 0
+.         ti  e041a e041v
+e042a     ke  298 0
+e042v     ke  2 0
+.         ti  e042a e042v
+e043a     ke  299 0
+e043v     ke  1 0
+.         ti  e043a e043v
+#   iji => +iji
+e044a     ke  300 0
+e044v     ke  0 0
+.         ti  e044a e044v
+e045a     ke  301 0
+e045v     ke  3 0
+.         ti  e045a e045v
+e046a     ke  302 0
+e046v     ke  1 0
+.         ti  e046a e046v
+e047a     ke  303 0
+e047v     ke  2 0
+.         ti  e047a e047v
+e048a     ke  304 0
+e048v     ke  1 0
+.         ti  e048a e048v
+#   jij => +jij
+e049a     ke  305 0
+e049v     ke  0 0
+.         ti  e049a e049v
+e050a     ke  306 0
+e050v     ke  3 0
+.         ti  e050a e050v
+e051a     ke  307 0
+e051v     ke  2 0
+.         ti  e051a e051v
+e052a     ke  308 0
+e052v     ke  1 0
+.         ti  e052a e052v
+e053a     ke  309 0
+e053v     ke  2 0
+.         ti  e053a e053v
+#   ijiij => -i
+e054a     ke  310 0
+e054v     ke  1 0
+.         ti  e054a e054v
+e055a     ke  311 0
+e055v     ke  1 0
+.         ti  e055a e055v
+e056a     ke  312 0
+e056v     ke  1 0
+.         ti  e056a e056v
+# ---- 走査の初期値 ----
+i0        ke  0 0
+i1        ke  128 0
+.         ti  i0 i1                      # p ← CASE
+i2        ke  4 0
+i3        ke  0 0
+.         ti  i2 i3                      # o ← 0
+
+# ================ 外側: CASE の語を一つずつ ================
+#
+# 反復は Ω 閉包で書く（10 章 §2 末、仕様 §18）。境界は work[p] ≠ −1 で、
+# 終端標識に届いたら後退分離が止まる。
+# 語が一つも無い場合は前方分離で分ける（§16 の path separation）。
+cg0       ke  0 0
+cgp       ta  cg0
+cgn       ta  cgp
+cgm       ke  -1 0
+.         se  cgm cgn Lcase
+.         so  Lcmp0
+Lcase     ke  0 0
+pv        ta  Lcase                      # p
+nn        ta  pv                         # work[p] = n
+one1      ke  1 0
+pv1       ko  pv one1
+.         ti  Lcase pv1                  # p ← p+1
+w3        ke  3 0
+.         ti  w3 nn                      # n ← 文字数
+w1        ke  1 0
+zz        ke  0 0
+.         ti  w1 zz                      # L ← 0
+w2        ke  2 0
+.         ti  w2 zz                      # E ← 0
+
+# ---- 内側: n 文字を読む。境界は 0 < n ----
+rg0       ke  3 0
+rgn       ta  rg0
+rgz       ke  0 0
+.         se  rgz rgn Lread
+.         so  Lemit
+Lread     ke  3 0
+nv        ta  Lread
+r0        ke  0 0
+pw        ta  r0
+cc        ta  pw                         # 文字 c
+r1        ke  1 0
+pw2       ko  pw r1
+.         ti  r0 pw2                     # p ← p+1
+rm        ke  -1 0
+nv2       ko  nv rm
+.         ti  Lread nv2                  # n ← n-1
+r2        ke  1 0
+lv        ta  r2                         # L
+z2        ke  0 0
+.         su  lv z2 Lpush                # 空なら押す
+cB        ke  32 0
+rm2       ke  -1 0
+lm        ko  lv rm2
+ad        ko  cB lm
+tp        ta  ad                         # BUF[L-1]
+.         su  tp cc Lpop                 # 同じ文字なら消す
+
+# ---- 押す ----
+Lpush     ke  32 0
+ba        ko  Lpush lv
+.         ti  ba cc                      # BUF[L] ← c
+p1        ke  1 0
+lv2       ko  lv p1
+p2        ke  1 0
+.         ti  p2 lv2                     # L ← L+1
+.         so  Rcnt
+
+# ---- 消す。ii ⇒ σ、jj ⇒ e ----
+Lpop      ke  1 0
+q1        ke  -1 0
+lv3       ko  lv q1
+.         ti  Lpop lv3                   # L ← L-1
+q2        ke  1 0
+.         su  cc q2 Lflip                # c = i のときだけ符号が動く
+.         so  Rcnt
+
+# ---- 符号の反転。ε ∈ {0,1} なので 2 に達したら 0 へ戻す ----
+Lflip     ke  2 0
+ev        ta  Lflip
+q3        ke  1 0
+ne        ko  ev q3
+q4        ke  2 0
+.         su  ne q4 Lzero
+.         ti  Lflip ne
+.         so  Rcnt
+Lzero     ke  2 0
+z3        ke  0 0
+.         ti  Lzero z3
+.         so  Rcnt
+
+# ---- 内側の閉じ ----
+Rcnt      ke  3 0
+rcn       ta  Rcnt
+rcz       ke  0 0
+.         se  rcz rcn Lread
+
+# ---- 一語分の正規形を OUT へ書く ----
+Lemit     ke  4 0
+ov        ta  Lemit                      # o
+cOU       ke  64 0
+oa        ko  cOU ov
+e2        ke  2 0
+ev2       ta  e2
+.         ti  oa ev2                     # OUT[o] ← ε
+s1        ke  1 0
+ov1       ko  ov s1
+oa1       ko  cOU ov1
+s2        ke  1 0
+lv4       ta  s2
+.         ti  oa1 lv4                    # OUT[o+1] ← m
+s3        ke  1 0
+ov2       ko  ov1 s3
+.         ti  Lemit ov2                  # o ← o+2
+s4        ke  5 0
+z4        ke  0 0
+.         ti  s4 z4                      # k ← 0
+
+# ---- 内側: BUF を OUT へ写す。境界は k < m ----
+mg0       ke  5 0
+mgk       ta  mg0
+mg1       ke  1 0
+mgm       ta  mg1
+.         se  mgk mgm Lmove
+.         so  Ccl
+Lmove     ke  5 0
+kv        ta  Lmove
+u2        ke  32 0
+sa2       ko  u2 kv
+vv        ta  sa2                        # BUF[k]
+u3        ke  4 0
+ov3       ta  u3
+u4        ke  64 0
+da        ko  u4 ov3
+.         ti  da vv                      # OUT[o] ← BUF[k]
+u5        ke  1 0
+ov4       ko  ov3 u5
+.         ti  u3 ov4                     # o ← o+1
+kv2       ko  kv u5
+.         ti  Lmove kv2                  # k ← k+1
+mc0       ke  5 0
+mck       ta  mc0
+mc1       ke  1 0
+mcm       ta  mc1
+.         se  mck mcm Lmove
+
+# ---- 外側の閉じ ----
+Ccl       ke  0 0
+ccp       ta  Ccl
+ccn       ta  ccp
+ccm       ke  -1 0
+.         se  ccm ccn Lcase
+
+# ================ 突き合わせ（13 章 §5）================
+Lcmp0     ke  4 0
+ovf       ta  Lcmp0
+c57       ke  57 0
+.         su  ovf c57 Lclr               # 出力語数が合わなければ失敗
+.         so  Lko
+Lclr      ke  5 0
+z5        ke  0 0
+.         ti  Lclr z5                    # k ← 0
+
+# ---- 突き合わせの走査。境界は k < 57 ----
+kg0       ke  5 0
+kgk       ta  kg0
+kg1       ke  57 0
+.         se  kgk kg1 Lcmp
+.         so  Lok
+Lcmp      ke  5 0
+kv3       ta  Lcmp
+v2        ke  64 0
+aa        ko  v2 kv3
+av        ta  aa
+v3        ke  256 0
+bb        ko  v3 kv3
+bv        ta  bb
+.         su  av bv Lnext
+.         so  Lko
+Lnext     ke  1 0
+kv4       ko  kv3 Lnext
+v4        ke  5 0
+.         ti  v4 kv4
+kc0       ke  5 0
+kck       ta  kc0
+kc1       ke  57 0
+.         se  kck kc1 Lcmp
+
+Lok       tu
+Lko       te

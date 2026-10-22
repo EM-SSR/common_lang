@@ -1,0 +1,113 @@
+# エラトステネスの篩 — π(1000000) = 78498
+# doc: eval.total closure.finite plain.rules
+#
+#   docs/common_national_language/04_全域計算と停止性 §3、§6
+#   docs/Common-Lang/Common言語のチェンバー構文と構成語の意味的正規形 §5.4、§5.5
+#   仕様 §18
+#
+# 反復に原子は要らない。label が自分より前の箱を指した分離が、そのまま Ω 閉包になる
+# （10 章 §2 末、§5 式 5.3）。
+#
+#     X ⊗ A ⊢ F : A、  a ∈ FixBoundary(A)   ⟹   X ⊢ Ω_a[F] : A
+#
+# 本体 F は後退先から後退分離までの区間、集積境界 a はその分離が見る比較になる。
+# backend は §18 の factorization でこれを back-edge 付きの control chamber へ写す。
+#
+# 後退分離が本体の後ろにあるので、軌道が一度も回らない場合は前方分離で分ける。
+# 前方分離は §16 の path separation そのもので、反復ではない。
+#
+# 停止する根拠は 04 定理6.1 になる。作業領域が有限なので状態集合が有限で、
+# 位置が単調に増える限り高々 N 段で境界へ届く。
+#
+#   語 0   i   外側の候補。零埋めの位置にも使う
+#   語 1   j   倍数の位置
+#   語 2   c   数えた素数
+#   語 3   N   上限
+#   語 64〜 篩。1 なら合成数
+#
+# 篩を自分で零埋めするので、作業領域の初期値に依存しない。
+#
+# 負荷試験なので歩数が多い。core 意味論で走らせるときは --steps を広げる。
+
+mu i
+d  0
+
+# ---- 番地と定数 ----
+A0        ke  0 0
+A1        ke  1 0
+A2        ke  2 0
+A3        ke  3 0
+SB        ke  64 0
+one       ke  1 0
+two       ke  2 0
+zero      ke  0 0
+
+NV        ke  1000000 0
+.         ti  A3 NV
+.         ti  A2 zero
+.         ti  A0 zero
+
+# ---- 篩を零で埋める ----
+zg        ta  A0
+zgN       ta  A3
+.         se  zg zgN zk
+.         so  Ld0
+zk        ta  A0
+za        ko  SB zk
+.         ti  za zero
+zk2       ko  zk one
+.         ti  A0 zk2
+zk3       ta  A0
+zN        ta  A3
+.         se  zk3 zN zk
+
+# ---- i = 2 から篩う ----
+Ld0       ti  A0 two
+og        ta  A0
+ogN       ta  A3
+.         se  og ogN oi
+.         so  Ld
+oi        ta  A0
+
+# 篩[i] が立っていれば合成数。次の候補へ分ける
+ba        ko  SB oi
+bv        ta  ba
+.         su  bv one Ln
+
+# 素数なので数える
+cv        ta  A2
+cn        ko  cv one
+.         ti  A2 cn
+
+# j = i·i から倍数を消す
+jj        sa  oi oi
+.         ti  A1 jj
+mg        ta  A1
+mgN       ta  A3
+.         se  mg mgN mj
+.         so  Ln
+mj        ta  A1
+ka        ko  SB mj
+.         ti  ka one
+oi2       ta  A0
+kj        ko  mj oi2
+.         ti  A1 kj
+mj2       ta  A1
+mN        ta  A3
+.         se  mj2 mN mj
+
+# ---- 次の候補 ----
+Ln        ta  A0
+nn        ko  Ln one
+.         ti  A0 nn
+on2       ta  A0
+oN2       ta  A3
+.         se  on2 oN2 oi
+
+# ---- 判定 ----
+Ld        ta  A2
+de        ke  78498 0
+.         su  Ld de Lok
+.         so  Lko
+Lok       tu
+Lko       te

@@ -1,0 +1,1194 @@
+# 座標折返しの正規形 D4
+# doc: reflect.D4 reflect.eight reflect.points obs.reflect cml.addr
+#
+#   Common-Lang/Common言語のチェンバー構文と構成語の意味的正規形 §7、§9.3
+#
+# 八写像を行列で置く。
+#
+#   E    = [1 0; 0 1]     R_r  = [1 0; 0 -1]    R_w = [-1 0; 0 1]
+#   R_ij = [0 1; 1 0]     R_ji = [0 -1; -1 0]
+#   Q+   = [0 -1; 1 0]    Q-   = [0 1; -1 0]    C_pi = [-1 0; 0 -1]
+#
+# 確かめるものは三つになる。
+#
+#   (1) 合成表（§7.2）。行の写像を先に、列の写像を後に適用する。
+#       表の成分 A B は B A であり、行列積 M_B M_A に等しい。
+#       積が必ず八写像の一つへ落ちることが D4 の閉性そのものになる。
+#
+#   (2) 正準点への作用表（§7.4）。像 (a r + b w, c r + d w) が
+#       正準点 {O, w, w-, i, j, p++, p-+, p+-, p--} の一つへ落ちる。
+#       R_ij(i) = w と R_ji(i) = w- が分かれるのが、折返しの側から見た非可換性になる。
+#
+#   (3) 観測表（§9.3）。phi_d(R(r,w)) は行列の第一行 (a, b) だけで決まる。
+#
+# 構成語の i, j とこの折返しは別の対象である（§7.5）。ここでは後者だけを扱う。
+# 折返し番号と正準点番号は 13 章 §1.3 による。
+#
+# 中間の値は作業語へ退避する。四成分をまとめて wire に載せると同時生存が
+# 十二本になり、landmark が十本しかない target で割り当てが尽きる。
+#
+# 作業領域
+#   語 0    A    合成の左（先に適用）
+#   語 1    B    合成の右（後に適用）
+#   語 2    o    OUT の書き込み位置
+#   語 7    s    折返しの探索位置
+#   語 8    p    正準点の番号
+#   語 9    R    折返しの番号
+#   語 10   t    正準点の探索位置
+#   語 12   k    突き合わせ位置
+#   語 13   c    成分の突き合わせ位置
+#   語 16   M    積の四成分、または像の二成分
+#   語 128  REF  折返し行列 8 行 4 列
+#   語 160  PT   正準点 9 行 2 列
+#   語 192  OUT  合成表、作用表、観測表
+#   語 384  EXP  期待値
+
+mu i
+d  0
+
+# ---- 折返し行列 REF: 一行が (a, b, c, d) ----
+#   E     (r,w) -> (1 r + 0 w, 0 r + 1 w)
+r00a      ke  128 0
+r00v      ke  1 0
+.         ti  r00a r00v
+r01a      ke  129 0
+r01v      ke  0 0
+.         ti  r01a r01v
+r02a      ke  130 0
+r02v      ke  0 0
+.         ti  r02a r02v
+r03a      ke  131 0
+r03v      ke  1 0
+.         ti  r03a r03v
+#   R_r   (r,w) -> (1 r + 0 w, 0 r + -1 w)
+r04a      ke  132 0
+r04v      ke  1 0
+.         ti  r04a r04v
+r05a      ke  133 0
+r05v      ke  0 0
+.         ti  r05a r05v
+r06a      ke  134 0
+r06v      ke  0 0
+.         ti  r06a r06v
+r07a      ke  135 0
+r07v      ke  -1 0
+.         ti  r07a r07v
+#   R_w   (r,w) -> (-1 r + 0 w, 0 r + 1 w)
+r08a      ke  136 0
+r08v      ke  -1 0
+.         ti  r08a r08v
+r09a      ke  137 0
+r09v      ke  0 0
+.         ti  r09a r09v
+r10a      ke  138 0
+r10v      ke  0 0
+.         ti  r10a r10v
+r11a      ke  139 0
+r11v      ke  1 0
+.         ti  r11a r11v
+#   R_ij  (r,w) -> (0 r + 1 w, 1 r + 0 w)
+r12a      ke  140 0
+r12v      ke  0 0
+.         ti  r12a r12v
+r13a      ke  141 0
+r13v      ke  1 0
+.         ti  r13a r13v
+r14a      ke  142 0
+r14v      ke  1 0
+.         ti  r14a r14v
+r15a      ke  143 0
+r15v      ke  0 0
+.         ti  r15a r15v
+#   R_ji  (r,w) -> (0 r + -1 w, -1 r + 0 w)
+r16a      ke  144 0
+r16v      ke  0 0
+.         ti  r16a r16v
+r17a      ke  145 0
+r17v      ke  -1 0
+.         ti  r17a r17v
+r18a      ke  146 0
+r18v      ke  -1 0
+.         ti  r18a r18v
+r19a      ke  147 0
+r19v      ke  0 0
+.         ti  r19a r19v
+#   Q+    (r,w) -> (0 r + -1 w, 1 r + 0 w)
+r20a      ke  148 0
+r20v      ke  0 0
+.         ti  r20a r20v
+r21a      ke  149 0
+r21v      ke  -1 0
+.         ti  r21a r21v
+r22a      ke  150 0
+r22v      ke  1 0
+.         ti  r22a r22v
+r23a      ke  151 0
+r23v      ke  0 0
+.         ti  r23a r23v
+#   Q-    (r,w) -> (0 r + 1 w, -1 r + 0 w)
+r24a      ke  152 0
+r24v      ke  0 0
+.         ti  r24a r24v
+r25a      ke  153 0
+r25v      ke  1 0
+.         ti  r25a r25v
+r26a      ke  154 0
+r26v      ke  -1 0
+.         ti  r26a r26v
+r27a      ke  155 0
+r27v      ke  0 0
+.         ti  r27a r27v
+#   C_pi  (r,w) -> (-1 r + 0 w, 0 r + -1 w)
+r28a      ke  156 0
+r28v      ke  -1 0
+.         ti  r28a r28v
+r29a      ke  157 0
+r29v      ke  0 0
+.         ti  r29a r29v
+r30a      ke  158 0
+r30v      ke  0 0
+.         ti  r30a r30v
+r31a      ke  159 0
+r31v      ke  -1 0
+.         ti  r31a r31v
+
+# ---- 正準点 PT: 一行が (r, w) ----
+#   O    (0, 0)
+p00a      ke  160 0
+p00v      ke  0 0
+.         ti  p00a p00v
+p01a      ke  161 0
+p01v      ke  0 0
+.         ti  p01a p01v
+#   w    (1, 0)
+p02a      ke  162 0
+p02v      ke  1 0
+.         ti  p02a p02v
+p03a      ke  163 0
+p03v      ke  0 0
+.         ti  p03a p03v
+#   w-   (-1, 0)
+p04a      ke  164 0
+p04v      ke  -1 0
+.         ti  p04a p04v
+p05a      ke  165 0
+p05v      ke  0 0
+.         ti  p05a p05v
+#   i    (0, 1)
+p06a      ke  166 0
+p06v      ke  0 0
+.         ti  p06a p06v
+p07a      ke  167 0
+p07v      ke  1 0
+.         ti  p07a p07v
+#   j    (0, -1)
+p08a      ke  168 0
+p08v      ke  0 0
+.         ti  p08a p08v
+p09a      ke  169 0
+p09v      ke  -1 0
+.         ti  p09a p09v
+#   p++  (1, 1)
+p10a      ke  170 0
+p10v      ke  1 0
+.         ti  p10a p10v
+p11a      ke  171 0
+p11v      ke  1 0
+.         ti  p11a p11v
+#   p-+  (-1, 1)
+p12a      ke  172 0
+p12v      ke  -1 0
+.         ti  p12a p12v
+p13a      ke  173 0
+p13v      ke  1 0
+.         ti  p13a p13v
+#   p+-  (1, -1)
+p14a      ke  174 0
+p14v      ke  1 0
+.         ti  p14a p14v
+p15a      ke  175 0
+p15v      ke  -1 0
+.         ti  p15a p15v
+#   p--  (-1, -1)
+p16a      ke  176 0
+p16v      ke  -1 0
+.         ti  p16a p16v
+p17a      ke  177 0
+p17v      ke  -1 0
+.         ti  p17a p17v
+
+# ---- 期待表 EXP ----
+#   合成: 先に E
+x000a     ke  384 0
+x000v     ke  0 0
+.         ti  x000a x000v
+x001a     ke  385 0
+x001v     ke  1 0
+.         ti  x001a x001v
+x002a     ke  386 0
+x002v     ke  2 0
+.         ti  x002a x002v
+x003a     ke  387 0
+x003v     ke  3 0
+.         ti  x003a x003v
+x004a     ke  388 0
+x004v     ke  4 0
+.         ti  x004a x004v
+x005a     ke  389 0
+x005v     ke  5 0
+.         ti  x005a x005v
+x006a     ke  390 0
+x006v     ke  6 0
+.         ti  x006a x006v
+x007a     ke  391 0
+x007v     ke  7 0
+.         ti  x007a x007v
+#   合成: 先に R_r
+x008a     ke  392 0
+x008v     ke  1 0
+.         ti  x008a x008v
+x009a     ke  393 0
+x009v     ke  0 0
+.         ti  x009a x009v
+x010a     ke  394 0
+x010v     ke  7 0
+.         ti  x010a x010v
+x011a     ke  395 0
+x011v     ke  5 0
+.         ti  x011a x011v
+x012a     ke  396 0
+x012v     ke  6 0
+.         ti  x012a x012v
+x013a     ke  397 0
+x013v     ke  3 0
+.         ti  x013a x013v
+x014a     ke  398 0
+x014v     ke  4 0
+.         ti  x014a x014v
+x015a     ke  399 0
+x015v     ke  2 0
+.         ti  x015a x015v
+#   合成: 先に R_w
+x016a     ke  400 0
+x016v     ke  2 0
+.         ti  x016a x016v
+x017a     ke  401 0
+x017v     ke  7 0
+.         ti  x017a x017v
+x018a     ke  402 0
+x018v     ke  0 0
+.         ti  x018a x018v
+x019a     ke  403 0
+x019v     ke  6 0
+.         ti  x019a x019v
+x020a     ke  404 0
+x020v     ke  5 0
+.         ti  x020a x020v
+x021a     ke  405 0
+x021v     ke  4 0
+.         ti  x021a x021v
+x022a     ke  406 0
+x022v     ke  3 0
+.         ti  x022a x022v
+x023a     ke  407 0
+x023v     ke  1 0
+.         ti  x023a x023v
+#   合成: 先に R_ij
+x024a     ke  408 0
+x024v     ke  3 0
+.         ti  x024a x024v
+x025a     ke  409 0
+x025v     ke  6 0
+.         ti  x025a x025v
+x026a     ke  410 0
+x026v     ke  5 0
+.         ti  x026a x026v
+x027a     ke  411 0
+x027v     ke  0 0
+.         ti  x027a x027v
+x028a     ke  412 0
+x028v     ke  7 0
+.         ti  x028a x028v
+x029a     ke  413 0
+x029v     ke  2 0
+.         ti  x029a x029v
+x030a     ke  414 0
+x030v     ke  1 0
+.         ti  x030a x030v
+x031a     ke  415 0
+x031v     ke  4 0
+.         ti  x031a x031v
+#   合成: 先に R_ji
+x032a     ke  416 0
+x032v     ke  4 0
+.         ti  x032a x032v
+x033a     ke  417 0
+x033v     ke  5 0
+.         ti  x033a x033v
+x034a     ke  418 0
+x034v     ke  6 0
+.         ti  x034a x034v
+x035a     ke  419 0
+x035v     ke  7 0
+.         ti  x035a x035v
+x036a     ke  420 0
+x036v     ke  0 0
+.         ti  x036a x036v
+x037a     ke  421 0
+x037v     ke  1 0
+.         ti  x037a x037v
+x038a     ke  422 0
+x038v     ke  2 0
+.         ti  x038a x038v
+x039a     ke  423 0
+x039v     ke  3 0
+.         ti  x039a x039v
+#   合成: 先に Q+
+x040a     ke  424 0
+x040v     ke  5 0
+.         ti  x040a x040v
+x041a     ke  425 0
+x041v     ke  4 0
+.         ti  x041a x041v
+x042a     ke  426 0
+x042v     ke  3 0
+.         ti  x042a x042v
+x043a     ke  427 0
+x043v     ke  1 0
+.         ti  x043a x043v
+x044a     ke  428 0
+x044v     ke  2 0
+.         ti  x044a x044v
+x045a     ke  429 0
+x045v     ke  7 0
+.         ti  x045a x045v
+x046a     ke  430 0
+x046v     ke  0 0
+.         ti  x046a x046v
+x047a     ke  431 0
+x047v     ke  6 0
+.         ti  x047a x047v
+#   合成: 先に Q-
+x048a     ke  432 0
+x048v     ke  6 0
+.         ti  x048a x048v
+x049a     ke  433 0
+x049v     ke  3 0
+.         ti  x049a x049v
+x050a     ke  434 0
+x050v     ke  4 0
+.         ti  x050a x050v
+x051a     ke  435 0
+x051v     ke  2 0
+.         ti  x051a x051v
+x052a     ke  436 0
+x052v     ke  1 0
+.         ti  x052a x052v
+x053a     ke  437 0
+x053v     ke  0 0
+.         ti  x053a x053v
+x054a     ke  438 0
+x054v     ke  7 0
+.         ti  x054a x054v
+x055a     ke  439 0
+x055v     ke  5 0
+.         ti  x055a x055v
+#   合成: 先に C_pi
+x056a     ke  440 0
+x056v     ke  7 0
+.         ti  x056a x056v
+x057a     ke  441 0
+x057v     ke  2 0
+.         ti  x057a x057v
+x058a     ke  442 0
+x058v     ke  1 0
+.         ti  x058a x058v
+x059a     ke  443 0
+x059v     ke  4 0
+.         ti  x059a x059v
+x060a     ke  444 0
+x060v     ke  3 0
+.         ti  x060a x060v
+x061a     ke  445 0
+x061v     ke  6 0
+.         ti  x061a x061v
+x062a     ke  446 0
+x062v     ke  5 0
+.         ti  x062a x062v
+x063a     ke  447 0
+x063v     ke  0 0
+.         ti  x063a x063v
+#   作用: 点 O
+x064a     ke  448 0
+x064v     ke  0 0
+.         ti  x064a x064v
+x065a     ke  449 0
+x065v     ke  0 0
+.         ti  x065a x065v
+x066a     ke  450 0
+x066v     ke  0 0
+.         ti  x066a x066v
+x067a     ke  451 0
+x067v     ke  0 0
+.         ti  x067a x067v
+x068a     ke  452 0
+x068v     ke  0 0
+.         ti  x068a x068v
+x069a     ke  453 0
+x069v     ke  0 0
+.         ti  x069a x069v
+x070a     ke  454 0
+x070v     ke  0 0
+.         ti  x070a x070v
+x071a     ke  455 0
+x071v     ke  0 0
+.         ti  x071a x071v
+#   作用: 点 w
+x072a     ke  456 0
+x072v     ke  1 0
+.         ti  x072a x072v
+x073a     ke  457 0
+x073v     ke  1 0
+.         ti  x073a x073v
+x074a     ke  458 0
+x074v     ke  2 0
+.         ti  x074a x074v
+x075a     ke  459 0
+x075v     ke  3 0
+.         ti  x075a x075v
+x076a     ke  460 0
+x076v     ke  4 0
+.         ti  x076a x076v
+x077a     ke  461 0
+x077v     ke  3 0
+.         ti  x077a x077v
+x078a     ke  462 0
+x078v     ke  4 0
+.         ti  x078a x078v
+x079a     ke  463 0
+x079v     ke  2 0
+.         ti  x079a x079v
+#   作用: 点 w-
+x080a     ke  464 0
+x080v     ke  2 0
+.         ti  x080a x080v
+x081a     ke  465 0
+x081v     ke  2 0
+.         ti  x081a x081v
+x082a     ke  466 0
+x082v     ke  1 0
+.         ti  x082a x082v
+x083a     ke  467 0
+x083v     ke  4 0
+.         ti  x083a x083v
+x084a     ke  468 0
+x084v     ke  3 0
+.         ti  x084a x084v
+x085a     ke  469 0
+x085v     ke  4 0
+.         ti  x085a x085v
+x086a     ke  470 0
+x086v     ke  3 0
+.         ti  x086a x086v
+x087a     ke  471 0
+x087v     ke  1 0
+.         ti  x087a x087v
+#   作用: 点 i
+x088a     ke  472 0
+x088v     ke  3 0
+.         ti  x088a x088v
+x089a     ke  473 0
+x089v     ke  4 0
+.         ti  x089a x089v
+x090a     ke  474 0
+x090v     ke  3 0
+.         ti  x090a x090v
+x091a     ke  475 0
+x091v     ke  1 0
+.         ti  x091a x091v
+x092a     ke  476 0
+x092v     ke  2 0
+.         ti  x092a x092v
+x093a     ke  477 0
+x093v     ke  2 0
+.         ti  x093a x093v
+x094a     ke  478 0
+x094v     ke  1 0
+.         ti  x094a x094v
+x095a     ke  479 0
+x095v     ke  4 0
+.         ti  x095a x095v
+#   作用: 点 j
+x096a     ke  480 0
+x096v     ke  4 0
+.         ti  x096a x096v
+x097a     ke  481 0
+x097v     ke  3 0
+.         ti  x097a x097v
+x098a     ke  482 0
+x098v     ke  4 0
+.         ti  x098a x098v
+x099a     ke  483 0
+x099v     ke  2 0
+.         ti  x099a x099v
+x100a     ke  484 0
+x100v     ke  1 0
+.         ti  x100a x100v
+x101a     ke  485 0
+x101v     ke  1 0
+.         ti  x101a x101v
+x102a     ke  486 0
+x102v     ke  2 0
+.         ti  x102a x102v
+x103a     ke  487 0
+x103v     ke  3 0
+.         ti  x103a x103v
+#   作用: 点 p++
+x104a     ke  488 0
+x104v     ke  5 0
+.         ti  x104a x104v
+x105a     ke  489 0
+x105v     ke  7 0
+.         ti  x105a x105v
+x106a     ke  490 0
+x106v     ke  6 0
+.         ti  x106a x106v
+x107a     ke  491 0
+x107v     ke  5 0
+.         ti  x107a x107v
+x108a     ke  492 0
+x108v     ke  8 0
+.         ti  x108a x108v
+x109a     ke  493 0
+x109v     ke  6 0
+.         ti  x109a x109v
+x110a     ke  494 0
+x110v     ke  7 0
+.         ti  x110a x110v
+x111a     ke  495 0
+x111v     ke  8 0
+.         ti  x111a x111v
+#   作用: 点 p-+
+x112a     ke  496 0
+x112v     ke  6 0
+.         ti  x112a x112v
+x113a     ke  497 0
+x113v     ke  8 0
+.         ti  x113a x113v
+x114a     ke  498 0
+x114v     ke  5 0
+.         ti  x114a x114v
+x115a     ke  499 0
+x115v     ke  7 0
+.         ti  x115a x115v
+x116a     ke  500 0
+x116v     ke  6 0
+.         ti  x116a x116v
+x117a     ke  501 0
+x117v     ke  8 0
+.         ti  x117a x117v
+x118a     ke  502 0
+x118v     ke  5 0
+.         ti  x118a x118v
+x119a     ke  503 0
+x119v     ke  7 0
+.         ti  x119a x119v
+#   作用: 点 p+-
+x120a     ke  504 0
+x120v     ke  7 0
+.         ti  x120a x120v
+x121a     ke  505 0
+x121v     ke  5 0
+.         ti  x121a x121v
+x122a     ke  506 0
+x122v     ke  8 0
+.         ti  x122a x122v
+x123a     ke  507 0
+x123v     ke  6 0
+.         ti  x123a x123v
+x124a     ke  508 0
+x124v     ke  7 0
+.         ti  x124a x124v
+x125a     ke  509 0
+x125v     ke  5 0
+.         ti  x125a x125v
+x126a     ke  510 0
+x126v     ke  8 0
+.         ti  x126a x126v
+x127a     ke  511 0
+x127v     ke  6 0
+.         ti  x127a x127v
+#   作用: 点 p--
+x128a     ke  512 0
+x128v     ke  8 0
+.         ti  x128a x128v
+x129a     ke  513 0
+x129v     ke  6 0
+.         ti  x129a x129v
+x130a     ke  514 0
+x130v     ke  7 0
+.         ti  x130a x130v
+x131a     ke  515 0
+x131v     ke  8 0
+.         ti  x131a x131v
+x132a     ke  516 0
+x132v     ke  5 0
+.         ti  x132a x132v
+x133a     ke  517 0
+x133v     ke  7 0
+.         ti  x133a x133v
+x134a     ke  518 0
+x134v     ke  6 0
+.         ti  x134a x134v
+x135a     ke  519 0
+x135v     ke  5 0
+.         ti  x135a x135v
+#   観測: (符号, 読み)。読み 0 = read_r、1 = read_w
+x136a     ke  520 0
+x136v     ke  1 0
+.         ti  x136a x136v
+x137a     ke  521 0
+x137v     ke  0 0
+.         ti  x137a x137v
+x138a     ke  522 0
+x138v     ke  1 0
+.         ti  x138a x138v
+x139a     ke  523 0
+x139v     ke  0 0
+.         ti  x139a x139v
+x140a     ke  524 0
+x140v     ke  -1 0
+.         ti  x140a x140v
+x141a     ke  525 0
+x141v     ke  0 0
+.         ti  x141a x141v
+x142a     ke  526 0
+x142v     ke  1 0
+.         ti  x142a x142v
+x143a     ke  527 0
+x143v     ke  1 0
+.         ti  x143a x143v
+x144a     ke  528 0
+x144v     ke  -1 0
+.         ti  x144a x144v
+x145a     ke  529 0
+x145v     ke  1 0
+.         ti  x145a x145v
+x146a     ke  530 0
+x146v     ke  -1 0
+.         ti  x146a x146v
+x147a     ke  531 0
+x147v     ke  1 0
+.         ti  x147a x147v
+x148a     ke  532 0
+x148v     ke  1 0
+.         ti  x148a x148v
+x149a     ke  533 0
+x149v     ke  1 0
+.         ti  x149a x149v
+x150a     ke  534 0
+x150v     ke  -1 0
+.         ti  x150a x150v
+x151a     ke  535 0
+x151v     ke  0 0
+.         ti  x151a x151v
+
+# ---- 初期値 ----
+v0001     ke  0 0
+v0002     ke  2 0
+.         ti  v0002 v0001
+v0003     ke  0 0
+v0004     ke  0 0
+.         ti  v0004 v0003
+
+# ======== (1) 合成表  A B = B A、成分は行列積 M_B M_A ========
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW3     ke  0 0
+LAW3      ke  0 0
+v0005W3   ta  LAW3
+v0006W3   ke  8 0
+.         se  v0005W3 v0006W3 LA
+.         so  LPT0
+LA        ke  0 0
+v0005     ta  LA
+v0006     ke  8 0
+v0007     ke  0 0
+v0008     ke  1 0
+.         ti  v0008 v0007
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW2     ke  0 0
+LBW2      ke  1 0
+v0009W2   ta  LBW2
+v0010W2   ke  8 0
+.         se  v0009W2 v0010W2 LB
+.         so  LAnx
+LB        ke  1 0
+v0009     ta  LB
+v0010     ke  8 0
+#   M_A と M_B の先頭語番号だけを wire に残す。四成分をまとめて載せると
+#   同時生存が十二本になり、landmark が十本の target で割り当てが尽きる
+v0011     ke  0 0
+v0012     ta  v0011
+v0013     ke  128 0
+v0014     ke  4 0
+v0015     sa  v0012 v0014
+v0016     ko  v0013 v0015
+v0017     ke  1 0
+v0018     ta  v0017
+v0019     ke  128 0
+v0020     ke  4 0
+v0021     sa  v0018 v0020
+v0022     ko  v0019 v0021
+#   積の四成分を作業語 16..19 へ置く
+v0023     ta  v0022
+v0024     ta  v0016
+v0025     sa  v0023 v0024
+v0027     ke  1 0
+v0026     ko  v0022 v0027
+v0028     ta  v0026
+v0030     ke  2 0
+v0029     ko  v0016 v0030
+v0031     ta  v0029
+v0032     sa  v0028 v0031
+v0033     ko  v0025 v0032
+v0034     ke  16 0
+.         ti  v0034 v0033
+v0035     ta  v0022
+v0037     ke  1 0
+v0036     ko  v0016 v0037
+v0038     ta  v0036
+v0039     sa  v0035 v0038
+v0041     ke  1 0
+v0040     ko  v0022 v0041
+v0042     ta  v0040
+v0044     ke  3 0
+v0043     ko  v0016 v0044
+v0045     ta  v0043
+v0046     sa  v0042 v0045
+v0047     ko  v0039 v0046
+v0048     ke  17 0
+.         ti  v0048 v0047
+v0050     ke  2 0
+v0049     ko  v0022 v0050
+v0051     ta  v0049
+v0052     ta  v0016
+v0053     sa  v0051 v0052
+v0055     ke  3 0
+v0054     ko  v0022 v0055
+v0056     ta  v0054
+v0058     ke  2 0
+v0057     ko  v0016 v0058
+v0059     ta  v0057
+v0060     sa  v0056 v0059
+v0061     ko  v0053 v0060
+v0062     ke  18 0
+.         ti  v0062 v0061
+v0064     ke  2 0
+v0063     ko  v0022 v0064
+v0065     ta  v0063
+v0067     ke  1 0
+v0066     ko  v0016 v0067
+v0068     ta  v0066
+v0069     sa  v0065 v0068
+v0071     ke  3 0
+v0070     ko  v0022 v0071
+v0072     ta  v0070
+v0074     ke  3 0
+v0073     ko  v0016 v0074
+v0075     ta  v0073
+v0076     sa  v0072 v0075
+v0077     ko  v0069 v0076
+v0078     ke  19 0
+.         ti  v0078 v0077
+v0079     ke  0 0
+v0080     ke  7 0
+.         ti  v0080 v0079
+#   積がどの折返しか。八写像の外に出ないことが D4 の閉性になる
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW1     ke  0 0
+LSW1      ke  7 0
+v0081W1   ta  LSW1
+v0082W1   ke  8 0
+.         se  v0081W1 v0082W1 LS
+.         so  Lko
+LS        ke  7 0
+v0081     ta  LS
+v0082     ke  8 0
+v0083     ke  128 0
+v0084     ke  4 0
+v0085     sa  v0081 v0084
+v0086     ko  v0083 v0085
+v0087     ke  0 0
+v0088     ke  13 0
+.         ti  v0088 v0087
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW0     ke  0 0
+LScW0     ke  13 0
+v0089W0   ta  LScW0
+v0090W0   ke  4 0
+.         se  v0089W0 v0090W0 LSc
+.         so  Lput
+LSc       ke  13 0
+v0089     ta  LSc
+v0090     ke  4 0
+v0091     ko  v0086 v0089
+v0092     ta  v0091
+v0093     ke  16 0
+v0094     ko  v0093 v0089
+v0095     ta  v0094
+.         su  v0092 v0095 LScnx
+.         so  LSnx
+LScnx     ke  1 0
+v0096     ko  v0089 LScnx
+v0097     ke  13 0
+.         ti  v0097 v0096
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW0     ke  0 0
+LScW0z    ke  13 0
+v0089W0z  ta  LScW0z
+v0090W0z  ke  4 0
+.         se  v0089W0z v0090W0z LSc
+.         so  Lput                       # 境界に届いた
+LSnx      ke  1 0
+v0098     ko  v0081 LSnx
+v0099     ke  7 0
+.         ti  v0099 v0098
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW1     ke  0 0
+LSW1z     ke  7 0
+v0081W1z  ta  LSW1z
+v0082W1z  ke  8 0
+.         se  v0081W1z v0082W1z LS
+.         so  Lko                        # 境界に届いた
+Lput      ke  2 0
+v0100     ta  Lput
+v0101     ke  192 0
+v0102     ko  v0101 v0100
+v0103     ke  7 0
+v0104     ta  v0103
+.         ti  v0102 v0104
+v0105     ke  1 0
+v0106     ko  v0100 v0105
+v0107     ke  2 0
+.         ti  v0107 v0106
+v0108     ke  1 0
+v0109     ta  v0108
+v0110     ke  1 0
+v0111     ko  v0109 v0110
+v0112     ke  1 0
+.         ti  v0112 v0111
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW2     ke  0 0
+LBW2z     ke  1 0
+v0009W2z  ta  LBW2z
+v0010W2z  ke  8 0
+.         se  v0009W2z v0010W2z LB
+.         so  LAnx                       # 境界に届いた
+LAnx      ke  0 0
+v0113     ke  0 0
+v0114     ta  v0113
+v0115     ke  1 0
+v0116     ko  v0114 v0115
+v0117     ke  0 0
+.         ti  v0117 v0116
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW3     ke  0 0
+LAW3z     ke  0 0
+v0005W3z  ta  LAW3z
+v0006W3z  ke  8 0
+.         se  v0005W3z v0006W3z LA
+.         so  LPT0                       # 境界に届いた
+
+# ======== (2) 正準点への作用表 ========
+LPT0      ke  8 0
+v0118     ke  0 0
+v0119     ke  8 0
+.         ti  v0119 v0118
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW7     ke  0 0
+LPW7      ke  8 0
+v0120W7   ta  LPW7
+v0121W7   ke  9 0
+.         se  v0120W7 v0121W7 LP
+.         so  LOB0
+LP        ke  8 0
+v0120     ta  LP
+v0121     ke  9 0
+v0122     ke  0 0
+v0123     ke  9 0
+.         ti  v0123 v0122
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW6     ke  0 0
+LRW6      ke  9 0
+v0124W6   ta  LRW6
+v0125W6   ke  8 0
+.         se  v0124W6 v0125W6 LR
+.         so  LPnx
+LR        ke  9 0
+v0124     ta  LR
+v0125     ke  8 0
+v0126     ke  160 0
+v0127     ke  8 0
+v0128     ta  v0127
+v0129     ke  2 0
+v0130     sa  v0128 v0129
+v0131     ko  v0126 v0130
+v0132     ta  v0131
+v0134     ke  1 0
+v0133     ko  v0131 v0134
+v0135     ta  v0133
+v0136     ke  128 0
+v0137     ke  4 0
+v0138     sa  v0124 v0137
+v0139     ko  v0136 v0138
+#   像 (a r + b w, c r + d w) を作業語 16、17 へ置く
+v0140     ta  v0139
+v0141     sa  v0140 v0132
+v0143     ke  1 0
+v0142     ko  v0139 v0143
+v0144     ta  v0142
+v0145     sa  v0144 v0135
+v0146     ko  v0141 v0145
+v0147     ke  16 0
+.         ti  v0147 v0146
+v0148     ke  160 0
+v0149     ke  8 0
+v0150     ta  v0149
+v0151     ke  2 0
+v0152     sa  v0150 v0151
+v0153     ko  v0148 v0152
+v0154     ta  v0153
+v0156     ke  1 0
+v0155     ko  v0153 v0156
+v0157     ta  v0155
+v0158     ke  128 0
+v0159     ke  9 0
+v0160     ta  v0159
+v0161     ke  4 0
+v0162     sa  v0160 v0161
+v0163     ko  v0158 v0162
+v0165     ke  2 0
+v0164     ko  v0163 v0165
+v0166     ta  v0164
+v0167     sa  v0166 v0154
+v0169     ke  3 0
+v0168     ko  v0163 v0169
+v0170     ta  v0168
+v0171     sa  v0170 v0157
+v0172     ko  v0167 v0171
+v0173     ke  17 0
+.         ti  v0173 v0172
+v0174     ke  0 0
+v0175     ke  10 0
+.         ti  v0175 v0174
+#   像がどの正準点か。九点の外に出ないことが作用表の閉性になる
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW5     ke  0 0
+LTW5      ke  10 0
+v0176W5   ta  LTW5
+v0177W5   ke  9 0
+.         se  v0176W5 v0177W5 LT
+.         so  Lko
+LT        ke  10 0
+v0176     ta  LT
+v0177     ke  9 0
+v0178     ke  160 0
+v0179     ke  2 0
+v0180     sa  v0176 v0179
+v0181     ko  v0178 v0180
+v0182     ke  0 0
+v0183     ke  13 0
+.         ti  v0183 v0182
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW4     ke  0 0
+LTcW4     ke  13 0
+v0184W4   ta  LTcW4
+v0185W4   ke  2 0
+.         se  v0184W4 v0185W4 LTc
+.         so  Lput2
+LTc       ke  13 0
+v0184     ta  LTc
+v0185     ke  2 0
+v0186     ko  v0181 v0184
+v0187     ta  v0186
+v0188     ke  16 0
+v0189     ko  v0188 v0184
+v0190     ta  v0189
+.         su  v0187 v0190 LTcnx
+.         so  LTnx
+LTcnx     ke  1 0
+v0191     ko  v0184 LTcnx
+v0192     ke  13 0
+.         ti  v0192 v0191
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW4     ke  0 0
+LTcW4z    ke  13 0
+v0184W4z  ta  LTcW4z
+v0185W4z  ke  2 0
+.         se  v0184W4z v0185W4z LTc
+.         so  Lput2                      # 境界に届いた
+LTnx      ke  1 0
+v0193     ko  v0176 LTnx
+v0194     ke  10 0
+.         ti  v0194 v0193
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW5     ke  0 0
+LTW5z     ke  10 0
+v0176W5z  ta  LTW5z
+v0177W5z  ke  9 0
+.         se  v0176W5z v0177W5z LT
+.         so  Lko                        # 境界に届いた
+Lput2     ke  2 0
+v0195     ta  Lput2
+v0196     ke  192 0
+v0197     ko  v0196 v0195
+v0198     ke  10 0
+v0199     ta  v0198
+.         ti  v0197 v0199
+v0200     ke  1 0
+v0201     ko  v0195 v0200
+v0202     ke  2 0
+.         ti  v0202 v0201
+v0203     ke  9 0
+v0204     ta  v0203
+v0205     ke  1 0
+v0206     ko  v0204 v0205
+v0207     ke  9 0
+.         ti  v0207 v0206
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW6     ke  0 0
+LRW6z     ke  9 0
+v0124W6z  ta  LRW6z
+v0125W6z  ke  8 0
+.         se  v0124W6z v0125W6z LR
+.         so  LPnx                       # 境界に届いた
+LPnx      ke  8 0
+v0208     ke  8 0
+v0209     ta  v0208
+v0210     ke  1 0
+v0211     ko  v0209 v0210
+v0212     ke  8 0
+.         ti  v0212 v0211
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW7     ke  0 0
+LPW7z     ke  8 0
+v0120W7z  ta  LPW7z
+v0121W7z  ke  9 0
+.         se  v0120W7z v0121W7z LP
+.         so  LOB0                       # 境界に届いた
+
+# ======== (3) 観測表 phi_d R ========
+#   phi_d(R(r,w)) は行列の第一行 (a, b) だけで決まる。
+#   b = 0 なら符号 a の read_r、そうでなければ符号 b の read_w になる
+LOB0      ke  9 0
+v0213     ke  0 0
+v0214     ke  9 0
+.         ti  v0214 v0213
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW8     ke  0 0
+LOW8      ke  9 0
+v0215W8   ta  LOW8
+v0216W8   ke  8 0
+.         se  v0215W8 v0216W8 LO
+.         so  Lcmp0
+LO        ke  9 0
+v0215     ta  LO
+v0216     ke  8 0
+v0217     ke  128 0
+v0218     ke  4 0
+v0219     sa  v0215 v0218
+v0220     ko  v0217 v0219
+v0221     ta  v0220
+v0223     ke  1 0
+v0222     ko  v0220 v0223
+v0224     ta  v0222
+v0225     ke  0 0
+.         su  v0224 v0225 Lrr
+v0226     ke  2 0
+v0227     ta  v0226
+v0228     ke  192 0
+v0229     ko  v0228 v0227
+.         ti  v0229 v0224
+v0230     ke  192 0
+v0231     ke  1 0
+v0232     ko  v0227 v0231
+v0233     ko  v0230 v0232
+v0234     ke  1 0
+.         ti  v0233 v0234
+v0235     ke  2 0
+v0236     ko  v0227 v0235
+v0237     ke  2 0
+.         ti  v0237 v0236
+.         so  LOnx
+Lrr       ke  0 0
+v0238     ke  2 0
+v0239     ta  v0238
+v0240     ke  192 0
+v0241     ko  v0240 v0239
+.         ti  v0241 v0221
+v0242     ke  192 0
+v0243     ke  1 0
+v0244     ko  v0239 v0243
+v0245     ko  v0242 v0244
+v0246     ke  0 0
+.         ti  v0245 v0246
+v0247     ke  2 0
+v0248     ko  v0239 v0247
+v0249     ke  2 0
+.         ti  v0249 v0248
+LOnx      ke  9 0
+v0250     ke  9 0
+v0251     ta  v0250
+v0252     ke  1 0
+v0253     ko  v0251 v0252
+v0254     ke  9 0
+.         ti  v0254 v0253
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW8     ke  0 0
+LOW8z     ke  9 0
+v0215W8z  ta  LOW8z
+v0216W8z  ke  8 0
+.         se  v0215W8z v0216W8z LO
+.         so  Lcmp0                      # 境界に届いた
+
+# ======== 突き合わせ（13 章 §5）========
+Lcmp0     ke  2 0
+v0255     ta  Lcmp0
+v0256     ke  152 0
+.         su  v0255 v0256 Lclr
+.         so  Lko
+Lclr      ke  12 0
+v0257     ke  0 0
+v0258     ke  12 0
+.         ti  v0258 v0257
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW9     ke  0 0
+LcmpW9    ke  12 0
+v0259W9   ta  LcmpW9
+v0260W9   ke  152 0
+.         se  v0259W9 v0260W9 Lcmp
+.         so  Lok
+Lcmp      ke  12 0
+v0259     ta  Lcmp
+v0260     ke  152 0
+v0261     ke  192 0
+v0262     ko  v0261 v0259
+v0263     ta  v0262
+v0264     ke  384 0
+v0265     ko  v0264 v0259
+v0266     ta  v0265
+.         su  v0263 v0266 Lnx
+.         so  Lko
+Lnx       ke  1 0
+v0267     ko  v0259 Lnx
+v0268     ke  12 0
+.         ti  v0268 v0267
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW9     ke  0 0
+LcmpW9z   ke  12 0
+v0259W9z  ta  LcmpW9z
+v0260W9z  ke  152 0
+.         se  v0259W9z v0260W9z Lcmp
+.         so  Lok                        # 境界に届いた
+Lok       tu
+Lko       te

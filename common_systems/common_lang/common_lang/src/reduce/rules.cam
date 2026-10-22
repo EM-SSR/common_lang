@@ -1,0 +1,3608 @@
+# 論理関数が従う規則 R3、R4、R5
+# doc: rules.six rule.degree joinrank rule.orbit
+#
+#   Common-Lang/1.関数の一般形と縮約規則 §4
+#
+# R1（一意性）は zeta.cmn が、R2（合成の行列性）は mf.cmn が扱う。
+# R6（不動点解消）は無限閉包と同じ操作なので omega.cmn が扱う。
+# この program は残りの三つを確かめる。
+#
+#   R3  次数の劣加法性
+#         deg(g∘f) <= deg g · deg f
+#       g の各単項式へ f~ を代入すると、簡約前の次数は高々 |U|·deg f になる。
+#       多重線形簡約は次数を下げるだけなので不等式が従う。
+#       台の大きさ s と次数 d から評価負荷 C_eval(s,d) <= s d も出る。
+#
+#   R4  接合秩（定理 4.1）
+#       カット [n] = A ⊔ B に対し、値の行列 F_{alpha,beta} = f(alpha, beta) の
+#       F_2 上の階数を rho とすると
+#         f(x_A, x_B) = ⊕_{r=1}^{rho} p_r(x_A) q_r(x_B)
+#       を満たす組が存在し、分離積の最小本数はちょうど rho になる。
+#       行を順に既存の基底で消し、消えなければ新しい基底へ加える。そのとき
+#       使った基底の番号を U に残すと、F = U BAS の分解が同時に得られる。
+#       項を一つ落とすと復元しないことも確かめる。
+#
+#   R5  軌道縮約（定理 5.1、定理 5.2）
+#         pi ∈ Aut(f)  =>  a_{pi(T)} = a_T
+#       完全対称な f では a_T は |T| だけで決まり、係数は n+1 個へ落ちる。
+#       さらに閉形評価
+#         f(x) = ⊕_k â_k [ k ⊆_2 h ],    h は入力のハミング重み
+#       が立つ。⊆_2 は二進のけたごとの包含であり、Lucas の定理から出る。
+#       一意性を支えていた Level 0 の「含まれる」が、対称な関数では
+#       二進けたの包含として評価式にまで降りてくる。
+#
+# 例に取る関数は
+#
+#     R3   f(x1,x2) = (x1 xor x2, x1 and x2),   g(y1,y2) = y1 xor y2
+#     R4   f(x1..x4) = x1x3 xor x2x4 xor x1、カットは {x1,x2} | {x3,x4}
+#     R5   f(x1..x4) = [ 重みが 3 以上 ]
+#
+# 成分は 0 か 1 に限るので、和は排他的論理和になる。等値の判定で作れるので
+# 剰余も除算も要らない。
+#
+# 作業領域
+#   語 0    i     行、または一般の走査
+#   語 1    j     列
+#   語 2    k     足し上げ、基底の番号
+#   語 3    acc   足し上げ、重み、けた分解の残り
+#   語 5    kw    突き合わせ位置
+#   語 6    r     deg f、または階数 rho
+#   語 7    c     deg f_0
+#   語 8    d     deg f_1
+#   語 9    p     互換のけた
+#   語 10   q     互換のもう一方のけた
+#   語 11   s     deg g、または重み h
+#   語 12   t     deg(g∘f)、または閉形評価の値
+#   語 13   u     台の大きさ、または落とす項の番号
+#   語 14   v     評価負荷、または「復元しない」の印
+#   語 15   w     退避
+#   語 16   POW   冪表（21 語目までは使わない）
+#   語 21   R3 の結果  deg f、deg g、deg(g∘f)、台の大きさ、評価負荷
+#   語 26   R4 の階数 rho
+#   語 32   BIT   ビット表 16 x 4
+#   語 96   TTF   f の真理値表
+#   語 100  TTG   g の真理値表
+#   語 104  TTH   g∘f の真理値表
+#   語 108  AF0   f_0 の ANF
+#   語 112  AF1   f_1 の ANF
+#   語 116  AG    g の ANF
+#   語 120  AH    g∘f の ANF
+#   語 128  FM    カット行列
+#   語 144  BAS   行の基底
+#   語 160  PIV   pivot の位置
+#   語 164  UM    分解の係数
+#   語 180  ROW   消去の作業行
+#   語 192  TT5   対称関数の真理値表
+#   語 208  A5    その ANF
+#   語 224  HAT   â_k
+#   語 256  OUT   出力
+#   語 384  EXP   期待値
+
+mu i
+d  0
+
+# 冪表 POW[k] = 2^k
+w000a     ke  16 0
+w000v     ke  1 0
+.         ti  w000a w000v
+w001a     ke  17 0
+w001v     ke  2 0
+.         ti  w001a w001v
+w002a     ke  18 0
+w002v     ke  4 0
+.         ti  w002a w002v
+w003a     ke  19 0
+w003v     ke  8 0
+.         ti  w003a w003v
+w004a     ke  20 0
+w004v     ke  16 0
+.         ti  w004a w004v
+# f の真理値表。f = (x1 xor x2, x1 and x2)
+f000a     ke  96 0
+f000v     ke  0 0
+.         ti  f000a f000v
+f001a     ke  97 0
+f001v     ke  1 0
+.         ti  f001a f001v
+f002a     ke  98 0
+f002v     ke  1 0
+.         ti  f002a f002v
+f003a     ke  99 0
+f003v     ke  2 0
+.         ti  f003a f003v
+# g の真理値表。g = y1 xor y2
+g000a     ke  100 0
+g000v     ke  0 0
+.         ti  g000a g000v
+g001a     ke  101 0
+g001v     ke  1 0
+.         ti  g001a g001v
+g002a     ke  102 0
+g002v     ke  1 0
+.         ti  g002a g002v
+g003a     ke  103 0
+g003v     ke  0 0
+.         ti  g003a g003v
+# R4 のカット行列 F[alpha][beta] = f(alpha, beta)。f = x1x3 xor x2x4 xor x1
+m000a     ke  128 0
+m000v     ke  0 0
+.         ti  m000a m000v
+m001a     ke  129 0
+m001v     ke  0 0
+.         ti  m001a m001v
+m002a     ke  130 0
+m002v     ke  0 0
+.         ti  m002a m002v
+m003a     ke  131 0
+m003v     ke  0 0
+.         ti  m003a m003v
+m004a     ke  132 0
+m004v     ke  1 0
+.         ti  m004a m004v
+m005a     ke  133 0
+m005v     ke  0 0
+.         ti  m005a m005v
+m006a     ke  134 0
+m006v     ke  1 0
+.         ti  m006a m006v
+m007a     ke  135 0
+m007v     ke  0 0
+.         ti  m007a m007v
+m008a     ke  136 0
+m008v     ke  0 0
+.         ti  m008a m008v
+m009a     ke  137 0
+m009v     ke  0 0
+.         ti  m009a m009v
+m010a     ke  138 0
+m010v     ke  1 0
+.         ti  m010a m010v
+m011a     ke  139 0
+m011v     ke  1 0
+.         ti  m011a m011v
+m012a     ke  140 0
+m012v     ke  1 0
+.         ti  m012a m012v
+m013a     ke  141 0
+m013v     ke  0 0
+.         ti  m013a m013v
+m014a     ke  142 0
+m014v     ke  0 0
+.         ti  m014a m014v
+m015a     ke  143 0
+m015v     ke  1 0
+.         ti  m015a m015v
+# R5 の対称関数。重みが 3 以上なら 1
+t000a     ke  192 0
+t000v     ke  0 0
+.         ti  t000a t000v
+t001a     ke  193 0
+t001v     ke  0 0
+.         ti  t001a t001v
+t002a     ke  194 0
+t002v     ke  0 0
+.         ti  t002a t002v
+t003a     ke  195 0
+t003v     ke  0 0
+.         ti  t003a t003v
+t004a     ke  196 0
+t004v     ke  0 0
+.         ti  t004a t004v
+t005a     ke  197 0
+t005v     ke  0 0
+.         ti  t005a t005v
+t006a     ke  198 0
+t006v     ke  0 0
+.         ti  t006a t006v
+t007a     ke  199 0
+t007v     ke  1 0
+.         ti  t007a t007v
+t008a     ke  200 0
+t008v     ke  0 0
+.         ti  t008a t008v
+t009a     ke  201 0
+t009v     ke  0 0
+.         ti  t009a t009v
+t010a     ke  202 0
+t010v     ke  0 0
+.         ti  t010a t010v
+t011a     ke  203 0
+t011v     ke  1 0
+.         ti  t011a t011v
+t012a     ke  204 0
+t012v     ke  0 0
+.         ti  t012a t012v
+t013a     ke  205 0
+t013v     ke  1 0
+.         ti  t013a t013v
+t014a     ke  206 0
+t014v     ke  1 0
+.         ti  t014a t014v
+t015a     ke  207 0
+t015v     ke  1 0
+.         ti  t015a t015v
+# 期待値
+x000a     ke  384 0
+x000v     ke  0 0
+.         ti  x000a x000v
+x001a     ke  385 0
+x001v     ke  1 0
+.         ti  x001a x001v
+x002a     ke  386 0
+x002v     ke  1 0
+.         ti  x002a x002v
+x003a     ke  387 0
+x003v     ke  0 0
+.         ti  x003a x003v
+x004a     ke  388 0
+x004v     ke  0 0
+.         ti  x004a x004v
+x005a     ke  389 0
+x005v     ke  0 0
+.         ti  x005a x005v
+x006a     ke  390 0
+x006v     ke  0 0
+.         ti  x006a x006v
+x007a     ke  391 0
+x007v     ke  1 0
+.         ti  x007a x007v
+x008a     ke  392 0
+x008v     ke  0 0
+.         ti  x008a x008v
+x009a     ke  393 0
+x009v     ke  1 0
+.         ti  x009a x009v
+x010a     ke  394 0
+x010v     ke  1 0
+.         ti  x010a x010v
+x011a     ke  395 0
+x011v     ke  0 0
+.         ti  x011a x011v
+x012a     ke  396 0
+x012v     ke  0 0
+.         ti  x012a x012v
+x013a     ke  397 0
+x013v     ke  1 0
+.         ti  x013a x013v
+x014a     ke  398 0
+x014v     ke  1 0
+.         ti  x014a x014v
+x015a     ke  399 0
+x015v     ke  1 0
+.         ti  x015a x015v
+x016a     ke  400 0
+x016v     ke  2 0
+.         ti  x016a x016v
+x017a     ke  401 0
+x017v     ke  1 0
+.         ti  x017a x017v
+x018a     ke  402 0
+x018v     ke  2 0
+.         ti  x018a x018v
+x019a     ke  403 0
+x019v     ke  3 0
+.         ti  x019a x019v
+x020a     ke  404 0
+x020v     ke  6 0
+.         ti  x020a x020v
+x021a     ke  405 0
+x021v     ke  0 0
+.         ti  x021a x021v
+x022a     ke  406 0
+x022v     ke  0 0
+.         ti  x022a x022v
+x023a     ke  407 0
+x023v     ke  0 0
+.         ti  x023a x023v
+x024a     ke  408 0
+x024v     ke  0 0
+.         ti  x024a x024v
+x025a     ke  409 0
+x025v     ke  1 0
+.         ti  x025a x025v
+x026a     ke  410 0
+x026v     ke  0 0
+.         ti  x026a x026v
+x027a     ke  411 0
+x027v     ke  1 0
+.         ti  x027a x027v
+x028a     ke  412 0
+x028v     ke  0 0
+.         ti  x028a x028v
+x029a     ke  413 0
+x029v     ke  0 0
+.         ti  x029a x029v
+x030a     ke  414 0
+x030v     ke  0 0
+.         ti  x030a x030v
+x031a     ke  415 0
+x031v     ke  1 0
+.         ti  x031a x031v
+x032a     ke  416 0
+x032v     ke  1 0
+.         ti  x032a x032v
+x033a     ke  417 0
+x033v     ke  1 0
+.         ti  x033a x033v
+x034a     ke  418 0
+x034v     ke  0 0
+.         ti  x034a x034v
+x035a     ke  419 0
+x035v     ke  0 0
+.         ti  x035a x035v
+x036a     ke  420 0
+x036v     ke  1 0
+.         ti  x036a x036v
+x037a     ke  421 0
+x037v     ke  2 0
+.         ti  x037a x037v
+x038a     ke  422 0
+x038v     ke  1 0
+.         ti  x038a x038v
+x039a     ke  423 0
+x039v     ke  0 0
+.         ti  x039a x039v
+x040a     ke  424 0
+x040v     ke  1 0
+.         ti  x040a x040v
+x041a     ke  425 0
+x041v     ke  0 0
+.         ti  x041a x041v
+x042a     ke  426 0
+x042v     ke  0 0
+.         ti  x042a x042v
+x043a     ke  427 0
+x043v     ke  0 0
+.         ti  x043a x043v
+x044a     ke  428 0
+x044v     ke  1 0
+.         ti  x044a x044v
+x045a     ke  429 0
+x045v     ke  1 0
+.         ti  x045a x045v
+x046a     ke  430 0
+x046v     ke  0 0
+.         ti  x046a x046v
+x047a     ke  431 0
+x047v     ke  0 0
+.         ti  x047a x047v
+x048a     ke  432 0
+x048v     ke  0 0
+.         ti  x048a x048v
+x049a     ke  433 0
+x049v     ke  0 0
+.         ti  x049a x049v
+x050a     ke  434 0
+x050v     ke  0 0
+.         ti  x050a x050v
+x051a     ke  435 0
+x051v     ke  0 0
+.         ti  x051a x051v
+x052a     ke  436 0
+x052v     ke  0 0
+.         ti  x052a x052v
+x053a     ke  437 0
+x053v     ke  0 0
+.         ti  x053a x053v
+x054a     ke  438 0
+x054v     ke  0 0
+.         ti  x054a x054v
+x055a     ke  439 0
+x055v     ke  0 0
+.         ti  x055a x055v
+x056a     ke  440 0
+x056v     ke  0 0
+.         ti  x056a x056v
+x057a     ke  441 0
+x057v     ke  0 0
+.         ti  x057a x057v
+x058a     ke  442 0
+x058v     ke  1 0
+.         ti  x058a x058v
+x059a     ke  443 0
+x059v     ke  0 0
+.         ti  x059a x059v
+x060a     ke  444 0
+x060v     ke  0 0
+.         ti  x060a x060v
+x061a     ke  445 0
+x061v     ke  0 0
+.         ti  x061a x061v
+x062a     ke  446 0
+x062v     ke  0 0
+.         ti  x062a x062v
+x063a     ke  447 0
+x063v     ke  1 0
+.         ti  x063a x063v
+x064a     ke  448 0
+x064v     ke  0 0
+.         ti  x064a x064v
+x065a     ke  449 0
+x065v     ke  0 0
+.         ti  x065a x065v
+x066a     ke  450 0
+x066v     ke  1 0
+.         ti  x066a x066v
+x067a     ke  451 0
+x067v     ke  1 0
+.         ti  x067a x067v
+x068a     ke  452 0
+x068v     ke  0 0
+.         ti  x068a x068v
+x069a     ke  453 0
+x069v     ke  0 0
+.         ti  x069a x069v
+x070a     ke  454 0
+x070v     ke  0 0
+.         ti  x070a x070v
+x071a     ke  455 0
+x071v     ke  0 0
+.         ti  x071a x071v
+x072a     ke  456 0
+x072v     ke  0 0
+.         ti  x072a x072v
+x073a     ke  457 0
+x073v     ke  0 0
+.         ti  x073a x073v
+x074a     ke  458 0
+x074v     ke  0 0
+.         ti  x074a x074v
+x075a     ke  459 0
+x075v     ke  0 0
+.         ti  x075a x075v
+x076a     ke  460 0
+x076v     ke  0 0
+.         ti  x076a x076v
+x077a     ke  461 0
+x077v     ke  1 0
+.         ti  x077a x077v
+x078a     ke  462 0
+x078v     ke  0 0
+.         ti  x078a x078v
+x079a     ke  463 0
+x079v     ke  0 0
+.         ti  x079a x079v
+x080a     ke  464 0
+x080v     ke  0 0
+.         ti  x080a x080v
+x081a     ke  465 0
+x081v     ke  1 0
+.         ti  x081a x081v
+x082a     ke  466 0
+x082v     ke  0 0
+.         ti  x082a x082v
+x083a     ke  467 0
+x083v     ke  1 0
+.         ti  x083a x083v
+x084a     ke  468 0
+x084v     ke  1 0
+.         ti  x084a x084v
+x085a     ke  469 0
+x085v     ke  1 0
+.         ti  x085a x085v
+x086a     ke  470 0
+x086v     ke  0 0
+.         ti  x086a x086v
+x087a     ke  471 0
+x087v     ke  0 0
+.         ti  x087a x087v
+x088a     ke  472 0
+x088v     ke  0 0
+.         ti  x088a x088v
+x089a     ke  473 0
+x089v     ke  1 0
+.         ti  x089a x089v
+x090a     ke  474 0
+x090v     ke  1 0
+.         ti  x090a x090v
+
+# ======== ビット表 BIT[NB*T + k] ========
+# けたごとの読み。上のけたから冪を引けるかどうかを見るので除算は要らない。
+v00001    ke  0 0
+v00002    ke  0 0
+.         ti  v00002 v00001
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW1     ke  0 0
+LbtW1     ke  0 0
+v00003W1  ke  0 0
+v00004W1  ta  v00003W1
+v00005W1  ke  16 0
+.         se  v00004W1 v00005W1 Lbt
+.         so  Lbte
+Lbt       ke  0 0
+v00003    ke  0 0
+v00004    ta  v00003
+v00005    ke  16 0
+v00006    ke  3 0
+.         ti  v00006 v00004
+v00007    ke  0 0
+v00008    ke  1 0
+.         ti  v00008 v00007
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW0     ke  0 0
+LbjW0     ke  1 0
+v00009W0  ke  1 0
+v00010W0  ta  v00009W0
+v00011W0  ke  4 0
+.         se  v00010W0 v00011W0 Lbj
+.         so  Lbje
+Lbj       ke  1 0
+v00009    ke  1 0
+v00010    ta  v00009
+v00011    ke  4 0
+v00012    ke  3 0
+v00013    si  v00010
+v00014    ko  v00012 v00013
+v00015    ke  16 0
+v00016    ko  v00015 v00014
+v00017    ta  v00016
+v00018    ke  3 0
+v00019    ta  v00018
+.         se  v00019 v00017 Lbz
+v00020    ke  0 0
+v00021    ta  v00020
+v00022    ke  4 0
+v00023    sa  v00021 v00022
+v00024    ko  v00023 v00014
+v00025    ke  1 0
+v00026    ke  32 0
+v00027    ko  v00026 v00024
+.         ti  v00027 v00025
+v00028    ke  3 0
+v00029    ta  v00028
+v00030    si  v00017
+v00031    ko  v00029 v00030
+v00032    ke  3 0
+.         ti  v00032 v00031
+.         so  Lbjn
+Lbz       ke  0 0
+v00033    ke  3 0
+v00034    ke  1 0
+v00035    ta  v00034
+v00036    si  v00035
+v00037    ko  v00033 v00036
+v00038    ke  0 0
+v00039    ta  v00038
+v00040    ke  4 0
+v00041    sa  v00039 v00040
+v00042    ko  v00041 v00037
+v00043    ke  0 0
+v00044    ke  32 0
+v00045    ko  v00044 v00042
+.         ti  v00045 v00043
+Lbjn      ke  1 0
+v00046    ke  1 0
+v00047    ta  v00046
+v00048    ko  v00047 Lbjn
+v00049    ke  1 0
+.         ti  v00049 v00048
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW0     ke  0 0
+LbjW0z    ke  1 0
+v00009W0z ke  1 0
+v00010W0z ta  v00009W0z
+v00011W0z ke  4 0
+.         se  v00010W0z v00011W0z Lbj
+.         so  Lbje                       # 境界に届いた
+Lbje      ke  1 0
+v00050    ke  0 0
+v00051    ta  v00050
+v00052    ko  v00051 Lbje
+v00053    ke  0 0
+.         ti  v00053 v00052
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW1     ke  0 0
+LbtW1z    ke  0 0
+v00003W1z ke  0 0
+v00004W1z ta  v00003W1z
+v00005W1z ke  16 0
+.         se  v00004W1z v00005W1z Lbt
+.         so  Lbte                       # 境界に届いた
+Lbte      ke  0 0
+
+# ======== R3  次数の劣加法性  deg(g∘f) <= deg g · deg f ========
+# g の各単項式へ f~ を代入すると、簡約前の次数は高々 |U|·deg f になる。
+# 多重線形簡約は次数を下げるだけなので不等式が従う。
+#   合成の真理値表 (g∘f)(R) = g(f(R)) を作る
+v00054    ke  0 0
+v00055    ke  0 0
+.         ti  v00055 v00054
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW2     ke  0 0
+LhW2      ke  0 0
+v00056W2  ke  0 0
+v00057W2  ta  v00056W2
+v00058W2  ke  4 0
+.         se  v00057W2 v00058W2 Lh
+.         so  Lhe
+Lh        ke  0 0
+v00056    ke  0 0
+v00057    ta  v00056
+v00058    ke  4 0
+v00059    ke  96 0
+v00060    ko  v00059 v00057
+v00061    ta  v00060
+v00062    ke  100 0
+v00063    ko  v00062 v00061
+v00064    ta  v00063
+v00065    ke  104 0
+v00066    ko  v00065 v00057
+.         ti  v00066 v00064
+v00067    ke  1 0
+v00068    ko  v00057 v00067
+v00069    ke  0 0
+.         ti  v00069 v00068
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW2     ke  0 0
+LhW2z     ke  0 0
+v00056W2z ke  0 0
+v00057W2z ta  v00056W2z
+v00058W2z ke  4 0
+.         se  v00057W2z v00058W2z Lh
+.         so  Lhe                        # 境界に届いた
+Lhe       ke  0 0
+#   af0: ANF を作る（1 章 R1、二値層）
+v00070    ke  0 0
+v00071    ke  0 0
+.         ti  v00071 v00070
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW3     ke  0 0
+Laf0cW3   ke  0 0
+v00072W3  ke  0 0
+v00073W3  ta  v00072W3
+v00074W3  ke  4 0
+.         se  v00073W3 v00074W3 Laf0c
+.         so  Laf0ce
+Laf0c     ke  0 0
+v00072    ke  0 0
+v00073    ta  v00072
+v00074    ke  4 0
+v00075    ke  96 0
+v00076    ko  v00075 v00073
+v00077    ta  v00076
+v00078    ke  108 0
+v00079    ko  v00078 v00073
+.         ti  v00079 v00077
+v00080    ke  0 0
+v00081    ta  v00080
+v00082    ke  1 0
+v00083    ko  v00081 v00082
+v00084    ke  0 0
+.         ti  v00084 v00083
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW3     ke  0 0
+Laf0cW3z  ke  0 0
+v00072W3z ke  0 0
+v00073W3z ta  v00072W3z
+v00074W3z ke  4 0
+.         se  v00073W3z v00074W3z Laf0c
+.         so  Laf0ce                     # 境界に届いた
+Laf0ce    ke  0 0
+v00085    ke  0 0
+v00086    ke  2 0
+.         ti  v00086 v00085
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW6     ke  0 0
+Laf0kW6   ke  2 0
+v00087W6  ke  2 0
+v00088W6  ta  v00087W6
+v00089W6  ke  2 0
+.         se  v00088W6 v00089W6 Laf0k
+.         so  Laf0ke
+Laf0k     ke  2 0
+v00087    ke  2 0
+v00088    ta  v00087
+v00089    ke  2 0
+v00090    ke  16 0
+v00091    ko  v00090 v00088
+v00092    ta  v00091
+v00093    ke  9 0
+.         ti  v00093 v00092
+v00094    ke  1 0
+v00095    ko  v00088 v00094
+v00096    ke  16 0
+v00097    ko  v00096 v00095
+v00098    ta  v00097
+v00099    ke  10 0
+.         ti  v00099 v00098
+v00100    ke  0 0
+v00101    ke  1 0
+.         ti  v00101 v00100
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW5     ke  0 0
+Laf0bW5   ke  1 0
+v00102W5  ke  1 0
+v00103W5  ta  v00102W5
+v00104W5  ke  4 0
+.         se  v00103W5 v00104W5 Laf0b
+.         so  Laf0be
+Laf0b     ke  1 0
+v00102    ke  1 0
+v00103    ta  v00102
+v00104    ke  4 0
+Laf0bb    ke  0 0
+v00105    ke  0 0
+v00106    ke  0 0
+.         ti  v00106 v00105
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW4     ke  0 0
+Laf0oW4   ke  0 0
+v00107W4  ke  0 0
+v00108W4  ta  v00107W4
+v00109W4  ke  9 0
+v00110W4  ta  v00109W4
+.         se  v00108W4 v00110W4 Laf0o
+.         so  Laf0oe
+Laf0o     ke  0 0
+v00107    ke  0 0
+v00108    ta  v00107
+v00109    ke  9 0
+v00110    ta  v00109
+Laf0ob    ke  0 0
+v00111    ke  1 0
+v00112    ta  v00111
+v00113    ke  0 0
+v00114    ta  v00113
+v00115    ko  v00112 v00114
+v00116    ke  9 0
+v00117    ta  v00116
+v00118    ko  v00115 v00117
+v00119    ke  108 0
+v00120    ko  v00119 v00118
+v00121    ta  v00120
+v00122    ke  108 0
+v00123    ko  v00122 v00115
+v00124    ta  v00123
+v00125    ke  15 0
+.         ti  v00125 v00118
+.         su  v00121 v00124 Laf0xz
+v00126    ke  15 0
+v00127    ta  v00126
+v00128    ke  1 0
+v00129    ke  108 0
+v00130    ko  v00129 v00127
+.         ti  v00130 v00128
+.         so  Laf0xe
+Laf0xz    ke  0 0
+v00131    ke  15 0
+v00132    ta  v00131
+v00133    ke  0 0
+v00134    ke  108 0
+v00135    ko  v00134 v00132
+.         ti  v00135 v00133
+Laf0xe    ke  0 0
+v00136    ke  0 0
+v00137    ta  v00136
+v00138    ke  1 0
+v00139    ko  v00137 v00138
+v00140    ke  0 0
+.         ti  v00140 v00139
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW4     ke  0 0
+Laf0oW4z  ke  0 0
+v00107W4z ke  0 0
+v00108W4z ta  v00107W4z
+v00109W4z ke  9 0
+v00110W4z ta  v00109W4z
+.         se  v00108W4z v00110W4z Laf0o
+.         so  Laf0oe                     # 境界に届いた
+Laf0oe    ke  0 0
+v00141    ke  1 0
+v00142    ta  v00141
+v00143    ke  10 0
+v00144    ta  v00143
+v00145    ko  v00142 v00144
+v00146    ke  1 0
+.         ti  v00146 v00145
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW5     ke  0 0
+Laf0bW5z  ke  1 0
+v00102W5z ke  1 0
+v00103W5z ta  v00102W5z
+v00104W5z ke  4 0
+.         se  v00103W5z v00104W5z Laf0b
+.         so  Laf0be                     # 境界に届いた
+Laf0be    ke  0 0
+v00147    ke  2 0
+v00148    ta  v00147
+v00149    ke  1 0
+v00150    ko  v00148 v00149
+v00151    ke  2 0
+.         ti  v00151 v00150
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW6     ke  0 0
+Laf0kW6z  ke  2 0
+v00087W6z ke  2 0
+v00088W6z ta  v00087W6z
+v00089W6z ke  2 0
+.         se  v00088W6z v00089W6z Laf0k
+.         so  Laf0ke                     # 境界に届いた
+Laf0ke    ke  0 0
+#   af1: ANF を作る（1 章 R1、二値層）
+v00152    ke  0 0
+v00153    ke  0 0
+.         ti  v00153 v00152
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW7     ke  0 0
+Laf1cW7   ke  0 0
+v00154W7  ke  0 0
+v00155W7  ta  v00154W7
+v00156W7  ke  4 0
+.         se  v00155W7 v00156W7 Laf1c
+.         so  Laf1ce
+Laf1c     ke  0 0
+v00154    ke  0 0
+v00155    ta  v00154
+v00156    ke  4 0
+#     出力ビット 1 を取り出す
+v00157    ke  96 0
+v00158    ko  v00157 v00155
+v00159    ta  v00158
+v00160    ke  3 0
+.         ti  v00160 v00159
+v00161    ke  3 0
+v00162    ta  v00161
+v00163    ke  2 0
+.         se  v00162 v00163 Laf1z0
+v00164    ke  0 0
+v00165    ta  v00164
+v00166    ke  1 0
+v00167    ke  112 0
+v00168    ko  v00167 v00165
+.         ti  v00168 v00166
+.         so  Laf1cn
+Laf1z0    ke  0 0
+v00169    ke  0 0
+v00170    ta  v00169
+v00171    ke  0 0
+v00172    ke  112 0
+v00173    ko  v00172 v00170
+.         ti  v00173 v00171
+Laf1cn    ke  0 0
+v00174    ke  0 0
+v00175    ta  v00174
+v00176    ke  1 0
+v00177    ko  v00175 v00176
+v00178    ke  0 0
+.         ti  v00178 v00177
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW7     ke  0 0
+Laf1cW7z  ke  0 0
+v00154W7z ke  0 0
+v00155W7z ta  v00154W7z
+v00156W7z ke  4 0
+.         se  v00155W7z v00156W7z Laf1c
+.         so  Laf1ce                     # 境界に届いた
+Laf1ce    ke  0 0
+v00179    ke  0 0
+v00180    ke  2 0
+.         ti  v00180 v00179
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW10    ke  0 0
+Laf1kW10  ke  2 0
+v00181W10 ke  2 0
+v00182W10 ta  v00181W10
+v00183W10 ke  2 0
+.         se  v00182W10 v00183W10 Laf1k
+.         so  Laf1ke
+Laf1k     ke  2 0
+v00181    ke  2 0
+v00182    ta  v00181
+v00183    ke  2 0
+v00184    ke  16 0
+v00185    ko  v00184 v00182
+v00186    ta  v00185
+v00187    ke  9 0
+.         ti  v00187 v00186
+v00188    ke  1 0
+v00189    ko  v00182 v00188
+v00190    ke  16 0
+v00191    ko  v00190 v00189
+v00192    ta  v00191
+v00193    ke  10 0
+.         ti  v00193 v00192
+v00194    ke  0 0
+v00195    ke  1 0
+.         ti  v00195 v00194
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW9     ke  0 0
+Laf1bW9   ke  1 0
+v00196W9  ke  1 0
+v00197W9  ta  v00196W9
+v00198W9  ke  4 0
+.         se  v00197W9 v00198W9 Laf1b
+.         so  Laf1be
+Laf1b     ke  1 0
+v00196    ke  1 0
+v00197    ta  v00196
+v00198    ke  4 0
+Laf1bb    ke  0 0
+v00199    ke  0 0
+v00200    ke  0 0
+.         ti  v00200 v00199
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW8     ke  0 0
+Laf1oW8   ke  0 0
+v00201W8  ke  0 0
+v00202W8  ta  v00201W8
+v00203W8  ke  9 0
+v00204W8  ta  v00203W8
+.         se  v00202W8 v00204W8 Laf1o
+.         so  Laf1oe
+Laf1o     ke  0 0
+v00201    ke  0 0
+v00202    ta  v00201
+v00203    ke  9 0
+v00204    ta  v00203
+Laf1ob    ke  0 0
+v00205    ke  1 0
+v00206    ta  v00205
+v00207    ke  0 0
+v00208    ta  v00207
+v00209    ko  v00206 v00208
+v00210    ke  9 0
+v00211    ta  v00210
+v00212    ko  v00209 v00211
+v00213    ke  112 0
+v00214    ko  v00213 v00212
+v00215    ta  v00214
+v00216    ke  112 0
+v00217    ko  v00216 v00209
+v00218    ta  v00217
+v00219    ke  15 0
+.         ti  v00219 v00212
+.         su  v00215 v00218 Laf1xz
+v00220    ke  15 0
+v00221    ta  v00220
+v00222    ke  1 0
+v00223    ke  112 0
+v00224    ko  v00223 v00221
+.         ti  v00224 v00222
+.         so  Laf1xe
+Laf1xz    ke  0 0
+v00225    ke  15 0
+v00226    ta  v00225
+v00227    ke  0 0
+v00228    ke  112 0
+v00229    ko  v00228 v00226
+.         ti  v00229 v00227
+Laf1xe    ke  0 0
+v00230    ke  0 0
+v00231    ta  v00230
+v00232    ke  1 0
+v00233    ko  v00231 v00232
+v00234    ke  0 0
+.         ti  v00234 v00233
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW8     ke  0 0
+Laf1oW8z  ke  0 0
+v00201W8z ke  0 0
+v00202W8z ta  v00201W8z
+v00203W8z ke  9 0
+v00204W8z ta  v00203W8z
+.         se  v00202W8z v00204W8z Laf1o
+.         so  Laf1oe                     # 境界に届いた
+Laf1oe    ke  0 0
+v00235    ke  1 0
+v00236    ta  v00235
+v00237    ke  10 0
+v00238    ta  v00237
+v00239    ko  v00236 v00238
+v00240    ke  1 0
+.         ti  v00240 v00239
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW9     ke  0 0
+Laf1bW9z  ke  1 0
+v00196W9z ke  1 0
+v00197W9z ta  v00196W9z
+v00198W9z ke  4 0
+.         se  v00197W9z v00198W9z Laf1b
+.         so  Laf1be                     # 境界に届いた
+Laf1be    ke  0 0
+v00241    ke  2 0
+v00242    ta  v00241
+v00243    ke  1 0
+v00244    ko  v00242 v00243
+v00245    ke  2 0
+.         ti  v00245 v00244
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW10    ke  0 0
+Laf1kW10z ke  2 0
+v00181W10z ke  2 0
+v00182W10z ta  v00181W10z
+v00183W10z ke  2 0
+.         se  v00182W10z v00183W10z Laf1k
+.         so  Laf1ke                     # 境界に届いた
+Laf1ke    ke  0 0
+#   ag: ANF を作る（1 章 R1、二値層）
+v00246    ke  0 0
+v00247    ke  0 0
+.         ti  v00247 v00246
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW11    ke  0 0
+LagcW11   ke  0 0
+v00248W11 ke  0 0
+v00249W11 ta  v00248W11
+v00250W11 ke  4 0
+.         se  v00249W11 v00250W11 Lagc
+.         so  Lagce
+Lagc      ke  0 0
+v00248    ke  0 0
+v00249    ta  v00248
+v00250    ke  4 0
+v00251    ke  100 0
+v00252    ko  v00251 v00249
+v00253    ta  v00252
+v00254    ke  116 0
+v00255    ko  v00254 v00249
+.         ti  v00255 v00253
+v00256    ke  0 0
+v00257    ta  v00256
+v00258    ke  1 0
+v00259    ko  v00257 v00258
+v00260    ke  0 0
+.         ti  v00260 v00259
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW11    ke  0 0
+LagcW11z  ke  0 0
+v00248W11z ke  0 0
+v00249W11z ta  v00248W11z
+v00250W11z ke  4 0
+.         se  v00249W11z v00250W11z Lagc
+.         so  Lagce                      # 境界に届いた
+Lagce     ke  0 0
+v00261    ke  0 0
+v00262    ke  2 0
+.         ti  v00262 v00261
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW14    ke  0 0
+LagkW14   ke  2 0
+v00263W14 ke  2 0
+v00264W14 ta  v00263W14
+v00265W14 ke  2 0
+.         se  v00264W14 v00265W14 Lagk
+.         so  Lagke
+Lagk      ke  2 0
+v00263    ke  2 0
+v00264    ta  v00263
+v00265    ke  2 0
+v00266    ke  16 0
+v00267    ko  v00266 v00264
+v00268    ta  v00267
+v00269    ke  9 0
+.         ti  v00269 v00268
+v00270    ke  1 0
+v00271    ko  v00264 v00270
+v00272    ke  16 0
+v00273    ko  v00272 v00271
+v00274    ta  v00273
+v00275    ke  10 0
+.         ti  v00275 v00274
+v00276    ke  0 0
+v00277    ke  1 0
+.         ti  v00277 v00276
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW13    ke  0 0
+LagbW13   ke  1 0
+v00278W13 ke  1 0
+v00279W13 ta  v00278W13
+v00280W13 ke  4 0
+.         se  v00279W13 v00280W13 Lagb
+.         so  Lagbe
+Lagb      ke  1 0
+v00278    ke  1 0
+v00279    ta  v00278
+v00280    ke  4 0
+Lagbb     ke  0 0
+v00281    ke  0 0
+v00282    ke  0 0
+.         ti  v00282 v00281
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW12    ke  0 0
+LagoW12   ke  0 0
+v00283W12 ke  0 0
+v00284W12 ta  v00283W12
+v00285W12 ke  9 0
+v00286W12 ta  v00285W12
+.         se  v00284W12 v00286W12 Lago
+.         so  Lagoe
+Lago      ke  0 0
+v00283    ke  0 0
+v00284    ta  v00283
+v00285    ke  9 0
+v00286    ta  v00285
+Lagob     ke  0 0
+v00287    ke  1 0
+v00288    ta  v00287
+v00289    ke  0 0
+v00290    ta  v00289
+v00291    ko  v00288 v00290
+v00292    ke  9 0
+v00293    ta  v00292
+v00294    ko  v00291 v00293
+v00295    ke  116 0
+v00296    ko  v00295 v00294
+v00297    ta  v00296
+v00298    ke  116 0
+v00299    ko  v00298 v00291
+v00300    ta  v00299
+v00301    ke  15 0
+.         ti  v00301 v00294
+.         su  v00297 v00300 Lagxz
+v00302    ke  15 0
+v00303    ta  v00302
+v00304    ke  1 0
+v00305    ke  116 0
+v00306    ko  v00305 v00303
+.         ti  v00306 v00304
+.         so  Lagxe
+Lagxz     ke  0 0
+v00307    ke  15 0
+v00308    ta  v00307
+v00309    ke  0 0
+v00310    ke  116 0
+v00311    ko  v00310 v00308
+.         ti  v00311 v00309
+Lagxe     ke  0 0
+v00312    ke  0 0
+v00313    ta  v00312
+v00314    ke  1 0
+v00315    ko  v00313 v00314
+v00316    ke  0 0
+.         ti  v00316 v00315
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW12    ke  0 0
+LagoW12z  ke  0 0
+v00283W12z ke  0 0
+v00284W12z ta  v00283W12z
+v00285W12z ke  9 0
+v00286W12z ta  v00285W12z
+.         se  v00284W12z v00286W12z Lago
+.         so  Lagoe                      # 境界に届いた
+Lagoe     ke  0 0
+v00317    ke  1 0
+v00318    ta  v00317
+v00319    ke  10 0
+v00320    ta  v00319
+v00321    ko  v00318 v00320
+v00322    ke  1 0
+.         ti  v00322 v00321
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW13    ke  0 0
+LagbW13z  ke  1 0
+v00278W13z ke  1 0
+v00279W13z ta  v00278W13z
+v00280W13z ke  4 0
+.         se  v00279W13z v00280W13z Lagb
+.         so  Lagbe                      # 境界に届いた
+Lagbe     ke  0 0
+v00323    ke  2 0
+v00324    ta  v00323
+v00325    ke  1 0
+v00326    ko  v00324 v00325
+v00327    ke  2 0
+.         ti  v00327 v00326
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW14    ke  0 0
+LagkW14z  ke  2 0
+v00263W14z ke  2 0
+v00264W14z ta  v00263W14z
+v00265W14z ke  2 0
+.         se  v00264W14z v00265W14z Lagk
+.         so  Lagke                      # 境界に届いた
+Lagke     ke  0 0
+#   ah: ANF を作る（1 章 R1、二値層）
+v00328    ke  0 0
+v00329    ke  0 0
+.         ti  v00329 v00328
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW15    ke  0 0
+LahcW15   ke  0 0
+v00330W15 ke  0 0
+v00331W15 ta  v00330W15
+v00332W15 ke  4 0
+.         se  v00331W15 v00332W15 Lahc
+.         so  Lahce
+Lahc      ke  0 0
+v00330    ke  0 0
+v00331    ta  v00330
+v00332    ke  4 0
+v00333    ke  104 0
+v00334    ko  v00333 v00331
+v00335    ta  v00334
+v00336    ke  120 0
+v00337    ko  v00336 v00331
+.         ti  v00337 v00335
+v00338    ke  0 0
+v00339    ta  v00338
+v00340    ke  1 0
+v00341    ko  v00339 v00340
+v00342    ke  0 0
+.         ti  v00342 v00341
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW15    ke  0 0
+LahcW15z  ke  0 0
+v00330W15z ke  0 0
+v00331W15z ta  v00330W15z
+v00332W15z ke  4 0
+.         se  v00331W15z v00332W15z Lahc
+.         so  Lahce                      # 境界に届いた
+Lahce     ke  0 0
+v00343    ke  0 0
+v00344    ke  2 0
+.         ti  v00344 v00343
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW18    ke  0 0
+LahkW18   ke  2 0
+v00345W18 ke  2 0
+v00346W18 ta  v00345W18
+v00347W18 ke  2 0
+.         se  v00346W18 v00347W18 Lahk
+.         so  Lahke
+Lahk      ke  2 0
+v00345    ke  2 0
+v00346    ta  v00345
+v00347    ke  2 0
+v00348    ke  16 0
+v00349    ko  v00348 v00346
+v00350    ta  v00349
+v00351    ke  9 0
+.         ti  v00351 v00350
+v00352    ke  1 0
+v00353    ko  v00346 v00352
+v00354    ke  16 0
+v00355    ko  v00354 v00353
+v00356    ta  v00355
+v00357    ke  10 0
+.         ti  v00357 v00356
+v00358    ke  0 0
+v00359    ke  1 0
+.         ti  v00359 v00358
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW17    ke  0 0
+LahbW17   ke  1 0
+v00360W17 ke  1 0
+v00361W17 ta  v00360W17
+v00362W17 ke  4 0
+.         se  v00361W17 v00362W17 Lahb
+.         so  Lahbe
+Lahb      ke  1 0
+v00360    ke  1 0
+v00361    ta  v00360
+v00362    ke  4 0
+Lahbb     ke  0 0
+v00363    ke  0 0
+v00364    ke  0 0
+.         ti  v00364 v00363
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW16    ke  0 0
+LahoW16   ke  0 0
+v00365W16 ke  0 0
+v00366W16 ta  v00365W16
+v00367W16 ke  9 0
+v00368W16 ta  v00367W16
+.         se  v00366W16 v00368W16 Laho
+.         so  Lahoe
+Laho      ke  0 0
+v00365    ke  0 0
+v00366    ta  v00365
+v00367    ke  9 0
+v00368    ta  v00367
+Lahob     ke  0 0
+v00369    ke  1 0
+v00370    ta  v00369
+v00371    ke  0 0
+v00372    ta  v00371
+v00373    ko  v00370 v00372
+v00374    ke  9 0
+v00375    ta  v00374
+v00376    ko  v00373 v00375
+v00377    ke  120 0
+v00378    ko  v00377 v00376
+v00379    ta  v00378
+v00380    ke  120 0
+v00381    ko  v00380 v00373
+v00382    ta  v00381
+v00383    ke  15 0
+.         ti  v00383 v00376
+.         su  v00379 v00382 Lahxz
+v00384    ke  15 0
+v00385    ta  v00384
+v00386    ke  1 0
+v00387    ke  120 0
+v00388    ko  v00387 v00385
+.         ti  v00388 v00386
+.         so  Lahxe
+Lahxz     ke  0 0
+v00389    ke  15 0
+v00390    ta  v00389
+v00391    ke  0 0
+v00392    ke  120 0
+v00393    ko  v00392 v00390
+.         ti  v00393 v00391
+Lahxe     ke  0 0
+v00394    ke  0 0
+v00395    ta  v00394
+v00396    ke  1 0
+v00397    ko  v00395 v00396
+v00398    ke  0 0
+.         ti  v00398 v00397
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW16    ke  0 0
+LahoW16z  ke  0 0
+v00365W16z ke  0 0
+v00366W16z ta  v00365W16z
+v00367W16z ke  9 0
+v00368W16z ta  v00367W16z
+.         se  v00366W16z v00368W16z Laho
+.         so  Lahoe                      # 境界に届いた
+Lahoe     ke  0 0
+v00399    ke  1 0
+v00400    ta  v00399
+v00401    ke  10 0
+v00402    ta  v00401
+v00403    ko  v00400 v00402
+v00404    ke  1 0
+.         ti  v00404 v00403
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW17    ke  0 0
+LahbW17z  ke  1 0
+v00360W17z ke  1 0
+v00361W17z ta  v00360W17z
+v00362W17z ke  4 0
+.         se  v00361W17z v00362W17z Lahb
+.         so  Lahbe                      # 境界に届いた
+Lahbe     ke  0 0
+v00405    ke  2 0
+v00406    ta  v00405
+v00407    ke  1 0
+v00408    ko  v00406 v00407
+v00409    ke  2 0
+.         ti  v00409 v00408
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW18    ke  0 0
+LahkW18z  ke  2 0
+v00345W18z ke  2 0
+v00346W18z ta  v00345W18z
+v00347W18z ke  2 0
+.         se  v00346W18z v00347W18z Lahk
+.         so  Lahke                      # 境界に届いた
+Lahke     ke  0 0
+v00410    ke  0 0
+v00411    ke  7 0
+.         ti  v00411 v00410
+v00412    ke  0 0
+v00413    ke  0 0
+.         ti  v00413 v00412
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW20    ke  0 0
+Ld0W20    ke  0 0
+v00414W20 ke  0 0
+v00415W20 ta  v00414W20
+v00416W20 ke  4 0
+.         se  v00415W20 v00416W20 Ld0
+.         so  Ld0e
+Ld0       ke  0 0
+v00414    ke  0 0
+v00415    ta  v00414
+v00416    ke  4 0
+v00417    ke  108 0
+v00418    ko  v00417 v00415
+v00419    ta  v00418
+v00420    ke  0 0
+.         su  v00419 v00420 Ld0n
+v00421    ke  0 0
+v00422    ke  3 0
+.         ti  v00422 v00421
+v00423    ke  0 0
+v00424    ke  1 0
+.         ti  v00424 v00423
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW19    ke  0 0
+Ld0jW19   ke  1 0
+v00425W19 ke  1 0
+v00426W19 ta  v00425W19
+v00427W19 ke  4 0
+.         se  v00426W19 v00427W19 Ld0j
+.         so  Ld0je
+Ld0j      ke  1 0
+v00425    ke  1 0
+v00426    ta  v00425
+v00427    ke  4 0
+v00428    ke  3 0
+v00429    ta  v00428
+v00430    ke  0 0
+v00431    ta  v00430
+v00432    ke  4 0
+v00433    sa  v00431 v00432
+v00434    ko  v00433 v00426
+v00435    ke  32 0
+v00436    ko  v00435 v00434
+v00437    ta  v00436
+v00438    ko  v00429 v00437
+v00439    ke  3 0
+.         ti  v00439 v00438
+v00440    ke  1 0
+v00441    ko  v00426 v00440
+v00442    ke  1 0
+.         ti  v00442 v00441
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW19    ke  0 0
+Ld0jW19z  ke  1 0
+v00425W19z ke  1 0
+v00426W19z ta  v00425W19z
+v00427W19z ke  4 0
+.         se  v00426W19z v00427W19z Ld0j
+.         so  Ld0je                      # 境界に届いた
+Ld0je     ke  0 0
+v00443    ke  7 0
+v00444    ta  v00443
+v00445    ke  3 0
+v00446    ta  v00445
+.         se  v00444 v00446 Ld0u
+.         so  Ld0n
+Ld0u      ke  0 0
+v00447    ke  3 0
+v00448    ta  v00447
+v00449    ke  7 0
+.         ti  v00449 v00448
+Ld0n      ke  1 0
+v00450    ke  0 0
+v00451    ta  v00450
+v00452    ko  v00451 Ld0n
+v00453    ke  0 0
+.         ti  v00453 v00452
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW20    ke  0 0
+Ld0W20z   ke  0 0
+v00414W20z ke  0 0
+v00415W20z ta  v00414W20z
+v00416W20z ke  4 0
+.         se  v00415W20z v00416W20z Ld0
+.         so  Ld0e                       # 境界に届いた
+Ld0e      ke  0 0
+v00454    ke  0 0
+v00455    ke  8 0
+.         ti  v00455 v00454
+v00456    ke  0 0
+v00457    ke  0 0
+.         ti  v00457 v00456
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW22    ke  0 0
+Ld1W22    ke  0 0
+v00458W22 ke  0 0
+v00459W22 ta  v00458W22
+v00460W22 ke  4 0
+.         se  v00459W22 v00460W22 Ld1
+.         so  Ld1e
+Ld1       ke  0 0
+v00458    ke  0 0
+v00459    ta  v00458
+v00460    ke  4 0
+v00461    ke  112 0
+v00462    ko  v00461 v00459
+v00463    ta  v00462
+v00464    ke  0 0
+.         su  v00463 v00464 Ld1n
+v00465    ke  0 0
+v00466    ke  3 0
+.         ti  v00466 v00465
+v00467    ke  0 0
+v00468    ke  1 0
+.         ti  v00468 v00467
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW21    ke  0 0
+Ld1jW21   ke  1 0
+v00469W21 ke  1 0
+v00470W21 ta  v00469W21
+v00471W21 ke  4 0
+.         se  v00470W21 v00471W21 Ld1j
+.         so  Ld1je
+Ld1j      ke  1 0
+v00469    ke  1 0
+v00470    ta  v00469
+v00471    ke  4 0
+v00472    ke  3 0
+v00473    ta  v00472
+v00474    ke  0 0
+v00475    ta  v00474
+v00476    ke  4 0
+v00477    sa  v00475 v00476
+v00478    ko  v00477 v00470
+v00479    ke  32 0
+v00480    ko  v00479 v00478
+v00481    ta  v00480
+v00482    ko  v00473 v00481
+v00483    ke  3 0
+.         ti  v00483 v00482
+v00484    ke  1 0
+v00485    ko  v00470 v00484
+v00486    ke  1 0
+.         ti  v00486 v00485
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW21    ke  0 0
+Ld1jW21z  ke  1 0
+v00469W21z ke  1 0
+v00470W21z ta  v00469W21z
+v00471W21z ke  4 0
+.         se  v00470W21z v00471W21z Ld1j
+.         so  Ld1je                      # 境界に届いた
+Ld1je     ke  0 0
+v00487    ke  8 0
+v00488    ta  v00487
+v00489    ke  3 0
+v00490    ta  v00489
+.         se  v00488 v00490 Ld1u
+.         so  Ld1n
+Ld1u      ke  0 0
+v00491    ke  3 0
+v00492    ta  v00491
+v00493    ke  8 0
+.         ti  v00493 v00492
+Ld1n      ke  1 0
+v00494    ke  0 0
+v00495    ta  v00494
+v00496    ko  v00495 Ld1n
+v00497    ke  0 0
+.         ti  v00497 v00496
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW22    ke  0 0
+Ld1W22z   ke  0 0
+v00458W22z ke  0 0
+v00459W22z ta  v00458W22z
+v00460W22z ke  4 0
+.         se  v00459W22z v00460W22z Ld1
+.         so  Ld1e                       # 境界に届いた
+Ld1e      ke  0 0
+#   deg f は出力ビットごとの次数の最大
+v00498    ke  7 0
+v00499    ta  v00498
+v00500    ke  8 0
+v00501    ta  v00500
+.         se  v00499 v00501 Ldf1
+.         so  Ldf2
+Ldf1      ke  0 0
+v00502    ke  8 0
+v00503    ta  v00502
+v00504    ke  7 0
+.         ti  v00504 v00503
+Ldf2      ke  0 0
+v00505    ke  7 0
+v00506    ta  v00505
+v00507    ke  6 0
+.         ti  v00507 v00506
+v00508    ke  0 0
+v00509    ke  11 0
+.         ti  v00509 v00508
+v00510    ke  0 0
+v00511    ke  0 0
+.         ti  v00511 v00510
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW24    ke  0 0
+LdgW24    ke  0 0
+v00512W24 ke  0 0
+v00513W24 ta  v00512W24
+v00514W24 ke  4 0
+.         se  v00513W24 v00514W24 Ldg
+.         so  Ldge
+Ldg       ke  0 0
+v00512    ke  0 0
+v00513    ta  v00512
+v00514    ke  4 0
+v00515    ke  116 0
+v00516    ko  v00515 v00513
+v00517    ta  v00516
+v00518    ke  0 0
+.         su  v00517 v00518 Ldgn
+v00519    ke  0 0
+v00520    ke  3 0
+.         ti  v00520 v00519
+v00521    ke  0 0
+v00522    ke  1 0
+.         ti  v00522 v00521
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW23    ke  0 0
+LdgjW23   ke  1 0
+v00523W23 ke  1 0
+v00524W23 ta  v00523W23
+v00525W23 ke  4 0
+.         se  v00524W23 v00525W23 Ldgj
+.         so  Ldgje
+Ldgj      ke  1 0
+v00523    ke  1 0
+v00524    ta  v00523
+v00525    ke  4 0
+v00526    ke  3 0
+v00527    ta  v00526
+v00528    ke  0 0
+v00529    ta  v00528
+v00530    ke  4 0
+v00531    sa  v00529 v00530
+v00532    ko  v00531 v00524
+v00533    ke  32 0
+v00534    ko  v00533 v00532
+v00535    ta  v00534
+v00536    ko  v00527 v00535
+v00537    ke  3 0
+.         ti  v00537 v00536
+v00538    ke  1 0
+v00539    ko  v00524 v00538
+v00540    ke  1 0
+.         ti  v00540 v00539
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW23    ke  0 0
+LdgjW23z  ke  1 0
+v00523W23z ke  1 0
+v00524W23z ta  v00523W23z
+v00525W23z ke  4 0
+.         se  v00524W23z v00525W23z Ldgj
+.         so  Ldgje                      # 境界に届いた
+Ldgje     ke  0 0
+v00541    ke  11 0
+v00542    ta  v00541
+v00543    ke  3 0
+v00544    ta  v00543
+.         se  v00542 v00544 Ldgu
+.         so  Ldgn
+Ldgu      ke  0 0
+v00545    ke  3 0
+v00546    ta  v00545
+v00547    ke  11 0
+.         ti  v00547 v00546
+Ldgn      ke  1 0
+v00548    ke  0 0
+v00549    ta  v00548
+v00550    ko  v00549 Ldgn
+v00551    ke  0 0
+.         ti  v00551 v00550
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW24    ke  0 0
+LdgW24z   ke  0 0
+v00512W24z ke  0 0
+v00513W24z ta  v00512W24z
+v00514W24z ke  4 0
+.         se  v00513W24z v00514W24z Ldg
+.         so  Ldge                       # 境界に届いた
+Ldge      ke  0 0
+v00552    ke  0 0
+v00553    ke  12 0
+.         ti  v00553 v00552
+v00554    ke  0 0
+v00555    ke  0 0
+.         ti  v00555 v00554
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW26    ke  0 0
+LdhW26    ke  0 0
+v00556W26 ke  0 0
+v00557W26 ta  v00556W26
+v00558W26 ke  4 0
+.         se  v00557W26 v00558W26 Ldh
+.         so  Ldhe
+Ldh       ke  0 0
+v00556    ke  0 0
+v00557    ta  v00556
+v00558    ke  4 0
+v00559    ke  120 0
+v00560    ko  v00559 v00557
+v00561    ta  v00560
+v00562    ke  0 0
+.         su  v00561 v00562 Ldhn
+v00563    ke  0 0
+v00564    ke  3 0
+.         ti  v00564 v00563
+v00565    ke  0 0
+v00566    ke  1 0
+.         ti  v00566 v00565
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW25    ke  0 0
+LdhjW25   ke  1 0
+v00567W25 ke  1 0
+v00568W25 ta  v00567W25
+v00569W25 ke  4 0
+.         se  v00568W25 v00569W25 Ldhj
+.         so  Ldhje
+Ldhj      ke  1 0
+v00567    ke  1 0
+v00568    ta  v00567
+v00569    ke  4 0
+v00570    ke  3 0
+v00571    ta  v00570
+v00572    ke  0 0
+v00573    ta  v00572
+v00574    ke  4 0
+v00575    sa  v00573 v00574
+v00576    ko  v00575 v00568
+v00577    ke  32 0
+v00578    ko  v00577 v00576
+v00579    ta  v00578
+v00580    ko  v00571 v00579
+v00581    ke  3 0
+.         ti  v00581 v00580
+v00582    ke  1 0
+v00583    ko  v00568 v00582
+v00584    ke  1 0
+.         ti  v00584 v00583
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW25    ke  0 0
+LdhjW25z  ke  1 0
+v00567W25z ke  1 0
+v00568W25z ta  v00567W25z
+v00569W25z ke  4 0
+.         se  v00568W25z v00569W25z Ldhj
+.         so  Ldhje                      # 境界に届いた
+Ldhje     ke  0 0
+v00585    ke  12 0
+v00586    ta  v00585
+v00587    ke  3 0
+v00588    ta  v00587
+.         se  v00586 v00588 Ldhu
+.         so  Ldhn
+Ldhu      ke  0 0
+v00589    ke  3 0
+v00590    ta  v00589
+v00591    ke  12 0
+.         ti  v00591 v00590
+Ldhn      ke  1 0
+v00592    ke  0 0
+v00593    ta  v00592
+v00594    ko  v00593 Ldhn
+v00595    ke  0 0
+.         ti  v00595 v00594
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW26    ke  0 0
+LdhW26z   ke  0 0
+v00556W26z ke  0 0
+v00557W26z ta  v00556W26z
+v00558W26z ke  4 0
+.         se  v00557W26z v00558W26z Ldh
+.         so  Ldhe                       # 境界に届いた
+Ldhe      ke  0 0
+#   不等式そのもの
+v00596    ke  11 0
+v00597    ta  v00596
+v00598    ke  6 0
+v00599    ta  v00598
+v00600    sa  v00597 v00599
+v00601    ke  12 0
+v00602    ta  v00601
+.         se  v00600 v00602 Lko
+#   台の大きさ s と評価負荷 C_eval(s, d) <= s d
+v00603    ke  0 0
+v00604    ke  13 0
+.         ti  v00604 v00603
+v00605    ke  0 0
+v00606    ke  0 0
+.         ti  v00606 v00605
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW27    ke  0 0
+LsuW27    ke  0 0
+v00607W27 ke  0 0
+v00608W27 ta  v00607W27
+v00609W27 ke  4 0
+.         se  v00608W27 v00609W27 Lsu
+.         so  Lsue
+Lsu       ke  0 0
+v00607    ke  0 0
+v00608    ta  v00607
+v00609    ke  4 0
+v00610    ke  13 0
+v00611    ta  v00610
+v00612    ke  120 0
+v00613    ko  v00612 v00608
+v00614    ta  v00613
+v00615    ko  v00611 v00614
+v00616    ke  13 0
+.         ti  v00616 v00615
+v00617    ke  1 0
+v00618    ko  v00608 v00617
+v00619    ke  0 0
+.         ti  v00619 v00618
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW27    ke  0 0
+LsuW27z   ke  0 0
+v00607W27z ke  0 0
+v00608W27z ta  v00607W27z
+v00609W27z ke  4 0
+.         se  v00608W27z v00609W27z Lsu
+.         so  Lsue                       # 境界に届いた
+Lsue      ke  0 0
+v00620    ke  13 0
+v00621    ta  v00620
+v00622    ke  12 0
+v00623    ta  v00622
+v00624    sa  v00621 v00623
+v00625    ke  14 0
+.         ti  v00625 v00624
+#   R3 の結果を専用の語へ退避する。走査の語は R4 と R5 が使い直す
+v00626    ke  6 0
+v00627    ta  v00626
+v00628    ke  21 0
+.         ti  v00628 v00627
+v00629    ke  11 0
+v00630    ta  v00629
+v00631    ke  22 0
+.         ti  v00631 v00630
+v00632    ke  12 0
+v00633    ta  v00632
+v00634    ke  23 0
+.         ti  v00634 v00633
+v00635    ke  13 0
+v00636    ta  v00635
+v00637    ke  24 0
+.         ti  v00637 v00636
+v00638    ke  14 0
+v00639    ta  v00638
+v00640    ke  25 0
+.         ti  v00640 v00639
+
+# ======== R4  接合秩（定理 4.1）========
+# カット [n] = A ⊔ B に対し、値の行列 F_{alpha,beta} = f(alpha, beta) の
+# F_2 上の階数を rho とすると
+#     f(x_A, x_B) = ⊕_{r=1}^{rho} p_r(x_A) q_r(x_B)
+# を満たす組が存在し、分離積の最小本数はちょうど rho になる。
+# 行を順に既存の基底で消し、消えなければ新しい基底へ加える。
+# そのとき使った基底の番号を U に残すと、F = U BAS の分解が同時に得られる。
+v00641    ke  0 0
+v00642    ke  6 0
+.         ti  v00642 v00641
+v00643    ke  0 0
+v00644    ke  0 0
+.         ti  v00644 v00643
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW33    ke  0 0
+LrkW33    ke  0 0
+v00645W33 ke  0 0
+v00646W33 ta  v00645W33
+v00647W33 ke  4 0
+.         se  v00646W33 v00647W33 Lrk
+.         so  Lrke
+Lrk       ke  0 0
+v00645    ke  0 0
+v00646    ta  v00645
+v00647    ke  4 0
+#   行を作業へ写し、U の欄を零で埋める
+v00648    ke  0 0
+v00649    ke  1 0
+.         ti  v00649 v00648
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW28    ke  0 0
+LrcW28    ke  1 0
+v00650W28 ke  1 0
+v00651W28 ta  v00650W28
+v00652W28 ke  4 0
+.         se  v00651W28 v00652W28 Lrc
+.         so  Lrce
+Lrc       ke  1 0
+v00650    ke  1 0
+v00651    ta  v00650
+v00652    ke  4 0
+v00653    ke  0 0
+v00654    ta  v00653
+v00655    ke  4 0
+v00656    sa  v00654 v00655
+v00657    ko  v00656 v00651
+v00658    ke  128 0
+v00659    ko  v00658 v00657
+v00660    ta  v00659
+v00661    ke  180 0
+v00662    ko  v00661 v00651
+.         ti  v00662 v00660
+v00663    ke  0 0
+v00664    ta  v00663
+v00665    ke  4 0
+v00666    sa  v00664 v00665
+v00667    ke  1 0
+v00668    ta  v00667
+v00669    ko  v00666 v00668
+v00670    ke  0 0
+v00671    ke  164 0
+v00672    ko  v00671 v00669
+.         ti  v00672 v00670
+v00673    ke  1 0
+v00674    ko  v00651 v00673
+v00675    ke  1 0
+.         ti  v00675 v00674
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW28    ke  0 0
+LrcW28z   ke  1 0
+v00650W28z ke  1 0
+v00651W28z ta  v00650W28z
+v00652W28z ke  4 0
+.         se  v00651W28z v00652W28z Lrc
+.         so  Lrce                       # 境界に届いた
+Lrce      ke  0 0
+#   既存の基底で消す
+v00676    ke  0 0
+v00677    ke  2 0
+.         ti  v00677 v00676
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW30    ke  0 0
+LrbW30    ke  2 0
+v00678W30 ke  2 0
+v00679W30 ta  v00678W30
+v00680W30 ke  6 0
+v00681W30 ta  v00680W30
+.         se  v00679W30 v00681W30 Lrb
+.         so  Lrbe
+Lrb       ke  2 0
+v00678    ke  2 0
+v00679    ta  v00678
+v00680    ke  6 0
+v00681    ta  v00680
+v00682    ke  160 0
+v00683    ko  v00682 v00679
+v00684    ta  v00683
+v00685    ke  180 0
+v00686    ko  v00685 v00684
+v00687    ta  v00686
+v00688    ke  0 0
+.         su  v00687 v00688 Lrbn
+v00689    ke  0 0
+v00690    ta  v00689
+v00691    ke  4 0
+v00692    sa  v00690 v00691
+v00693    ke  2 0
+v00694    ta  v00693
+v00695    ko  v00692 v00694
+v00696    ke  1 0
+v00697    ke  164 0
+v00698    ko  v00697 v00695
+.         ti  v00698 v00696
+v00699    ke  0 0
+v00700    ke  1 0
+.         ti  v00700 v00699
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW29    ke  0 0
+LrxW29    ke  1 0
+v00701W29 ke  1 0
+v00702W29 ta  v00701W29
+v00703W29 ke  4 0
+.         se  v00702W29 v00703W29 Lrx
+.         so  Lrxe
+Lrx       ke  1 0
+v00701    ke  1 0
+v00702    ta  v00701
+v00703    ke  4 0
+v00704    ke  2 0
+v00705    ta  v00704
+v00706    ke  4 0
+v00707    sa  v00705 v00706
+v00708    ko  v00707 v00702
+v00709    ke  144 0
+v00710    ko  v00709 v00708
+v00711    ta  v00710
+v00712    ke  1 0
+v00713    ta  v00712
+v00714    ke  1 0
+v00715    ta  v00714
+v00716    ke  180 0
+v00717    ko  v00716 v00715
+v00718    ta  v00717
+v00719    ke  15 0
+.         ti  v00719 v00713
+.         su  v00718 v00711 Lrwz
+v00720    ke  15 0
+v00721    ta  v00720
+v00722    ke  1 0
+v00723    ke  180 0
+v00724    ko  v00723 v00721
+.         ti  v00724 v00722
+.         so  Lrwe
+Lrwz      ke  0 0
+v00725    ke  15 0
+v00726    ta  v00725
+v00727    ke  0 0
+v00728    ke  180 0
+v00729    ko  v00728 v00726
+.         ti  v00729 v00727
+Lrwe      ke  0 0
+v00730    ke  1 0
+v00731    ta  v00730
+v00732    ke  1 0
+v00733    ko  v00731 v00732
+v00734    ke  1 0
+.         ti  v00734 v00733
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW29    ke  0 0
+LrxW29z   ke  1 0
+v00701W29z ke  1 0
+v00702W29z ta  v00701W29z
+v00703W29z ke  4 0
+.         se  v00702W29z v00703W29z Lrx
+.         so  Lrxe                       # 境界に届いた
+Lrxe      ke  0 0
+Lrbn      ke  1 0
+v00735    ke  2 0
+v00736    ta  v00735
+v00737    ko  v00736 Lrbn
+v00738    ke  2 0
+.         ti  v00738 v00737
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW30    ke  0 0
+LrbW30z   ke  2 0
+v00678W30z ke  2 0
+v00679W30z ta  v00678W30z
+v00680W30z ke  6 0
+v00681W30z ta  v00680W30z
+.         se  v00679W30z v00681W30z Lrb
+.         so  Lrbe                       # 境界に届いた
+Lrbe      ke  0 0
+#   残りが零でなければ新しい基底になる。先頭の 1 の位置を pivot にする
+v00739    ke  0 0
+v00740    ke  1 0
+.         ti  v00740 v00739
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW31    ke  0 0
+LrlW31    ke  1 0
+v00741W31 ke  1 0
+v00742W31 ta  v00741W31
+v00743W31 ke  4 0
+.         se  v00742W31 v00743W31 Lrl
+.         so  Lrin
+Lrl       ke  1 0
+v00741    ke  1 0
+v00742    ta  v00741
+v00743    ke  4 0
+v00744    ke  180 0
+v00745    ko  v00744 v00742
+v00746    ta  v00745
+v00747    ke  1 0
+.         su  v00746 v00747 Lrnew
+v00748    ke  1 0
+v00749    ko  v00742 v00748
+v00750    ke  1 0
+.         ti  v00750 v00749
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW31    ke  0 0
+LrlW31z   ke  1 0
+v00741W31z ke  1 0
+v00742W31z ta  v00741W31z
+v00743W31z ke  4 0
+.         se  v00742W31z v00743W31z Lrl
+.         so  Lrin                       # 境界に届いた
+Lrnew     ke  0 0
+v00751    ke  6 0
+v00752    ta  v00751
+v00753    ke  1 0
+v00754    ta  v00753
+v00755    ke  160 0
+v00756    ko  v00755 v00752
+.         ti  v00756 v00754
+v00757    ke  0 0
+v00758    ta  v00757
+v00759    ke  4 0
+v00760    sa  v00758 v00759
+v00761    ke  6 0
+v00762    ta  v00761
+v00763    ko  v00760 v00762
+v00764    ke  1 0
+v00765    ke  164 0
+v00766    ko  v00765 v00763
+.         ti  v00766 v00764
+v00767    ke  0 0
+v00768    ke  1 0
+.         ti  v00768 v00767
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW32    ke  0 0
+LrsW32    ke  1 0
+v00769W32 ke  1 0
+v00770W32 ta  v00769W32
+v00771W32 ke  4 0
+.         se  v00770W32 v00771W32 Lrs
+.         so  Lrse
+Lrs       ke  1 0
+v00769    ke  1 0
+v00770    ta  v00769
+v00771    ke  4 0
+v00772    ke  6 0
+v00773    ta  v00772
+v00774    ke  4 0
+v00775    sa  v00773 v00774
+v00776    ko  v00775 v00770
+v00777    ke  180 0
+v00778    ko  v00777 v00770
+v00779    ta  v00778
+v00780    ke  144 0
+v00781    ko  v00780 v00776
+.         ti  v00781 v00779
+v00782    ke  1 0
+v00783    ko  v00770 v00782
+v00784    ke  1 0
+.         ti  v00784 v00783
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW32    ke  0 0
+LrsW32z   ke  1 0
+v00769W32z ke  1 0
+v00770W32z ta  v00769W32z
+v00771W32z ke  4 0
+.         se  v00770W32z v00771W32z Lrs
+.         so  Lrse                       # 境界に届いた
+Lrse      ke  0 0
+v00785    ke  6 0
+v00786    ta  v00785
+v00787    ke  1 0
+v00788    ko  v00786 v00787
+v00789    ke  6 0
+.         ti  v00789 v00788
+Lrin      ke  1 0
+v00790    ke  0 0
+v00791    ta  v00790
+v00792    ko  v00791 Lrin
+v00793    ke  0 0
+.         ti  v00793 v00792
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW33    ke  0 0
+LrkW33z   ke  0 0
+v00645W33z ke  0 0
+v00646W33z ta  v00645W33z
+v00647W33z ke  4 0
+.         se  v00646W33z v00647W33z Lrk
+.         so  Lrke                       # 境界に届いた
+Lrke      ke  0 0
+v00794    ke  6 0
+v00795    ta  v00794
+v00796    ke  26 0
+.         ti  v00796 v00795
+#   分離積が F を復元するか
+v00797    ke  0 0
+v00798    ke  0 0
+.         ti  v00798 v00797
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW36    ke  0 0
+Lv1W36    ke  0 0
+v00799W36 ke  0 0
+v00800W36 ta  v00799W36
+v00801W36 ke  4 0
+.         se  v00800W36 v00801W36 Lv1
+.         so  Lv1e
+Lv1       ke  0 0
+v00799    ke  0 0
+v00800    ta  v00799
+v00801    ke  4 0
+v00802    ke  0 0
+v00803    ke  1 0
+.         ti  v00803 v00802
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW35    ke  0 0
+Lv2W35    ke  1 0
+v00804W35 ke  1 0
+v00805W35 ta  v00804W35
+v00806W35 ke  4 0
+.         se  v00805W35 v00806W35 Lv2
+.         so  Lv2e
+Lv2       ke  1 0
+v00804    ke  1 0
+v00805    ta  v00804
+v00806    ke  4 0
+v00807    ke  0 0
+v00808    ke  3 0
+.         ti  v00808 v00807
+v00809    ke  0 0
+v00810    ke  2 0
+.         ti  v00810 v00809
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW34    ke  0 0
+Lv3W34    ke  2 0
+v00811W34 ke  2 0
+v00812W34 ta  v00811W34
+v00813W34 ke  6 0
+v00814W34 ta  v00813W34
+.         se  v00812W34 v00814W34 Lv3
+.         so  Lv3e
+Lv3       ke  2 0
+v00811    ke  2 0
+v00812    ta  v00811
+v00813    ke  6 0
+v00814    ta  v00813
+v00815    ke  0 0
+v00816    ta  v00815
+v00817    ke  4 0
+v00818    sa  v00816 v00817
+v00819    ko  v00818 v00812
+v00820    ke  164 0
+v00821    ko  v00820 v00819
+v00822    ta  v00821
+v00823    ke  2 0
+v00824    ta  v00823
+v00825    ke  4 0
+v00826    sa  v00824 v00825
+v00827    ke  1 0
+v00828    ta  v00827
+v00829    ko  v00826 v00828
+v00830    ke  144 0
+v00831    ko  v00830 v00829
+v00832    ta  v00831
+v00833    sa  v00822 v00832
+v00834    ke  3 0
+v00835    ta  v00834
+.         su  v00835 v00833 Lv3z
+v00836    ke  1 0
+v00837    ke  3 0
+.         ti  v00837 v00836
+.         so  Lv3n
+Lv3z      ke  0 0
+v00838    ke  0 0
+v00839    ke  3 0
+.         ti  v00839 v00838
+Lv3n      ke  1 0
+v00840    ke  2 0
+v00841    ta  v00840
+v00842    ko  v00841 Lv3n
+v00843    ke  2 0
+.         ti  v00843 v00842
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW34    ke  0 0
+Lv3W34z   ke  2 0
+v00811W34z ke  2 0
+v00812W34z ta  v00811W34z
+v00813W34z ke  6 0
+v00814W34z ta  v00813W34z
+.         se  v00812W34z v00814W34z Lv3
+.         so  Lv3e                       # 境界に届いた
+Lv3e      ke  0 0
+v00844    ke  3 0
+v00845    ta  v00844
+v00846    ke  0 0
+v00847    ta  v00846
+v00848    ke  4 0
+v00849    sa  v00847 v00848
+v00850    ke  1 0
+v00851    ta  v00850
+v00852    ko  v00849 v00851
+v00853    ke  128 0
+v00854    ko  v00853 v00852
+v00855    ta  v00854
+.         su  v00845 v00855 Lv2n
+.         so  Lko
+Lv2n      ke  1 0
+v00856    ke  1 0
+v00857    ta  v00856
+v00858    ko  v00857 Lv2n
+v00859    ke  1 0
+.         ti  v00859 v00858
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW35    ke  0 0
+Lv2W35z   ke  1 0
+v00804W35z ke  1 0
+v00805W35z ta  v00804W35z
+v00806W35z ke  4 0
+.         se  v00805W35z v00806W35z Lv2
+.         so  Lv2e                       # 境界に届いた
+Lv2e      ke  0 0
+v00860    ke  0 0
+v00861    ta  v00860
+v00862    ke  1 0
+v00863    ko  v00861 v00862
+v00864    ke  0 0
+.         ti  v00864 v00863
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW36    ke  0 0
+Lv1W36z   ke  0 0
+v00799W36z ke  0 0
+v00800W36z ta  v00799W36z
+v00801W36z ke  4 0
+.         se  v00800W36z v00801W36z Lv1
+.         so  Lv1e                       # 境界に届いた
+Lv1e      ke  0 0
+#   項を一つ落とすと復元しない。だから rho は最小本数になる
+v00865    ke  0 0
+v00866    ke  13 0
+.         ti  v00866 v00865
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW40    ke  0 0
+Lz0W40    ke  13 0
+v00867W40 ke  13 0
+v00868W40 ta  v00867W40
+v00869W40 ke  6 0
+v00870W40 ta  v00869W40
+.         se  v00868W40 v00870W40 Lz0
+.         so  Lz0e
+Lz0       ke  13 0
+v00867    ke  13 0
+v00868    ta  v00867
+v00869    ke  6 0
+v00870    ta  v00869
+v00871    ke  0 0
+v00872    ke  14 0
+.         ti  v00872 v00871
+v00873    ke  0 0
+v00874    ke  0 0
+.         ti  v00874 v00873
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW39    ke  0 0
+Lz1W39    ke  0 0
+v00875W39 ke  0 0
+v00876W39 ta  v00875W39
+v00877W39 ke  4 0
+.         se  v00876W39 v00877W39 Lz1
+.         so  Lz1e
+Lz1       ke  0 0
+v00875    ke  0 0
+v00876    ta  v00875
+v00877    ke  4 0
+v00878    ke  0 0
+v00879    ke  1 0
+.         ti  v00879 v00878
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW38    ke  0 0
+Lz2W38    ke  1 0
+v00880W38 ke  1 0
+v00881W38 ta  v00880W38
+v00882W38 ke  4 0
+.         se  v00881W38 v00882W38 Lz2
+.         so  Lz2e
+Lz2       ke  1 0
+v00880    ke  1 0
+v00881    ta  v00880
+v00882    ke  4 0
+v00883    ke  0 0
+v00884    ke  3 0
+.         ti  v00884 v00883
+v00885    ke  0 0
+v00886    ke  2 0
+.         ti  v00886 v00885
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW37    ke  0 0
+Lz3W37    ke  2 0
+v00887W37 ke  2 0
+v00888W37 ta  v00887W37
+v00889W37 ke  6 0
+v00890W37 ta  v00889W37
+.         se  v00888W37 v00890W37 Lz3
+.         so  Lz3e
+Lz3       ke  2 0
+v00887    ke  2 0
+v00888    ta  v00887
+v00889    ke  6 0
+v00890    ta  v00889
+v00891    ke  13 0
+v00892    ta  v00891
+.         su  v00888 v00892 Lz3n
+v00893    ke  0 0
+v00894    ta  v00893
+v00895    ke  4 0
+v00896    sa  v00894 v00895
+v00897    ke  2 0
+v00898    ta  v00897
+v00899    ko  v00896 v00898
+v00900    ke  164 0
+v00901    ko  v00900 v00899
+v00902    ta  v00901
+v00903    ke  2 0
+v00904    ta  v00903
+v00905    ke  4 0
+v00906    sa  v00904 v00905
+v00907    ke  1 0
+v00908    ta  v00907
+v00909    ko  v00906 v00908
+v00910    ke  144 0
+v00911    ko  v00910 v00909
+v00912    ta  v00911
+v00913    sa  v00902 v00912
+v00914    ke  3 0
+v00915    ta  v00914
+.         su  v00915 v00913 Lz3z
+v00916    ke  1 0
+v00917    ke  3 0
+.         ti  v00917 v00916
+.         so  Lz3n
+Lz3z      ke  0 0
+v00918    ke  0 0
+v00919    ke  3 0
+.         ti  v00919 v00918
+Lz3n      ke  1 0
+v00920    ke  2 0
+v00921    ta  v00920
+v00922    ko  v00921 Lz3n
+v00923    ke  2 0
+.         ti  v00923 v00922
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW37    ke  0 0
+Lz3W37z   ke  2 0
+v00887W37z ke  2 0
+v00888W37z ta  v00887W37z
+v00889W37z ke  6 0
+v00890W37z ta  v00889W37z
+.         se  v00888W37z v00890W37z Lz3
+.         so  Lz3e                       # 境界に届いた
+Lz3e      ke  0 0
+v00924    ke  3 0
+v00925    ta  v00924
+v00926    ke  0 0
+v00927    ta  v00926
+v00928    ke  4 0
+v00929    sa  v00927 v00928
+v00930    ke  1 0
+v00931    ta  v00930
+v00932    ko  v00929 v00931
+v00933    ke  128 0
+v00934    ko  v00933 v00932
+v00935    ta  v00934
+.         su  v00925 v00935 Lz2n
+v00936    ke  1 0
+v00937    ke  14 0
+.         ti  v00937 v00936
+Lz2n      ke  1 0
+v00938    ke  1 0
+v00939    ta  v00938
+v00940    ko  v00939 Lz2n
+v00941    ke  1 0
+.         ti  v00941 v00940
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW38    ke  0 0
+Lz2W38z   ke  1 0
+v00880W38z ke  1 0
+v00881W38z ta  v00880W38z
+v00882W38z ke  4 0
+.         se  v00881W38z v00882W38z Lz2
+.         so  Lz2e                       # 境界に届いた
+Lz2e      ke  0 0
+v00942    ke  0 0
+v00943    ta  v00942
+v00944    ke  1 0
+v00945    ko  v00943 v00944
+v00946    ke  0 0
+.         ti  v00946 v00945
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW39    ke  0 0
+Lz1W39z   ke  0 0
+v00875W39z ke  0 0
+v00876W39z ta  v00875W39z
+v00877W39z ke  4 0
+.         se  v00876W39z v00877W39z Lz1
+.         so  Lz1e                       # 境界に届いた
+Lz1e      ke  0 0
+v00947    ke  14 0
+v00948    ta  v00947
+v00949    ke  1 0
+.         su  v00948 v00949 Lz0n
+.         so  Lko
+Lz0n      ke  1 0
+v00950    ke  13 0
+v00951    ta  v00950
+v00952    ko  v00951 Lz0n
+v00953    ke  13 0
+.         ti  v00953 v00952
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW40    ke  0 0
+Lz0W40z   ke  13 0
+v00867W40z ke  13 0
+v00868W40z ta  v00867W40z
+v00869W40z ke  6 0
+v00870W40z ta  v00869W40z
+.         se  v00868W40z v00870W40z Lz0
+.         so  Lz0e                       # 境界に届いた
+Lz0e      ke  0 0
+
+# ======== R5  軌道縮約（定理 5.1、定理 5.2）========
+# f の自己同型 pi について、正規形の係数は軌道の上で一定になる。
+#     pi ∈ Aut(f)  =>  a_{pi(T)} = a_T
+# 完全対称な f では a_T は |T| だけで決まり、実効的な係数は n+1 個へ落ちる。
+# さらに閉形評価が立つ。
+#     f(x) = ⊕_k â_k [ k ⊆_2 h ],    h は入力のハミング重み
+# ⊆_2 は二進のけたごとの包含であり、Lucas の定理から出る。
+#   a5: ANF を作る（1 章 R1、二値層）
+v00954    ke  0 0
+v00955    ke  0 0
+.         ti  v00955 v00954
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW41    ke  0 0
+La5cW41   ke  0 0
+v00956W41 ke  0 0
+v00957W41 ta  v00956W41
+v00958W41 ke  16 0
+.         se  v00957W41 v00958W41 La5c
+.         so  La5ce
+La5c      ke  0 0
+v00956    ke  0 0
+v00957    ta  v00956
+v00958    ke  16 0
+v00959    ke  192 0
+v00960    ko  v00959 v00957
+v00961    ta  v00960
+v00962    ke  208 0
+v00963    ko  v00962 v00957
+.         ti  v00963 v00961
+v00964    ke  0 0
+v00965    ta  v00964
+v00966    ke  1 0
+v00967    ko  v00965 v00966
+v00968    ke  0 0
+.         ti  v00968 v00967
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW41    ke  0 0
+La5cW41z  ke  0 0
+v00956W41z ke  0 0
+v00957W41z ta  v00956W41z
+v00958W41z ke  16 0
+.         se  v00957W41z v00958W41z La5c
+.         so  La5ce                      # 境界に届いた
+La5ce     ke  0 0
+v00969    ke  0 0
+v00970    ke  2 0
+.         ti  v00970 v00969
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW44    ke  0 0
+La5kW44   ke  2 0
+v00971W44 ke  2 0
+v00972W44 ta  v00971W44
+v00973W44 ke  4 0
+.         se  v00972W44 v00973W44 La5k
+.         so  La5ke
+La5k      ke  2 0
+v00971    ke  2 0
+v00972    ta  v00971
+v00973    ke  4 0
+v00974    ke  16 0
+v00975    ko  v00974 v00972
+v00976    ta  v00975
+v00977    ke  9 0
+.         ti  v00977 v00976
+v00978    ke  1 0
+v00979    ko  v00972 v00978
+v00980    ke  16 0
+v00981    ko  v00980 v00979
+v00982    ta  v00981
+v00983    ke  10 0
+.         ti  v00983 v00982
+v00984    ke  0 0
+v00985    ke  1 0
+.         ti  v00985 v00984
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW43    ke  0 0
+La5bW43   ke  1 0
+v00986W43 ke  1 0
+v00987W43 ta  v00986W43
+v00988W43 ke  16 0
+.         se  v00987W43 v00988W43 La5b
+.         so  La5be
+La5b      ke  1 0
+v00986    ke  1 0
+v00987    ta  v00986
+v00988    ke  16 0
+La5bb     ke  0 0
+v00989    ke  0 0
+v00990    ke  0 0
+.         ti  v00990 v00989
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW42    ke  0 0
+La5oW42   ke  0 0
+v00991W42 ke  0 0
+v00992W42 ta  v00991W42
+v00993W42 ke  9 0
+v00994W42 ta  v00993W42
+.         se  v00992W42 v00994W42 La5o
+.         so  La5oe
+La5o      ke  0 0
+v00991    ke  0 0
+v00992    ta  v00991
+v00993    ke  9 0
+v00994    ta  v00993
+La5ob     ke  0 0
+v00995    ke  1 0
+v00996    ta  v00995
+v00997    ke  0 0
+v00998    ta  v00997
+v00999    ko  v00996 v00998
+v01000    ke  9 0
+v01001    ta  v01000
+v01002    ko  v00999 v01001
+v01003    ke  208 0
+v01004    ko  v01003 v01002
+v01005    ta  v01004
+v01006    ke  208 0
+v01007    ko  v01006 v00999
+v01008    ta  v01007
+v01009    ke  15 0
+.         ti  v01009 v01002
+.         su  v01005 v01008 La5xz
+v01010    ke  15 0
+v01011    ta  v01010
+v01012    ke  1 0
+v01013    ke  208 0
+v01014    ko  v01013 v01011
+.         ti  v01014 v01012
+.         so  La5xe
+La5xz     ke  0 0
+v01015    ke  15 0
+v01016    ta  v01015
+v01017    ke  0 0
+v01018    ke  208 0
+v01019    ko  v01018 v01016
+.         ti  v01019 v01017
+La5xe     ke  0 0
+v01020    ke  0 0
+v01021    ta  v01020
+v01022    ke  1 0
+v01023    ko  v01021 v01022
+v01024    ke  0 0
+.         ti  v01024 v01023
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW42    ke  0 0
+La5oW42z  ke  0 0
+v00991W42z ke  0 0
+v00992W42z ta  v00991W42z
+v00993W42z ke  9 0
+v00994W42z ta  v00993W42z
+.         se  v00992W42z v00994W42z La5o
+.         so  La5oe                      # 境界に届いた
+La5oe     ke  0 0
+v01025    ke  1 0
+v01026    ta  v01025
+v01027    ke  10 0
+v01028    ta  v01027
+v01029    ko  v01026 v01028
+v01030    ke  1 0
+.         ti  v01030 v01029
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW43    ke  0 0
+La5bW43z  ke  1 0
+v00986W43z ke  1 0
+v00987W43z ta  v00986W43z
+v00988W43z ke  16 0
+.         se  v00987W43z v00988W43z La5b
+.         so  La5be                      # 境界に届いた
+La5be     ke  0 0
+v01031    ke  2 0
+v01032    ta  v01031
+v01033    ke  1 0
+v01034    ko  v01032 v01033
+v01035    ke  2 0
+.         ti  v01035 v01034
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW44    ke  0 0
+La5kW44z  ke  2 0
+v00971W44z ke  2 0
+v00972W44z ta  v00971W44z
+v00973W44z ke  4 0
+.         se  v00972W44z v00973W44z La5k
+.         so  La5ke                      # 境界に届いた
+La5ke     ke  0 0
+#   â_k を取り出す。同時に a_T = â_{|T|} を確かめる
+v01036    ke  0 0
+v01037    ke  0 0
+.         ti  v01037 v01036
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW45    ke  0 0
+LhzW45    ke  0 0
+v01038W45 ke  0 0
+v01039W45 ta  v01038W45
+v01040W45 ke  5 0
+.         se  v01039W45 v01040W45 Lhz
+.         so  Lhze
+Lhz       ke  0 0
+v01038    ke  0 0
+v01039    ta  v01038
+v01040    ke  5 0
+v01041    ke  0 0
+v01042    ke  224 0
+v01043    ko  v01042 v01039
+.         ti  v01043 v01041
+v01044    ke  1 0
+v01045    ko  v01039 v01044
+v01046    ke  0 0
+.         ti  v01046 v01045
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW45    ke  0 0
+LhzW45z   ke  0 0
+v01038W45z ke  0 0
+v01039W45z ta  v01038W45z
+v01040W45z ke  5 0
+.         se  v01039W45z v01040W45z Lhz
+.         so  Lhze                       # 境界に届いた
+Lhze      ke  0 0
+v01047    ke  0 0
+v01048    ke  0 0
+.         ti  v01048 v01047
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW47    ke  0 0
+LhaW47    ke  0 0
+v01049W47 ke  0 0
+v01050W47 ta  v01049W47
+v01051W47 ke  16 0
+.         se  v01050W47 v01051W47 Lha
+.         so  Lhae
+Lha       ke  0 0
+v01049    ke  0 0
+v01050    ta  v01049
+v01051    ke  16 0
+v01052    ke  0 0
+v01053    ke  3 0
+.         ti  v01053 v01052
+v01054    ke  0 0
+v01055    ke  1 0
+.         ti  v01055 v01054
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW46    ke  0 0
+LhcW46    ke  1 0
+v01056W46 ke  1 0
+v01057W46 ta  v01056W46
+v01058W46 ke  4 0
+.         se  v01057W46 v01058W46 Lhc
+.         so  Lhce
+Lhc       ke  1 0
+v01056    ke  1 0
+v01057    ta  v01056
+v01058    ke  4 0
+v01059    ke  3 0
+v01060    ta  v01059
+v01061    ke  0 0
+v01062    ta  v01061
+v01063    ke  4 0
+v01064    sa  v01062 v01063
+v01065    ko  v01064 v01057
+v01066    ke  32 0
+v01067    ko  v01066 v01065
+v01068    ta  v01067
+v01069    ko  v01060 v01068
+v01070    ke  3 0
+.         ti  v01070 v01069
+v01071    ke  1 0
+v01072    ko  v01057 v01071
+v01073    ke  1 0
+.         ti  v01073 v01072
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW46    ke  0 0
+LhcW46z   ke  1 0
+v01056W46z ke  1 0
+v01057W46z ta  v01056W46z
+v01058W46z ke  4 0
+.         se  v01057W46z v01058W46z Lhc
+.         so  Lhce                       # 境界に届いた
+Lhce      ke  0 0
+v01074    ke  0 0
+v01075    ta  v01074
+v01076    ke  208 0
+v01077    ko  v01076 v01075
+v01078    ta  v01077
+v01079    ke  1 0
+.         su  v01078 v01079 Lhs
+.         so  Lhan
+Lhs       ke  0 0
+v01080    ke  3 0
+v01081    ta  v01080
+v01082    ke  1 0
+v01083    ke  224 0
+v01084    ko  v01083 v01081
+.         ti  v01084 v01082
+Lhan      ke  1 0
+v01085    ke  0 0
+v01086    ta  v01085
+v01087    ko  v01086 Lhan
+v01088    ke  0 0
+.         ti  v01088 v01087
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW47    ke  0 0
+LhaW47z   ke  0 0
+v01049W47z ke  0 0
+v01050W47z ta  v01049W47z
+v01051W47z ke  16 0
+.         se  v01050W47z v01051W47z Lha
+.         so  Lhae                       # 境界に届いた
+Lhae      ke  0 0
+#   すべての T で a_T = â_{|T|} になるか
+v01089    ke  0 0
+v01090    ke  0 0
+.         ti  v01090 v01089
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW49    ke  0 0
+LhbW49    ke  0 0
+v01091W49 ke  0 0
+v01092W49 ta  v01091W49
+v01093W49 ke  16 0
+.         se  v01092W49 v01093W49 Lhb
+.         so  Lhbe
+Lhb       ke  0 0
+v01091    ke  0 0
+v01092    ta  v01091
+v01093    ke  16 0
+v01094    ke  0 0
+v01095    ke  3 0
+.         ti  v01095 v01094
+v01096    ke  0 0
+v01097    ke  1 0
+.         ti  v01097 v01096
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW48    ke  0 0
+LhdW48    ke  1 0
+v01098W48 ke  1 0
+v01099W48 ta  v01098W48
+v01100W48 ke  4 0
+.         se  v01099W48 v01100W48 Lhd
+.         so  Lhde
+Lhd       ke  1 0
+v01098    ke  1 0
+v01099    ta  v01098
+v01100    ke  4 0
+v01101    ke  3 0
+v01102    ta  v01101
+v01103    ke  0 0
+v01104    ta  v01103
+v01105    ke  4 0
+v01106    sa  v01104 v01105
+v01107    ko  v01106 v01099
+v01108    ke  32 0
+v01109    ko  v01108 v01107
+v01110    ta  v01109
+v01111    ko  v01102 v01110
+v01112    ke  3 0
+.         ti  v01112 v01111
+v01113    ke  1 0
+v01114    ko  v01099 v01113
+v01115    ke  1 0
+.         ti  v01115 v01114
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW48    ke  0 0
+LhdW48z   ke  1 0
+v01098W48z ke  1 0
+v01099W48z ta  v01098W48z
+v01100W48z ke  4 0
+.         se  v01099W48z v01100W48z Lhd
+.         so  Lhde                       # 境界に届いた
+Lhde      ke  0 0
+v01116    ke  0 0
+v01117    ta  v01116
+v01118    ke  208 0
+v01119    ko  v01118 v01117
+v01120    ta  v01119
+v01121    ke  3 0
+v01122    ta  v01121
+v01123    ke  224 0
+v01124    ko  v01123 v01122
+v01125    ta  v01124
+.         su  v01120 v01125 Lhbn
+.         so  Lko
+Lhbn      ke  1 0
+v01126    ke  0 0
+v01127    ta  v01126
+v01128    ko  v01127 Lhbn
+v01129    ke  0 0
+.         ti  v01129 v01128
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW49    ke  0 0
+LhbW49z   ke  0 0
+v01091W49z ke  0 0
+v01092W49z ta  v01091W49z
+v01093W49z ke  16 0
+.         se  v01092W49z v01093W49z Lhb
+.         so  Lhbe                       # 境界に届いた
+Lhbe      ke  0 0
+#   互換 pi による係数の不変性。けた p と q を入れ替える
+v01130    ke  0 0
+v01131    ke  9 0
+.         ti  v01131 v01130
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW52    ke  0 0
+Lp1W52    ke  9 0
+v01132W52 ke  9 0
+v01133W52 ta  v01132W52
+v01134W52 ke  4 0
+.         se  v01133W52 v01134W52 Lp1
+.         so  Lp1e
+Lp1       ke  9 0
+v01132    ke  9 0
+v01133    ta  v01132
+v01134    ke  4 0
+v01135    ke  1 0
+v01136    ko  v01133 v01135
+v01137    ke  10 0
+.         ti  v01137 v01136
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW51    ke  0 0
+Lp2W51    ke  10 0
+v01138W51 ke  10 0
+v01139W51 ta  v01138W51
+v01140W51 ke  4 0
+.         se  v01139W51 v01140W51 Lp2
+.         so  Lp2e
+Lp2       ke  10 0
+v01138    ke  10 0
+v01139    ta  v01138
+v01140    ke  4 0
+v01141    ke  0 0
+v01142    ke  0 0
+.         ti  v01142 v01141
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW50    ke  0 0
+Lp3W50    ke  0 0
+v01143W50 ke  0 0
+v01144W50 ta  v01143W50
+v01145W50 ke  16 0
+.         se  v01144W50 v01145W50 Lp3
+.         so  Lp3e
+Lp3       ke  0 0
+v01143    ke  0 0
+v01144    ta  v01143
+v01145    ke  16 0
+#     T のけた p と q を交換した T' を作る
+v01146    ke  12 0
+.         ti  v01146 v01144
+#     BIT[NB*T + b] は T のけた b そのものになる
+v01147    ke  0 0
+v01148    ta  v01147
+v01149    ke  4 0
+v01150    sa  v01148 v01149
+v01151    ke  9 0
+v01152    ta  v01151
+v01153    ko  v01150 v01152
+v01154    ke  32 0
+v01155    ko  v01154 v01153
+v01156    ta  v01155
+v01157    ke  0 0
+v01158    ta  v01157
+v01159    ke  4 0
+v01160    sa  v01158 v01159
+v01161    ke  10 0
+v01162    ta  v01161
+v01163    ko  v01160 v01162
+v01164    ke  32 0
+v01165    ko  v01164 v01163
+v01166    ta  v01165
+v01167    ke  14 0
+.         ti  v01167 v01156
+v01168    ke  15 0
+.         ti  v01168 v01166
+v01169    ke  14 0
+v01170    ta  v01169
+v01171    ke  15 0
+v01172    ta  v01171
+.         su  v01170 v01172 Lp3s
+#     けたが違うときだけ番号が動く
+v01173    ke  9 0
+v01174    ta  v01173
+v01175    ke  16 0
+v01176    ko  v01175 v01174
+v01177    ta  v01176
+v01178    ke  10 0
+v01179    ta  v01178
+v01180    ke  16 0
+v01181    ko  v01180 v01179
+v01182    ta  v01181
+v01183    ke  14 0
+v01184    ta  v01183
+v01185    ke  1 0
+.         su  v01184 v01185 Lp3a
+v01186    ke  12 0
+v01187    ta  v01186
+v01188    si  v01182
+v01189    ko  v01177 v01188
+v01190    ko  v01187 v01189
+v01191    ke  12 0
+.         ti  v01191 v01190
+.         so  Lp3s
+Lp3a      ke  0 0
+v01192    ke  12 0
+v01193    ta  v01192
+v01194    si  v01177
+v01195    ko  v01182 v01194
+v01196    ko  v01193 v01195
+v01197    ke  12 0
+.         ti  v01197 v01196
+Lp3s      ke  0 0
+v01198    ke  0 0
+v01199    ta  v01198
+v01200    ke  208 0
+v01201    ko  v01200 v01199
+v01202    ta  v01201
+v01203    ke  12 0
+v01204    ta  v01203
+v01205    ke  208 0
+v01206    ko  v01205 v01204
+v01207    ta  v01206
+.         su  v01202 v01207 Lp3n
+.         so  Lko
+Lp3n      ke  1 0
+v01208    ke  0 0
+v01209    ta  v01208
+v01210    ko  v01209 Lp3n
+v01211    ke  0 0
+.         ti  v01211 v01210
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW50    ke  0 0
+Lp3W50z   ke  0 0
+v01143W50z ke  0 0
+v01144W50z ta  v01143W50z
+v01145W50z ke  16 0
+.         se  v01144W50z v01145W50z Lp3
+.         so  Lp3e                       # 境界に届いた
+Lp3e      ke  0 0
+v01212    ke  10 0
+v01213    ta  v01212
+v01214    ke  1 0
+v01215    ko  v01213 v01214
+v01216    ke  10 0
+.         ti  v01216 v01215
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW51    ke  0 0
+Lp2W51z   ke  10 0
+v01138W51z ke  10 0
+v01139W51z ta  v01138W51z
+v01140W51z ke  4 0
+.         se  v01139W51z v01140W51z Lp2
+.         so  Lp2e                       # 境界に届いた
+Lp2e      ke  0 0
+v01217    ke  9 0
+v01218    ta  v01217
+v01219    ke  1 0
+v01220    ko  v01218 v01219
+v01221    ke  9 0
+.         ti  v01221 v01220
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW52    ke  0 0
+Lp1W52z   ke  9 0
+v01132W52z ke  9 0
+v01133W52z ta  v01132W52z
+v01134W52z ke  4 0
+.         se  v01133W52z v01134W52z Lp1
+.         so  Lp1e                       # 境界に届いた
+Lp1e      ke  0 0
+#   定理 5.2  閉形評価。k ⊆_2 h をけたごとの包含で読む
+v01222    ke  0 0
+v01223    ke  0 0
+.         ti  v01223 v01222
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW56    ke  0 0
+Lq1W56    ke  0 0
+v01224W56 ke  0 0
+v01225W56 ta  v01224W56
+v01226W56 ke  16 0
+.         se  v01225W56 v01226W56 Lq1
+.         so  Lq1e
+Lq1       ke  0 0
+v01224    ke  0 0
+v01225    ta  v01224
+v01226    ke  16 0
+#     重み h を数える
+v01227    ke  0 0
+v01228    ke  3 0
+.         ti  v01228 v01227
+v01229    ke  0 0
+v01230    ke  1 0
+.         ti  v01230 v01229
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW53    ke  0 0
+Lq2W53    ke  1 0
+v01231W53 ke  1 0
+v01232W53 ta  v01231W53
+v01233W53 ke  4 0
+.         se  v01232W53 v01233W53 Lq2
+.         so  Lq2e
+Lq2       ke  1 0
+v01231    ke  1 0
+v01232    ta  v01231
+v01233    ke  4 0
+v01234    ke  3 0
+v01235    ta  v01234
+v01236    ke  0 0
+v01237    ta  v01236
+v01238    ke  4 0
+v01239    sa  v01237 v01238
+v01240    ko  v01239 v01232
+v01241    ke  32 0
+v01242    ko  v01241 v01240
+v01243    ta  v01242
+v01244    ko  v01235 v01243
+v01245    ke  3 0
+.         ti  v01245 v01244
+v01246    ke  1 0
+v01247    ko  v01232 v01246
+v01248    ke  1 0
+.         ti  v01248 v01247
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW53    ke  0 0
+Lq2W53z   ke  1 0
+v01231W53z ke  1 0
+v01232W53z ta  v01231W53z
+v01233W53z ke  4 0
+.         se  v01232W53z v01233W53z Lq2
+.         so  Lq2e                       # 境界に届いた
+Lq2e      ke  0 0
+v01249    ke  3 0
+v01250    ta  v01249
+v01251    ke  11 0
+.         ti  v01251 v01250
+v01252    ke  0 0
+v01253    ke  12 0
+.         ti  v01253 v01252
+v01254    ke  0 0
+v01255    ke  2 0
+.         ti  v01255 v01254
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW55    ke  0 0
+Lq3W55    ke  2 0
+v01256W55 ke  2 0
+v01257W55 ta  v01256W55
+v01258W55 ke  5 0
+.         se  v01257W55 v01258W55 Lq3
+.         so  Lq3e
+Lq3       ke  2 0
+v01256    ke  2 0
+v01257    ta  v01256
+v01258    ke  5 0
+v01259    ke  224 0
+v01260    ko  v01259 v01257
+v01261    ta  v01260
+v01262    ke  0 0
+.         su  v01261 v01262 Lq3n
+#     k ⊆_2 h か。どこかで k のけたが大きければ含まれない
+v01263    ke  0 0
+v01264    ke  1 0
+.         ti  v01264 v01263
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW54    ke  0 0
+Lq4W54    ke  1 0
+v01265W54 ke  1 0
+v01266W54 ta  v01265W54
+v01267W54 ke  4 0
+.         se  v01266W54 v01267W54 Lq4
+.         so  Lq4y
+Lq4       ke  1 0
+v01265    ke  1 0
+v01266    ta  v01265
+v01267    ke  4 0
+v01268    ke  2 0
+v01269    ta  v01268
+v01270    ke  4 0
+v01271    sa  v01269 v01270
+v01272    ko  v01271 v01266
+v01273    ke  32 0
+v01274    ko  v01273 v01272
+v01275    ta  v01274
+v01276    ke  11 0
+v01277    ta  v01276
+v01278    ke  4 0
+v01279    sa  v01277 v01278
+v01280    ke  1 0
+v01281    ta  v01280
+v01282    ko  v01279 v01281
+v01283    ke  32 0
+v01284    ko  v01283 v01282
+v01285    ta  v01284
+.         se  v01285 v01275 Lq3n
+v01286    ke  1 0
+v01287    ta  v01286
+v01288    ke  1 0
+v01289    ko  v01287 v01288
+v01290    ke  1 0
+.         ti  v01290 v01289
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW54    ke  0 0
+Lq4W54z   ke  1 0
+v01265W54z ke  1 0
+v01266W54z ta  v01265W54z
+v01267W54z ke  4 0
+.         se  v01266W54z v01267W54z Lq4
+.         so  Lq4y                       # 境界に届いた
+Lq4y      ke  0 0
+v01291    ke  12 0
+v01292    ta  v01291
+v01293    ke  1 0
+.         su  v01292 v01293 Lq4z
+v01294    ke  1 0
+v01295    ke  12 0
+.         ti  v01295 v01294
+.         so  Lq3n
+Lq4z      ke  0 0
+v01296    ke  0 0
+v01297    ke  12 0
+.         ti  v01297 v01296
+Lq3n      ke  1 0
+v01298    ke  2 0
+v01299    ta  v01298
+v01300    ko  v01299 Lq3n
+v01301    ke  2 0
+.         ti  v01301 v01300
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW55    ke  0 0
+Lq3W55z   ke  2 0
+v01256W55z ke  2 0
+v01257W55z ta  v01256W55z
+v01258W55z ke  5 0
+.         se  v01257W55z v01258W55z Lq3
+.         so  Lq3e                       # 境界に届いた
+Lq3e      ke  0 0
+v01302    ke  12 0
+v01303    ta  v01302
+v01304    ke  0 0
+v01305    ta  v01304
+v01306    ke  192 0
+v01307    ko  v01306 v01305
+v01308    ta  v01307
+.         su  v01303 v01308 Lq1n
+.         so  Lko
+Lq1n      ke  1 0
+v01309    ke  0 0
+v01310    ta  v01309
+v01311    ko  v01310 Lq1n
+v01312    ke  0 0
+.         ti  v01312 v01311
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW56    ke  0 0
+Lq1W56z   ke  0 0
+v01224W56z ke  0 0
+v01225W56z ta  v01224W56z
+v01226W56z ke  16 0
+.         se  v01225W56z v01226W56z Lq1
+.         so  Lq1e                       # 境界に届いた
+Lq1e      ke  0 0
+
+#   結果を OUT へ
+v01313    ke  0 0
+v01314    ke  0 0
+.         ti  v01314 v01313
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW57    ke  0 0
+Lw0W57    ke  0 0
+v01315W57 ke  0 0
+v01316W57 ta  v01315W57
+v01317W57 ke  4 0
+.         se  v01316W57 v01317W57 Lw0
+.         so  Lw0e
+Lw0       ke  0 0
+v01315    ke  0 0
+v01316    ta  v01315
+v01317    ke  4 0
+v01318    ke  108 0
+v01319    ko  v01318 v01316
+v01320    ta  v01319
+v01321    ke  256 0
+v01322    ko  v01321 v01316
+.         ti  v01322 v01320
+v01323    ke  1 0
+v01324    ko  v01316 v01323
+v01325    ke  0 0
+.         ti  v01325 v01324
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW57    ke  0 0
+Lw0W57z   ke  0 0
+v01315W57z ke  0 0
+v01316W57z ta  v01315W57z
+v01317W57z ke  4 0
+.         se  v01316W57z v01317W57z Lw0
+.         so  Lw0e                       # 境界に届いた
+Lw0e      ke  0 0
+v01326    ke  0 0
+v01327    ke  0 0
+.         ti  v01327 v01326
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW58    ke  0 0
+Lw4W58    ke  0 0
+v01328W58 ke  0 0
+v01329W58 ta  v01328W58
+v01330W58 ke  4 0
+.         se  v01329W58 v01330W58 Lw4
+.         so  Lw4e
+Lw4       ke  0 0
+v01328    ke  0 0
+v01329    ta  v01328
+v01330    ke  4 0
+v01331    ke  112 0
+v01332    ko  v01331 v01329
+v01333    ta  v01332
+v01334    ke  260 0
+v01335    ko  v01334 v01329
+.         ti  v01335 v01333
+v01336    ke  1 0
+v01337    ko  v01329 v01336
+v01338    ke  0 0
+.         ti  v01338 v01337
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW58    ke  0 0
+Lw4W58z   ke  0 0
+v01328W58z ke  0 0
+v01329W58z ta  v01328W58z
+v01330W58z ke  4 0
+.         se  v01329W58z v01330W58z Lw4
+.         so  Lw4e                       # 境界に届いた
+Lw4e      ke  0 0
+v01339    ke  0 0
+v01340    ke  0 0
+.         ti  v01340 v01339
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW59    ke  0 0
+Lw8W59    ke  0 0
+v01341W59 ke  0 0
+v01342W59 ta  v01341W59
+v01343W59 ke  4 0
+.         se  v01342W59 v01343W59 Lw8
+.         so  Lw8e
+Lw8       ke  0 0
+v01341    ke  0 0
+v01342    ta  v01341
+v01343    ke  4 0
+v01344    ke  116 0
+v01345    ko  v01344 v01342
+v01346    ta  v01345
+v01347    ke  264 0
+v01348    ko  v01347 v01342
+.         ti  v01348 v01346
+v01349    ke  1 0
+v01350    ko  v01342 v01349
+v01351    ke  0 0
+.         ti  v01351 v01350
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW59    ke  0 0
+Lw8W59z   ke  0 0
+v01341W59z ke  0 0
+v01342W59z ta  v01341W59z
+v01343W59z ke  4 0
+.         se  v01342W59z v01343W59z Lw8
+.         so  Lw8e                       # 境界に届いた
+Lw8e      ke  0 0
+v01352    ke  0 0
+v01353    ke  0 0
+.         ti  v01353 v01352
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW60    ke  0 0
+Lw12W60   ke  0 0
+v01354W60 ke  0 0
+v01355W60 ta  v01354W60
+v01356W60 ke  4 0
+.         se  v01355W60 v01356W60 Lw12
+.         so  Lw12e
+Lw12      ke  0 0
+v01354    ke  0 0
+v01355    ta  v01354
+v01356    ke  4 0
+v01357    ke  120 0
+v01358    ko  v01357 v01355
+v01359    ta  v01358
+v01360    ke  268 0
+v01361    ko  v01360 v01355
+.         ti  v01361 v01359
+v01362    ke  1 0
+v01363    ko  v01355 v01362
+v01364    ke  0 0
+.         ti  v01364 v01363
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW60    ke  0 0
+Lw12W60z  ke  0 0
+v01354W60z ke  0 0
+v01355W60z ta  v01354W60z
+v01356W60z ke  4 0
+.         se  v01355W60z v01356W60z Lw12
+.         so  Lw12e                      # 境界に届いた
+Lw12e     ke  0 0
+v01365    ke  0 0
+v01366    ke  21 0
+v01367    ta  v01366
+v01368    ke  272 0
+v01369    ko  v01368 v01365
+.         ti  v01369 v01367
+v01370    ke  0 0
+v01371    ke  22 0
+v01372    ta  v01371
+v01373    ke  273 0
+v01374    ko  v01373 v01370
+.         ti  v01374 v01372
+v01375    ke  0 0
+v01376    ke  23 0
+v01377    ta  v01376
+v01378    ke  274 0
+v01379    ko  v01378 v01375
+.         ti  v01379 v01377
+v01380    ke  0 0
+v01381    ke  24 0
+v01382    ta  v01381
+v01383    ke  275 0
+v01384    ko  v01383 v01380
+.         ti  v01384 v01382
+v01385    ke  0 0
+v01386    ke  25 0
+v01387    ta  v01386
+v01388    ke  276 0
+v01389    ko  v01388 v01385
+.         ti  v01389 v01387
+v01390    ke  0 0
+v01391    ke  0 0
+.         ti  v01391 v01390
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW61    ke  0 0
+Lw21W61   ke  0 0
+v01392W61 ke  0 0
+v01393W61 ta  v01392W61
+v01394W61 ke  16 0
+.         se  v01393W61 v01394W61 Lw21
+.         so  Lw21e
+Lw21      ke  0 0
+v01392    ke  0 0
+v01393    ta  v01392
+v01394    ke  16 0
+v01395    ke  128 0
+v01396    ko  v01395 v01393
+v01397    ta  v01396
+v01398    ke  277 0
+v01399    ko  v01398 v01393
+.         ti  v01399 v01397
+v01400    ke  1 0
+v01401    ko  v01393 v01400
+v01402    ke  0 0
+.         ti  v01402 v01401
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW61    ke  0 0
+Lw21W61z  ke  0 0
+v01392W61z ke  0 0
+v01393W61z ta  v01392W61z
+v01394W61z ke  16 0
+.         se  v01393W61z v01394W61z Lw21
+.         so  Lw21e                      # 境界に届いた
+Lw21e     ke  0 0
+v01403    ke  0 0
+v01404    ke  26 0
+v01405    ta  v01404
+v01406    ke  293 0
+v01407    ko  v01406 v01403
+.         ti  v01407 v01405
+v01408    ke  0 0
+v01409    ke  0 0
+.         ti  v01409 v01408
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW62    ke  0 0
+Lw38W62   ke  0 0
+v01410W62 ke  0 0
+v01411W62 ta  v01410W62
+v01412W62 ke  16 0
+.         se  v01411W62 v01412W62 Lw38
+.         so  Lw38e
+Lw38      ke  0 0
+v01410    ke  0 0
+v01411    ta  v01410
+v01412    ke  16 0
+v01413    ke  144 0
+v01414    ko  v01413 v01411
+v01415    ta  v01414
+v01416    ke  294 0
+v01417    ko  v01416 v01411
+.         ti  v01417 v01415
+v01418    ke  1 0
+v01419    ko  v01411 v01418
+v01420    ke  0 0
+.         ti  v01420 v01419
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW62    ke  0 0
+Lw38W62z  ke  0 0
+v01410W62z ke  0 0
+v01411W62z ta  v01410W62z
+v01412W62z ke  16 0
+.         se  v01411W62z v01412W62z Lw38
+.         so  Lw38e                      # 境界に届いた
+Lw38e     ke  0 0
+v01421    ke  0 0
+v01422    ke  0 0
+.         ti  v01422 v01421
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW63    ke  0 0
+Lw54W63   ke  0 0
+v01423W63 ke  0 0
+v01424W63 ta  v01423W63
+v01425W63 ke  16 0
+.         se  v01424W63 v01425W63 Lw54
+.         so  Lw54e
+Lw54      ke  0 0
+v01423    ke  0 0
+v01424    ta  v01423
+v01425    ke  16 0
+v01426    ke  164 0
+v01427    ko  v01426 v01424
+v01428    ta  v01427
+v01429    ke  310 0
+v01430    ko  v01429 v01424
+.         ti  v01430 v01428
+v01431    ke  1 0
+v01432    ko  v01424 v01431
+v01433    ke  0 0
+.         ti  v01433 v01432
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW63    ke  0 0
+Lw54W63z  ke  0 0
+v01423W63z ke  0 0
+v01424W63z ta  v01423W63z
+v01425W63z ke  16 0
+.         se  v01424W63z v01425W63z Lw54
+.         so  Lw54e                      # 境界に届いた
+Lw54e     ke  0 0
+v01434    ke  0 0
+v01435    ke  0 0
+.         ti  v01435 v01434
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW64    ke  0 0
+Lw70W64   ke  0 0
+v01436W64 ke  0 0
+v01437W64 ta  v01436W64
+v01438W64 ke  16 0
+.         se  v01437W64 v01438W64 Lw70
+.         so  Lw70e
+Lw70      ke  0 0
+v01436    ke  0 0
+v01437    ta  v01436
+v01438    ke  16 0
+v01439    ke  208 0
+v01440    ko  v01439 v01437
+v01441    ta  v01440
+v01442    ke  326 0
+v01443    ko  v01442 v01437
+.         ti  v01443 v01441
+v01444    ke  1 0
+v01445    ko  v01437 v01444
+v01446    ke  0 0
+.         ti  v01446 v01445
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW64    ke  0 0
+Lw70W64z  ke  0 0
+v01436W64z ke  0 0
+v01437W64z ta  v01436W64z
+v01438W64z ke  16 0
+.         se  v01437W64z v01438W64z Lw70
+.         so  Lw70e                      # 境界に届いた
+Lw70e     ke  0 0
+v01447    ke  0 0
+v01448    ke  0 0
+.         ti  v01448 v01447
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW65    ke  0 0
+Lw86W65   ke  0 0
+v01449W65 ke  0 0
+v01450W65 ta  v01449W65
+v01451W65 ke  5 0
+.         se  v01450W65 v01451W65 Lw86
+.         so  Lw86e
+Lw86      ke  0 0
+v01449    ke  0 0
+v01450    ta  v01449
+v01451    ke  5 0
+v01452    ke  224 0
+v01453    ko  v01452 v01450
+v01454    ta  v01453
+v01455    ke  342 0
+v01456    ko  v01455 v01450
+.         ti  v01456 v01454
+v01457    ke  1 0
+v01458    ko  v01450 v01457
+v01459    ke  0 0
+.         ti  v01459 v01458
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW65    ke  0 0
+Lw86W65z  ke  0 0
+v01449W65z ke  0 0
+v01450W65z ta  v01449W65z
+v01451W65z ke  5 0
+.         se  v01450W65z v01451W65z Lw86
+.         so  Lw86e                      # 境界に届いた
+Lw86e     ke  0 0
+
+# ======== 突き合わせ（13 章 §5）========
+Lcmp      ke  5 0
+v01460    ke  0 0
+v01461    ke  5 0
+.         ti  v01461 v01460
+# ---- 入口。0 回のときは本体へ入らない（§16 の前方分離）----
+ENTW66    ke  0 0
+LcmplW66  ke  5 0
+v01462W66 ta  LcmplW66
+v01463W66 ke  91 0
+.         se  v01462W66 v01463W66 Lcmpl
+.         so  Lok
+Lcmpl     ke  5 0
+v01462    ta  Lcmpl
+v01463    ke  91 0
+v01464    ke  256 0
+v01465    ko  v01464 v01462
+v01466    ta  v01465
+v01467    ke  384 0
+v01468    ko  v01467 v01462
+v01469    ta  v01468
+.         su  v01466 v01469 Lcmpn
+.         so  Lko
+Lcmpn     ke  1 0
+v01470    ko  v01462 Lcmpn
+v01471    ke  5 0
+.         ti  v01471 v01470
+# ---- 閉じ。集積境界の内側にいる間は本体へ戻る ----
+CNTW66    ke  0 0
+LcmplW66z ke  5 0
+v01462W66z ta  LcmplW66z
+v01463W66z ke  91 0
+.         se  v01462W66z v01463W66z Lcmpl
+.         so  Lok                        # 境界に届いた
+Lok       tu
+Lko       te

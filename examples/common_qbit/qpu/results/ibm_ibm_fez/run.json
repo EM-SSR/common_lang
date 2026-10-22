@@ -1,0 +1,27 @@
+{
+ "backend": "ibm_fez",
+ "layout": [
+  58,
+  71
+ ],
+ "shots": 1024,
+ "rounds": 1,
+ "seed": 1,
+ "instance": null,
+ "max_time": "8m",
+ "hash": "toy",
+ "when": "2026-10-19 16:06:43",
+ "estimate": {
+  "circuits": 331,
+  "shots": 357920,
+  "seconds": 214.75199999999998
+ },
+ "omega_layouts": {
+  "L1": [
+   0
+  ],
+  "L2": [
+   79
+  ]
+ }
+}

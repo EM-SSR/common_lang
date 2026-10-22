@@ -1,0 +1,15 @@
+{
+ "id": "J_g/order/delay512_loop_p2",
+ "function": "J_g",
+ "family": "order",
+ "section": "式 10.1〜10.4",
+ "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+ "phi": 3.141592653589793,
+ "meta": {
+  "tag": "delay512_loop",
+  "word": "delay512",
+  "form": "loop",
+  "offset": 0.0
+ },
+ "readout": "q0 の古典ビット 0。C = (P0 − S0)/G、S0 = G = 1/2（calibration/readout で決め直す）"
+}

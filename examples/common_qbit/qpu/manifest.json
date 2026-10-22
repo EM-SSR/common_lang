@@ -1,0 +1,4738 @@
+[
+ {
+  "id": "calibration/readout/zero",
+  "function": "calibration",
+  "family": "readout",
+  "section": "式 16.1",
+  "role": "S0 と G の校正",
+  "path": "calibration/readout/zero"
+ },
+ {
+  "id": "calibration/readout/one",
+  "function": "calibration",
+  "family": "readout",
+  "section": "式 16.1",
+  "role": "S0 と G の校正",
+  "path": "calibration/readout/one"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p0",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p0"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p1",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p1"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p2",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p2"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p3",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p3"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p4",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p4"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p5",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p5"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p6",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p6"
+ },
+ {
+  "id": "J_g/phase_sweep/base_p7",
+  "function": "J_g",
+  "family": "phase_sweep",
+  "section": "式 8.5〜8.9",
+  "role": "z_j = (A, B)",
+  "path": "J_g/phase_sweep/base_p7"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N0_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N0_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N0_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N0_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N0_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N0_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N0_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N0_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N0_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N0_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N0_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N0_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N0_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N0_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N0_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N0_p3"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N1_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N1_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N1_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N1_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N1_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N1_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N1_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N1_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N1_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N1_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N1_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N1_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N1_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N1_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N1_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N1_p3"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N2_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N2_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N2_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N2_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N2_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N2_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N2_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N2_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N2_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N2_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N2_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N2_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N2_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N2_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N2_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N2_p3"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N4_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N4_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N4_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N4_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N4_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N4_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N4_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N4_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N4_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N4_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N4_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N4_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N4_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N4_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N4_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N4_p3"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N8_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N8_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N8_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N8_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N8_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N8_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N8_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N8_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N8_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N8_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N8_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N8_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N8_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N8_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N8_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N8_p3"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N16_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N16_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N16_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N16_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N16_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N16_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N16_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N16_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N16_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N16_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N16_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N16_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N16_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N16_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N16_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N16_p3"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N32_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N32_p0"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N32_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N32_p1"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N32_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N32_p2"
+ },
+ {
+  "id": "J_g/preparation/echo_xx_N32_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/echo_xx_N32_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N32_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N32_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N32_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N32_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N32_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N32_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/echo_xx_N32_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/echo_xx_N32_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N0_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N0_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N0_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N0_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N0_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N0_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N0_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N0_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N0_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N0_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N0_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N0_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N0_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N0_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N0_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N0_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N1_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N1_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N1_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N1_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N1_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N1_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N1_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N1_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N1_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N1_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N1_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N1_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N1_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N1_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N1_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N1_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N2_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N2_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N2_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N2_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N2_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N2_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N2_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N2_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N2_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N2_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N2_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N2_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N2_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N2_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N2_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N2_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N4_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N4_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N4_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N4_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N4_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N4_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N4_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N4_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N4_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N4_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N4_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N4_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N4_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N4_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N4_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N4_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N8_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N8_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N8_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N8_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N8_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N8_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N8_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N8_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N8_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N8_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N8_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N8_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N8_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N8_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N8_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N8_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N16_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N16_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N16_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N16_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N16_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N16_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N16_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N16_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N16_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N16_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N16_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N16_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N16_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N16_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N16_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N16_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4_N32_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N32_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4_N32_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N32_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4_N32_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N32_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4_N32_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4_N32_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N32_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N32_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N32_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N32_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N32_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N32_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4_N32_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4_N32_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N0_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N0_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N0_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N0_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N0_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N0_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N0_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N0_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N0_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N0_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N0_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N0_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N0_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N0_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N0_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N0_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N1_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N1_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N1_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N1_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N1_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N1_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N1_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N1_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N1_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N1_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N1_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N1_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N1_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N1_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N1_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N1_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N2_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N2_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N2_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N2_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N2_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N2_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N2_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N2_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N2_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N2_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N2_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N2_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N2_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N2_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N2_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N2_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N4_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N4_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N4_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N4_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N4_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N4_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N4_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N4_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N4_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N4_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N4_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N4_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N4_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N4_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N4_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N4_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N8_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N8_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N8_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N8_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N8_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N8_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N8_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N8_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N8_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N8_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N8_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N8_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N8_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N8_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N8_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N8_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N16_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N16_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N16_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N16_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N16_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N16_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N16_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N16_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N16_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N16_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N16_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N16_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N16_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N16_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N16_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N16_p3"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N32_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N32_p0"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N32_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N32_p1"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N32_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N32_p2"
+ },
+ {
+  "id": "J_g/preparation/sx4inv_N32_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/sx4inv_N32_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N32_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N32_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N32_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N32_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N32_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N32_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/sx4inv_N32_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/sx4inv_N32_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N0_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N0_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N0_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N0_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N0_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N0_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N0_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N0_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N0_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N0_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N0_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N0_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N0_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N0_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N0_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N0_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N1_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N1_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N1_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N1_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N1_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N1_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N1_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N1_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N1_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N1_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N1_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N1_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N1_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N1_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N1_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N1_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N2_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N2_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N2_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N2_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N2_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N2_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N2_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N2_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N2_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N2_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N2_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N2_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N2_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N2_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N2_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N2_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N4_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N4_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N4_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N4_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N4_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N4_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N4_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N4_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N4_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N4_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N4_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N4_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N4_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N4_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N4_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N4_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N8_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N8_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N8_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N8_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N8_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N8_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N8_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N8_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N8_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N8_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N8_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N8_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N8_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N8_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N8_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N8_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N16_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N16_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N16_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N16_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N16_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N16_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N16_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N16_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N16_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N16_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N16_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N16_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N16_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N16_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N16_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N16_p3"
+ },
+ {
+  "id": "J_g/preparation/h2_N32_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N32_p0"
+ },
+ {
+  "id": "J_g/preparation/h2_N32_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N32_p1"
+ },
+ {
+  "id": "J_g/preparation/h2_N32_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N32_p2"
+ },
+ {
+  "id": "J_g/preparation/h2_N32_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/h2_N32_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N32_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N32_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N32_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N32_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N32_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N32_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/h2_N32_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/h2_N32_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N0_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N0_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N0_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N0_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N0_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N0_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N0_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N0_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N0_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N0_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N0_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N0_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N0_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N0_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N0_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N0_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N1_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N1_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N1_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N1_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N1_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N1_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N1_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N1_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N1_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N1_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N1_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N1_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N1_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N1_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N1_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N1_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N2_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N2_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N2_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N2_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N2_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N2_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N2_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N2_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N2_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N2_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N2_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N2_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N2_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N2_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N2_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N2_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N4_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N4_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N4_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N4_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N4_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N4_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N4_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N4_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N4_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N4_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N4_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N4_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N4_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N4_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N4_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N4_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N8_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N8_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N8_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N8_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N8_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N8_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N8_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N8_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N8_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N8_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N8_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N8_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N8_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N8_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N8_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N8_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N16_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N16_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N16_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N16_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N16_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N16_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N16_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N16_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N16_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N16_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N16_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N16_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N16_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N16_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N16_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N16_p3"
+ },
+ {
+  "id": "J_g/preparation/cx2_N32_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N32_p0"
+ },
+ {
+  "id": "J_g/preparation/cx2_N32_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N32_p1"
+ },
+ {
+  "id": "J_g/preparation/cx2_N32_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N32_p2"
+ },
+ {
+  "id": "J_g/preparation/cx2_N32_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/cx2_N32_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N32_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N32_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N32_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N32_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N32_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N32_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/cx2_N32_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/cx2_N32_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N0_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N0_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N0_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N0_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N0_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N0_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N0_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N0_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N0_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N0_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N0_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N0_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N0_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N0_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N0_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N0_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N1_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N1_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N1_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N1_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N1_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N1_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N1_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N1_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N1_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N1_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N1_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N1_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N1_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N1_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N1_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N1_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N2_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N2_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N2_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N2_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N2_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N2_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N2_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N2_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N2_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N2_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N2_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N2_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N2_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N2_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N2_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N2_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N4_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N4_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N4_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N4_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N4_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N4_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N4_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N4_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N4_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N4_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N4_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N4_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N4_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N4_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N4_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N4_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N8_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N8_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N8_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N8_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N8_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N8_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N8_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N8_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N8_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N8_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N8_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N8_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N8_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N8_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N8_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N8_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N16_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N16_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N16_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N16_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N16_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N16_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N16_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N16_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N16_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N16_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N16_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N16_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N16_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N16_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N16_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N16_p3"
+ },
+ {
+  "id": "J_g/preparation/delay512_N32_p0",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N32_p0"
+ },
+ {
+  "id": "J_g/preparation/delay512_N32_p1",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N32_p1"
+ },
+ {
+  "id": "J_g/preparation/delay512_N32_p2",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N32_p2"
+ },
+ {
+  "id": "J_g/preparation/delay512_N32_p3",
+  "function": "J_g",
+  "family": "preparation",
+  "section": "式 9.2〜9.8",
+  "role": "N 回の W の後の z_j。q_N = e^{-2Nλ} q_0、η_N = η_0 + Nη_W",
+  "path": "J_g/preparation/delay512_N32_p3"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N32_p0",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N32_p0"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N32_p1",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N32_p1"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N32_p2",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N32_p2"
+ },
+ {
+  "id": "J_g/preparation_rot/delay512_N32_p3",
+  "function": "J_g",
+  "family": "preparation_rot",
+  "section": "式 10.3、10.11",
+  "role": "W の前に rz(π/2)（既知の Π_i 作用）を置く。z_0 の向きが直交する二組で L の四成分が決まる",
+  "path": "J_g/preparation_rot/delay512_N32_p3"
+ },
+ {
+  "id": "J_g/order/echo_xx_AB_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_AB_p0"
+ },
+ {
+  "id": "J_g/order/echo_xx_AB_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_AB_p1"
+ },
+ {
+  "id": "J_g/order/echo_xx_AB_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_AB_p2"
+ },
+ {
+  "id": "J_g/order/echo_xx_AB_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_AB_p3"
+ },
+ {
+  "id": "J_g/order/echo_xx_BA_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_BA_p0"
+ },
+ {
+  "id": "J_g/order/echo_xx_BA_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_BA_p1"
+ },
+ {
+  "id": "J_g/order/echo_xx_BA_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_BA_p2"
+ },
+ {
+  "id": "J_g/order/echo_xx_BA_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_BA_p3"
+ },
+ {
+  "id": "J_g/order/echo_xx_loop_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_loop_p0"
+ },
+ {
+  "id": "J_g/order/echo_xx_loop_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_loop_p1"
+ },
+ {
+  "id": "J_g/order/echo_xx_loop_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_loop_p2"
+ },
+ {
+  "id": "J_g/order/echo_xx_loop_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/echo_xx_loop_p3"
+ },
+ {
+  "id": "J_g/order/sx4_AB_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_AB_p0"
+ },
+ {
+  "id": "J_g/order/sx4_AB_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_AB_p1"
+ },
+ {
+  "id": "J_g/order/sx4_AB_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_AB_p2"
+ },
+ {
+  "id": "J_g/order/sx4_AB_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_AB_p3"
+ },
+ {
+  "id": "J_g/order/sx4_BA_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_BA_p0"
+ },
+ {
+  "id": "J_g/order/sx4_BA_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_BA_p1"
+ },
+ {
+  "id": "J_g/order/sx4_BA_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_BA_p2"
+ },
+ {
+  "id": "J_g/order/sx4_BA_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_BA_p3"
+ },
+ {
+  "id": "J_g/order/sx4_loop_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_loop_p0"
+ },
+ {
+  "id": "J_g/order/sx4_loop_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_loop_p1"
+ },
+ {
+  "id": "J_g/order/sx4_loop_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_loop_p2"
+ },
+ {
+  "id": "J_g/order/sx4_loop_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/sx4_loop_p3"
+ },
+ {
+  "id": "J_g/order/h2_AB_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_AB_p0"
+ },
+ {
+  "id": "J_g/order/h2_AB_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_AB_p1"
+ },
+ {
+  "id": "J_g/order/h2_AB_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_AB_p2"
+ },
+ {
+  "id": "J_g/order/h2_AB_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_AB_p3"
+ },
+ {
+  "id": "J_g/order/h2_BA_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_BA_p0"
+ },
+ {
+  "id": "J_g/order/h2_BA_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_BA_p1"
+ },
+ {
+  "id": "J_g/order/h2_BA_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_BA_p2"
+ },
+ {
+  "id": "J_g/order/h2_BA_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_BA_p3"
+ },
+ {
+  "id": "J_g/order/h2_loop_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_loop_p0"
+ },
+ {
+  "id": "J_g/order/h2_loop_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_loop_p1"
+ },
+ {
+  "id": "J_g/order/h2_loop_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_loop_p2"
+ },
+ {
+  "id": "J_g/order/h2_loop_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/h2_loop_p3"
+ },
+ {
+  "id": "J_g/order/delay512_AB_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_AB_p0"
+ },
+ {
+  "id": "J_g/order/delay512_AB_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_AB_p1"
+ },
+ {
+  "id": "J_g/order/delay512_AB_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_AB_p2"
+ },
+ {
+  "id": "J_g/order/delay512_AB_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_AB_p3"
+ },
+ {
+  "id": "J_g/order/delay512_BA_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_BA_p0"
+ },
+ {
+  "id": "J_g/order/delay512_BA_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_BA_p1"
+ },
+ {
+  "id": "J_g/order/delay512_BA_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_BA_p2"
+ },
+ {
+  "id": "J_g/order/delay512_BA_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_BA_p3"
+ },
+ {
+  "id": "J_g/order/delay512_loop_p0",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_loop_p0"
+ },
+ {
+  "id": "J_g/order/delay512_loop_p1",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_loop_p1"
+ },
+ {
+  "id": "J_g/order/delay512_loop_p2",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_loop_p2"
+ },
+ {
+  "id": "J_g/order/delay512_loop_p3",
+  "function": "J_g",
+  "family": "order",
+  "section": "式 10.1〜10.4",
+  "role": "標準の終点が同じで構成語が違う回路の z_j の差",
+  "path": "J_g/order/delay512_loop_p3"
+ },
+ {
+  "id": "A_g/transport/control",
+  "function": "A_g",
+  "family": "transport",
+  "section": "式 6.12、16.6、19.5",
+  "role": "W の前後の二進桁の相関。W が u を領域へ移すなら、後ろの桁が偏る",
+  "path": "A_g/transport/control"
+ },
+ {
+  "id": "A_g/transport/echo_xx",
+  "function": "A_g",
+  "family": "transport",
+  "section": "式 6.12、16.6、19.5",
+  "role": "W の前後の二進桁の相関。W が u を領域へ移すなら、後ろの桁が偏る",
+  "path": "A_g/transport/echo_xx"
+ },
+ {
+  "id": "A_g/transport/sx4",
+  "function": "A_g",
+  "family": "transport",
+  "section": "式 6.12、16.6、19.5",
+  "role": "W の前後の二進桁の相関。W が u を領域へ移すなら、後ろの桁が偏る",
+  "path": "A_g/transport/sx4"
+ },
+ {
+  "id": "A_g/transport/h2",
+  "function": "A_g",
+  "family": "transport",
+  "section": "式 6.12、16.6、19.5",
+  "role": "W の前後の二進桁の相関。W が u を領域へ移すなら、後ろの桁が偏る",
+  "path": "A_g/transport/h2"
+ },
+ {
+  "id": "A_g/transport/delay512",
+  "function": "A_g",
+  "family": "transport",
+  "section": "式 6.12、16.6、19.5",
+  "role": "W の前後の二進桁の相関。W が u を領域へ移すなら、後ろの桁が偏る",
+  "path": "A_g/transport/delay512"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N0",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N0"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N1",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N1"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N2",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N2"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N4",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N4"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N8",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N8"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N16",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N16"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N32",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N32"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N64",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N64"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N128",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N128"
+ },
+ {
+  "id": "A_g/mobius/echo_xx_N256",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/echo_xx_N256"
+ },
+ {
+  "id": "A_g/mobius/sx4_N0",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N0"
+ },
+ {
+  "id": "A_g/mobius/sx4_N1",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N1"
+ },
+ {
+  "id": "A_g/mobius/sx4_N2",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N2"
+ },
+ {
+  "id": "A_g/mobius/sx4_N4",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N4"
+ },
+ {
+  "id": "A_g/mobius/sx4_N8",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N8"
+ },
+ {
+  "id": "A_g/mobius/sx4_N16",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N16"
+ },
+ {
+  "id": "A_g/mobius/sx4_N32",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N32"
+ },
+ {
+  "id": "A_g/mobius/sx4_N64",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N64"
+ },
+ {
+  "id": "A_g/mobius/sx4_N128",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N128"
+ },
+ {
+  "id": "A_g/mobius/sx4_N256",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4_N256"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N0",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N0"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N1",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N1"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N2",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N2"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N4",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N4"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N8",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N8"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N16",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N16"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N32",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N32"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N64",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N64"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N128",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N128"
+ },
+ {
+  "id": "A_g/mobius/sx4inv_N256",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/sx4inv_N256"
+ },
+ {
+  "id": "A_g/mobius/h2_N0",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N0"
+ },
+ {
+  "id": "A_g/mobius/h2_N1",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N1"
+ },
+ {
+  "id": "A_g/mobius/h2_N2",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N2"
+ },
+ {
+  "id": "A_g/mobius/h2_N4",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N4"
+ },
+ {
+  "id": "A_g/mobius/h2_N8",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N8"
+ },
+ {
+  "id": "A_g/mobius/h2_N16",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N16"
+ },
+ {
+  "id": "A_g/mobius/h2_N32",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N32"
+ },
+ {
+  "id": "A_g/mobius/h2_N64",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N64"
+ },
+ {
+  "id": "A_g/mobius/h2_N128",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N128"
+ },
+ {
+  "id": "A_g/mobius/h2_N256",
+  "function": "A_g",
+  "family": "mobius",
+  "section": "式 16.4〜16.8",
+  "role": "N 回の W の後に |+> を測る。P(0) = 1/(1 + e^{κηN})。κ を同定する",
+  "path": "A_g/mobius/h2_N256"
+ },
+ {
+  "id": "A_g/mobius_group/n16_m8",
+  "function": "A_g",
+  "family": "mobius_group",
+  "section": "式 16.6",
+  "role": "W を n1 回、W⁻¹ を n2 回。P0 は正味の回数 n1 − n2 の単独の結果と一致するか",
+  "path": "A_g/mobius_group/n16_m8"
+ },
+ {
+  "id": "A_g/mobius_group/n24_m8",
+  "function": "A_g",
+  "family": "mobius_group",
+  "section": "式 16.6",
+  "role": "W を n1 回、W⁻¹ を n2 回。P0 は正味の回数 n1 − n2 の単独の結果と一致するか",
+  "path": "A_g/mobius_group/n24_m8"
+ },
+ {
+  "id": "A_g/mobius_group/n40_m8",
+  "function": "A_g",
+  "family": "mobius_group",
+  "section": "式 16.6",
+  "role": "W を n1 回、W⁻¹ を n2 回。P0 は正味の回数 n1 − n2 の単独の結果と一致するか",
+  "path": "A_g/mobius_group/n40_m8"
+ },
+ {
+  "id": "A_g/mobius_group/n8_m16",
+  "function": "A_g",
+  "family": "mobius_group",
+  "section": "式 16.6",
+  "role": "W を n1 回、W⁻¹ を n2 回。P0 は正味の回数 n1 − n2 の単独の結果と一致するか",
+  "path": "A_g/mobius_group/n8_m16"
+ },
+ {
+  "id": "A_g/mobius_group/n24_m16",
+  "function": "A_g",
+  "family": "mobius_group",
+  "section": "式 16.6",
+  "role": "W を n1 回、W⁻¹ を n2 回。P0 は正味の回数 n1 − n2 の単独の結果と一致するか",
+  "path": "A_g/mobius_group/n24_m16"
+ },
+ {
+  "id": "A_g/mobius_group/n32_m16",
+  "function": "A_g",
+  "family": "mobius_group",
+  "section": "式 16.6",
+  "role": "W を n1 回、W⁻¹ を n2 回。P0 は正味の回数 n1 − n2 の単独の結果と一致するか",
+  "path": "A_g/mobius_group/n32_m16"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N0",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N0"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N1",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N1"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N4",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N4"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N16",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N16"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N64",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N64"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N256",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N256"
+ },
+ {
+  "id": "A_g/virtual_mobius/vab_N1024",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vab_N1024"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N0",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N0"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N1",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N1"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N4",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N4"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N16",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N16"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N64",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N64"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N256",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N256"
+ },
+ {
+  "id": "A_g/virtual_mobius/vba_N1024",
+  "function": "A_g",
+  "family": "virtual_mobius",
+  "section": "式 10.1、16.8",
+  "role": "パルスの無い語 ab、ba を N 回。P0 の差が構成順序の作用",
+  "path": "A_g/virtual_mobius/vba_N1024"
+ },
+ {
+  "id": "A_g/align_types/M0",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M0"
+ },
+ {
+  "id": "A_g/align_types/M1",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M1"
+ },
+ {
+  "id": "A_g/align_types/M2",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M2"
+ },
+ {
+  "id": "A_g/align_types/M4",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M4"
+ },
+ {
+  "id": "A_g/align_types/M8",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M8"
+ },
+ {
+  "id": "A_g/align_types/M16",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M16"
+ },
+ {
+  "id": "A_g/align_types/M32",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（virtual）。倍率が M で動くか",
+  "path": "A_g/align_types/M32"
+ },
+ {
+  "id": "A_g/align_types/P0",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P0"
+ },
+ {
+  "id": "A_g/align_types/P1",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P1"
+ },
+ {
+  "id": "A_g/align_types/P2",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P2"
+ },
+ {
+  "id": "A_g/align_types/P4",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P4"
+ },
+ {
+  "id": "A_g/align_types/P8",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P8"
+ },
+ {
+  "id": "A_g/align_types/P16",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P16"
+ },
+ {
+  "id": "A_g/align_types/P32",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（pulse）。倍率が M で動くか",
+  "path": "A_g/align_types/P32"
+ },
+ {
+  "id": "A_g/align_types/Q0",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q0"
+ },
+ {
+  "id": "A_g/align_types/Q1",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q1"
+ },
+ {
+  "id": "A_g/align_types/Q2",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q2"
+ },
+ {
+  "id": "A_g/align_types/Q4",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q4"
+ },
+ {
+  "id": "A_g/align_types/Q8",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q8"
+ },
+ {
+  "id": "A_g/align_types/Q16",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q16"
+ },
+ {
+  "id": "A_g/align_types/Q32",
+  "function": "A_g",
+  "family": "align_types",
+  "section": "式 7.10、9.1、16.8",
+  "role": "互いに違う語を M 種類（measure）。倍率が M で動くか",
+  "path": "A_g/align_types/Q32"
+ },
+ {
+  "id": "A_g/align_persist/none",
+  "function": "A_g",
+  "family": "align_persist",
+  "section": "式 12.5、17.2、19.6",
+  "role": "整列の後の待機、測定とリセット。倍率が残るか",
+  "path": "A_g/align_persist/none"
+ },
+ {
+  "id": "A_g/align_persist/delay",
+  "function": "A_g",
+  "family": "align_persist",
+  "section": "式 12.5、17.2、19.6",
+  "role": "整列の後の待機、測定とリセット。倍率が残るか",
+  "path": "A_g/align_persist/delay"
+ },
+ {
+  "id": "A_g/align_persist/reset",
+  "function": "A_g",
+  "family": "align_persist",
+  "section": "式 12.5、17.2、19.6",
+  "role": "整列の後の待機、測定とリセット。倍率が残るか",
+  "path": "A_g/align_persist/reset"
+ },
+ {
+  "id": "D_g/depth/k0_p0",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k0_p0"
+ },
+ {
+  "id": "D_g/depth/k0_p1",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k0_p1"
+ },
+ {
+  "id": "D_g/depth/k0_p2",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k0_p2"
+ },
+ {
+  "id": "D_g/depth/k0_p3",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k0_p3"
+ },
+ {
+  "id": "D_g/depth/k1_p0",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k1_p0"
+ },
+ {
+  "id": "D_g/depth/k1_p1",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k1_p1"
+ },
+ {
+  "id": "D_g/depth/k1_p2",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k1_p2"
+ },
+ {
+  "id": "D_g/depth/k1_p3",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k1_p3"
+ },
+ {
+  "id": "D_g/depth/k2_p0",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k2_p0"
+ },
+ {
+  "id": "D_g/depth/k2_p1",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k2_p1"
+ },
+ {
+  "id": "D_g/depth/k2_p2",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k2_p2"
+ },
+ {
+  "id": "D_g/depth/k2_p3",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k2_p3"
+ },
+ {
+  "id": "D_g/depth/k4_p0",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k4_p0"
+ },
+ {
+  "id": "D_g/depth/k4_p1",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k4_p1"
+ },
+ {
+  "id": "D_g/depth/k4_p2",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k4_p2"
+ },
+ {
+  "id": "D_g/depth/k4_p3",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k4_p3"
+ },
+ {
+  "id": "D_g/depth/k8_p0",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k8_p0"
+ },
+ {
+  "id": "D_g/depth/k8_p1",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k8_p1"
+ },
+ {
+  "id": "D_g/depth/k8_p2",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k8_p2"
+ },
+ {
+  "id": "D_g/depth/k8_p3",
+  "function": "D_g",
+  "family": "depth",
+  "section": "式 13.1、13.2",
+  "role": "測定を k 回行った後の z_j。z_d = 2^{-d} z_0 なら信号が縮む",
+  "path": "D_g/depth/k8_p3"
+ },
+ {
+  "id": "X_g/idle/t0_p0",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t0_p0"
+ },
+ {
+  "id": "X_g/idle/t0_p1",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t0_p1"
+ },
+ {
+  "id": "X_g/idle/t0_p2",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t0_p2"
+ },
+ {
+  "id": "X_g/idle/t0_p3",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t0_p3"
+ },
+ {
+  "id": "X_g/idle/t64_p0",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t64_p0"
+ },
+ {
+  "id": "X_g/idle/t64_p1",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t64_p1"
+ },
+ {
+  "id": "X_g/idle/t64_p2",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t64_p2"
+ },
+ {
+  "id": "X_g/idle/t64_p3",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t64_p3"
+ },
+ {
+  "id": "X_g/idle/t256_p0",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t256_p0"
+ },
+ {
+  "id": "X_g/idle/t256_p1",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t256_p1"
+ },
+ {
+  "id": "X_g/idle/t256_p2",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t256_p2"
+ },
+ {
+  "id": "X_g/idle/t256_p3",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t256_p3"
+ },
+ {
+  "id": "X_g/idle/t1024_p0",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t1024_p0"
+ },
+ {
+  "id": "X_g/idle/t1024_p1",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t1024_p1"
+ },
+ {
+  "id": "X_g/idle/t1024_p2",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t1024_p2"
+ },
+ {
+  "id": "X_g/idle/t1024_p3",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t1024_p3"
+ },
+ {
+  "id": "X_g/idle/t4096_p0",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t4096_p0"
+ },
+ {
+  "id": "X_g/idle/t4096_p1",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t4096_p1"
+ },
+ {
+  "id": "X_g/idle/t4096_p2",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t4096_p2"
+ },
+ {
+  "id": "X_g/idle/t4096_p3",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t4096_p3"
+ },
+ {
+  "id": "X_g/idle/t16384_p0",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t16384_p0"
+ },
+ {
+  "id": "X_g/idle/t16384_p1",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t16384_p1"
+ },
+ {
+  "id": "X_g/idle/t16384_p2",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t16384_p2"
+ },
+ {
+  "id": "X_g/idle/t16384_p3",
+  "function": "X_g",
+  "family": "idle",
+  "section": "式 11.1",
+  "role": "待機時間 t の後の z_j",
+  "path": "X_g/idle/t16384_p3"
+ },
+ {
+  "id": "X_g/neighbor/m0_p0",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m0_p0"
+ },
+ {
+  "id": "X_g/neighbor/m0_p1",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m0_p1"
+ },
+ {
+  "id": "X_g/neighbor/m0_p2",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m0_p2"
+ },
+ {
+  "id": "X_g/neighbor/m0_p3",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m0_p3"
+ },
+ {
+  "id": "X_g/neighbor/m1_p0",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m1_p0"
+ },
+ {
+  "id": "X_g/neighbor/m1_p1",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m1_p1"
+ },
+ {
+  "id": "X_g/neighbor/m1_p2",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m1_p2"
+ },
+ {
+  "id": "X_g/neighbor/m1_p3",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m1_p3"
+ },
+ {
+  "id": "X_g/neighbor/m2_p0",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m2_p0"
+ },
+ {
+  "id": "X_g/neighbor/m2_p1",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m2_p1"
+ },
+ {
+  "id": "X_g/neighbor/m2_p2",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m2_p2"
+ },
+ {
+  "id": "X_g/neighbor/m2_p3",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m2_p3"
+ },
+ {
+  "id": "X_g/neighbor/m4_p0",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m4_p0"
+ },
+ {
+  "id": "X_g/neighbor/m4_p1",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m4_p1"
+ },
+ {
+  "id": "X_g/neighbor/m4_p2",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m4_p2"
+ },
+ {
+  "id": "X_g/neighbor/m4_p3",
+  "function": "X_g",
+  "family": "neighbor",
+  "section": "式 11.1",
+  "role": "隣の量子ビット 1 への x を m 回行ったときの q0 の z_j",
+  "path": "X_g/neighbor/m4_p3"
+ },
+ {
+  "id": "R_C/reset_history/none_p0",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 none の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/none_p0"
+ },
+ {
+  "id": "R_C/reset_history/none_p1",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 none の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/none_p1"
+ },
+ {
+  "id": "R_C/reset_history/none_p2",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 none の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/none_p2"
+ },
+ {
+  "id": "R_C/reset_history/none_p3",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 none の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/none_p3"
+ },
+ {
+  "id": "R_C/reset_history/echo_xx_p0",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 echo_xx の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/echo_xx_p0"
+ },
+ {
+  "id": "R_C/reset_history/echo_xx_p1",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 echo_xx の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/echo_xx_p1"
+ },
+ {
+  "id": "R_C/reset_history/echo_xx_p2",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 echo_xx の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/echo_xx_p2"
+ },
+ {
+  "id": "R_C/reset_history/echo_xx_p3",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 echo_xx の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/echo_xx_p3"
+ },
+ {
+  "id": "R_C/reset_history/virt1_p0",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt1 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt1_p0"
+ },
+ {
+  "id": "R_C/reset_history/virt1_p1",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt1 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt1_p1"
+ },
+ {
+  "id": "R_C/reset_history/virt1_p2",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt1 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt1_p2"
+ },
+ {
+  "id": "R_C/reset_history/virt1_p3",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt1 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt1_p3"
+ },
+ {
+  "id": "R_C/reset_history/virt4_p0",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt4 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt4_p0"
+ },
+ {
+  "id": "R_C/reset_history/virt4_p1",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt4 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt4_p1"
+ },
+ {
+  "id": "R_C/reset_history/virt4_p2",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt4 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt4_p2"
+ },
+ {
+  "id": "R_C/reset_history/virt4_p3",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt4 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt4_p3"
+ },
+ {
+  "id": "R_C/reset_history/virt16_p0",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt16 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt16_p0"
+ },
+ {
+  "id": "R_C/reset_history/virt16_p1",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt16 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt16_p1"
+ },
+ {
+  "id": "R_C/reset_history/virt16_p2",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt16 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt16_p2"
+ },
+ {
+  "id": "R_C/reset_history/virt16_p3",
+  "function": "R_C",
+  "family": "reset_history",
+  "section": "式 12.15〜12.18、19.6",
+  "role": "前史 virt16 の後のリセットを越えた z_j",
+  "path": "R_C/reset_history/virt16_p3"
+ },
+ {
+  "id": "sigma/determinism/tape8",
+  "function": "sigma",
+  "family": "determinism",
+  "section": "式 5.12a、19.1",
+  "role": "rounds 桁の系列。連続する shot の一致率を、遠い shot の組と比べる（C3）。shot の順序を残す",
+  "path": "sigma/determinism/tape8"
+ },
+ {
+  "id": "sigma/determinism/tape32",
+  "function": "sigma",
+  "family": "determinism",
+  "section": "式 1.13、13.1、4.12",
+  "role": "depth 桁の系列。同じ量子ビットで測定を重ねる深さ k に対する、桁の 1 の割合（作図深度 d の効果）",
+  "path": "sigma/determinism/tape32"
+ },
+ {
+  "id": "sigma/equivalent_preparation/h",
+  "function": "sigma",
+  "family": "equivalent_preparation",
+  "section": "式 19.2〜19.5",
+  "role": "標準の終点が同じで構成語が違う準備の後の系列。分布が違えば h が α に入る",
+  "path": "sigma/equivalent_preparation/h"
+ },
+ {
+  "id": "sigma/equivalent_preparation/rz_sx_rz",
+  "function": "sigma",
+  "family": "equivalent_preparation",
+  "section": "式 19.2〜19.5",
+  "role": "標準の終点が同じで構成語が違う準備の後の系列。分布が違えば h が α に入る",
+  "path": "sigma/equivalent_preparation/rz_sx_rz"
+ },
+ {
+  "id": "sigma/equivalent_preparation/sx_rzpi",
+  "function": "sigma",
+  "family": "equivalent_preparation",
+  "section": "式 19.2〜19.5",
+  "role": "標準の終点が同じで構成語が違う準備の後の系列。分布が違えば h が α に入る",
+  "path": "sigma/equivalent_preparation/sx_rzpi"
+ },
+ {
+  "id": "h_phys/virtual_rz/ref_p0",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/ref_p0"
+ },
+ {
+  "id": "h_phys/virtual_rz/ref_p1",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/ref_p1"
+ },
+ {
+  "id": "h_phys/virtual_rz/ref_p2",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/ref_p2"
+ },
+ {
+  "id": "h_phys/virtual_rz/ref_p3",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/ref_p3"
+ },
+ {
+  "id": "h_phys/virtual_rz/v1_p0",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v1_p0"
+ },
+ {
+  "id": "h_phys/virtual_rz/v1_p1",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v1_p1"
+ },
+ {
+  "id": "h_phys/virtual_rz/v1_p2",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v1_p2"
+ },
+ {
+  "id": "h_phys/virtual_rz/v1_p3",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v1_p3"
+ },
+ {
+  "id": "h_phys/virtual_rz/v3_p0",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v3_p0"
+ },
+ {
+  "id": "h_phys/virtual_rz/v3_p1",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v3_p1"
+ },
+ {
+  "id": "h_phys/virtual_rz/v3_p2",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v3_p2"
+ },
+ {
+  "id": "h_phys/virtual_rz/v3_p3",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v3_p3"
+ },
+ {
+  "id": "h_phys/virtual_rz/v8_p0",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v8_p0"
+ },
+ {
+  "id": "h_phys/virtual_rz/v8_p1",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v8_p1"
+ },
+ {
+  "id": "h_phys/virtual_rz/v8_p2",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v8_p2"
+ },
+ {
+  "id": "h_phys/virtual_rz/v8_p3",
+  "function": "h_phys",
+  "family": "virtual_rz",
+  "section": "式 12.2、19.2",
+  "role": "物理が同一で h_phys が違う回路の組。ref との差が構成語の効果",
+  "path": "h_phys/virtual_rz/v8_p3"
+ },
+ {
+  "id": "h_phys/order_swap/q0_first_p0",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q0_first_p0"
+ },
+ {
+  "id": "h_phys/order_swap/q0_first_p1",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q0_first_p1"
+ },
+ {
+  "id": "h_phys/order_swap/q0_first_p2",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q0_first_p2"
+ },
+ {
+  "id": "h_phys/order_swap/q0_first_p3",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q0_first_p3"
+ },
+ {
+  "id": "h_phys/order_swap/q1_first_p0",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q1_first_p0"
+ },
+ {
+  "id": "h_phys/order_swap/q1_first_p1",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q1_first_p1"
+ },
+ {
+  "id": "h_phys/order_swap/q1_first_p2",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q1_first_p2"
+ },
+ {
+  "id": "h_phys/order_swap/q1_first_p3",
+  "function": "h_phys",
+  "family": "order_swap",
+  "section": "式 2.10、10.1",
+  "role": "独立な操作の記述順だけが違う回路の組",
+  "path": "h_phys/order_swap/q1_first_p3"
+ }
+]
